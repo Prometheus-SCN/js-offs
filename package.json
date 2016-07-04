@@ -1,0 +1,23 @@
+{
+  "name": "js-offs",
+  "version": "0.0.1",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vijayee Kulkaa <vijayee.kulkaa@hushmail.com>",
+  "license": "GPL",
+  "dependencies": {
+    "bs58": "^3.0.0",
+    "buffer-xor": "^2.0.1",
+    "end-of-stream": "^1.1.0",
+    "fs-blob-store": "^5.2.1",
+    "isstream": "^0.1.2",
+    "mkdirp": "^0.5.1",
+    "multihashing": "^0.2.1",
+    "streamifier": "^0.1.1",
+    "through2": "^2.0.1"
+  },
+  "devDependencies": {}
+}
