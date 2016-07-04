@@ -79,9 +79,13 @@ module.exports =
       })
     }
 
-    randomBlocks (number, cb) {
+    randomBlocks (number, used, cb) {
       if (isNaN(number)) {
         return cb(new Error('Invalid Number'))
+      }
+      if(typeof used === 'function'){
+        cb= used
+        used=[]
       }
       number = Math.floor(number)
       let blockArray = []
@@ -90,6 +94,11 @@ module.exports =
         if (err) {
           return cb(err)
         }
+
+        items = items.filter((block)=>{
+          return !(used.find((key)=> key === block))
+        })
+
         if (items.length < number) {
           commit= true
           for (let i = 0; i < (number - items.length); i++) {
