@@ -1,3 +1,4 @@
+'use strict'
 const fs = require('fs')
 const Block = require('./block')
 const mkdirp = require('mkdirp')

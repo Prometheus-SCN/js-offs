@@ -13,7 +13,8 @@ let parity = Block.parityBlock(block1, block2)
 console.log(block1.key)
 console.log(block2.key)
 console.log(parity.key)
-console.log(parity.parity(block2).key)
+console.log((new Buffer("|" + JSON.stringify([parity.key]))).length)
+//console.log(parity.parity(block2).key)
 
 bc.put(block1,(err)=>{
   if (err){
