@@ -16,7 +16,7 @@ module.exports = class OffUrl{
 
   }
   toString(){
-
+    return "Wish this was a real url..."
   }
   key(){
     

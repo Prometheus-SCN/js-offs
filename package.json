@@ -7,8 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Vijayee Kulkaa <vijayee.kulkaa@hushmail.com>",
-  "license": "GPL",
+  "license": "GPL-3.0",
   "dependencies": {
+    "block-stream2": "^1.1.0",
     "bs58": "^3.0.0",
     "buffer-xor": "^2.0.1",
     "end-of-stream": "^1.1.0",

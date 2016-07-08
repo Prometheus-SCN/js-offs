@@ -50,7 +50,7 @@ module.exports = class Block {
   }
 
   parity (block) {
-    Block.parityBlock(this, block)
+    return Block.parityBlock(this, block)
   }
 
   static parityBlock (blockA, blockB) {
