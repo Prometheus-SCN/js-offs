@@ -12,8 +12,15 @@ let block2 = Block.randomBlock()
 let parity = Block.parityBlock(block1, block2)
 let rs= fs.createReadStream('test.pdf')
 let ws= new ows('../block_cache')
+/*
+rs.on('error', (err)=> {throw err})
+rs.on('end', ()=>{ console.log('read stream ended')})
+rs.on('data', (data)=>{ console.log('data event: ' + data.length)})
 ws.on('error', (err)=> {throw err})
 ws.on('url', (url) => console.log(url))
+ws.on('finish', () => console.log('write stream ended'))
+ws.on('unpipe', () => console.log())
+*/
 rs.pipe(ws)
 
 /*

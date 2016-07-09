@@ -70,7 +70,7 @@ module.exports = class Descriptor {
           }
           let block = new Block(data)
           _blockArr.unshift(block)
-          last = new Buffer(Block.key)
+          last = new Buffer(block.key)
         }
         _data.set(this, dblocks)
         return _blockArr
