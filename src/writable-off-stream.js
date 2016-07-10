@@ -5,6 +5,7 @@ const BlockCache = require('./block-cache')
 const Descriptor = require('./descriptor')
 const Block = require('./block')
 const util = require('./utility')
+const bs58 = require('bs58')
 const through = require('through2')
 const isStream = require('isstream')
 const streamifier = require('streamifier')
@@ -37,6 +38,7 @@ module.exports = class WritableOffStream extends Writable {
     _usedRandoms.set(this, [])
     _descriptor.set(this, new Descriptor())
     _accumulator.set(this, new Buffer(0))
+    _hasher.set(this, util.hasher())
     this.on('finish', ()=> {
       let accumulator = _accumulator.get(this)
       let bc = _blockCache.get(this)
@@ -60,7 +62,9 @@ module.exports = class WritableOffStream extends Writable {
               return next(err)
             })
           } else {
-            this.emit('url', new OffUrl())
+            let hasher = _hasher.get(this)
+            console.log(bs58.encode(hasher.digest()))
+            this.emit('url', new OffUrl())//TODO: Fix this fucker
             return
           }
         }
@@ -111,14 +115,8 @@ module.exports = class WritableOffStream extends Writable {
           }))//hash original file
           .pipe(through((buf, enc, nxt)=> {
             let hasher = _hasher.get(this)
-            if (hasher) {
-              let hash = util.hash(buf)
-              hasher = Buffer.concat([ hasher, hash ])
-              _hasher.set(this, hasher)
-            } else {
-              hasher = util.hash(buf)
-              _hasher.set(this, hasher)
-            }
+            hasher.update(buf)
+            _hasher.set(this, hasher)
             return nxt()
           }))
           .on('finish', genURL)
@@ -189,14 +187,8 @@ module.exports = class WritableOffStream extends Writable {
         }))//hash original file
         .pipe(through((buf, enc, nxt)=> {
           let hasher = _hasher.get(this)
-          if (hasher) {
-            let hash = util.hash(buf)
-            hasher = Buffer.concat([ hasher, hash ])
-            _hasher.set(this, hasher)
-          } else {
-            hasher = util.hash(buf)
-            _hasher.set(this, hasher)
-          }
+          hasher.update(buf)
+          _hasher.set(this, hasher)
           return nxt()
         }))
         .on('finish', ()=> {
