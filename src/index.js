@@ -5,6 +5,11 @@ const util = require('./utility')
 const fs =  require('fs')
 const ows = require('./writable-off-stream')
 
+const OffUrl = require('./off-url')
+
+let offUrl = new OffUrl()
+
+
 let bc= new BlockCache('../block_cache')
 
 let block1 = Block.randomBlock()
@@ -21,6 +26,7 @@ ws.on('url', (url) => console.log(url))
 ws.on('finish', () => console.log('write stream ended'))
 ws.on('unpipe', () => console.log())
 */
+ws.on('url', (url) => console.log(url.toString()))
 rs.pipe(ws)
 
 /*

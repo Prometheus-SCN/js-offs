@@ -18,6 +18,9 @@ let _usedRandoms = new WeakMap()
 let _hasher = new WeakMap()
 let _descriptor = new WeakMap()
 let _accumulator = new WeakMap()
+let _url = new WeakMap()
+let _size = new WeakMap()
+let _count = new WeakMap()
 
 module.exports = class WritableOffStream extends Writable {
   constructor (opts) {
@@ -27,8 +30,16 @@ module.exports = class WritableOffStream extends Writable {
     if (typeof opts === 'string') {
       opts = { path: opts }
     }
+
     opts.highWaterMark = _blockSize
     super(opts)
+    if (opts.url && (opts.url instanceof OffUrl)){
+      _url.set(this, opts.url)
+    } else {
+      opts.url= new OffUrl
+      _url.set(this, opts.url)
+    }
+
     if (opts.path) {
       _path.set(this, opts)
     } else {
@@ -39,9 +50,12 @@ module.exports = class WritableOffStream extends Writable {
     _descriptor.set(this, new Descriptor())
     _accumulator.set(this, new Buffer(0))
     _hasher.set(this, util.hasher())
+    _size.set(this, 0)
+    _count.set(this, 0)
     this.on('finish', ()=> {
       let accumulator = _accumulator.get(this)
       let bc = _blockCache.get(this)
+
       //callback to help close out the stream with a url
       let genURL = ()=> {
         let descriptor = _descriptor.get(this)
@@ -63,8 +77,15 @@ module.exports = class WritableOffStream extends Writable {
             })
           } else {
             let hasher = _hasher.get(this)
-            console.log(bs58.encode(hasher.digest()))
-            this.emit('url', new OffUrl())//TODO: Fix this fucker
+            let url = _url.get(this)
+            let size = _size.get(this)
+            url.fileHash = bs58.encode(hasher.digest())
+            url.descriptorHash = dBlocks[0].key
+            url.streamLength = size
+            url.streamOffsetLength = size
+            url.streamOffset = 0
+            _url.set(this, url)
+            this.emit('url', url)
             return
           }
         }
@@ -90,14 +111,27 @@ module.exports = class WritableOffStream extends Writable {
                 this.emit('error', err)
                 return
               }
-              //create off block from
+               //create off block from
+              let count = _count.get(this)
               let offBlock = new Block(buf)
+              if(count === 0){
+                let url = _url.get(this)
+                url.hash = offBlock.key
+                _url.set(this, url)
+              }
               let descriptor = _descriptor.get(this)
               let tuple = []
               randoms.forEach((random)=> {
                 offBlock = offBlock.parity(random)
                 tuple.push(random)
               })
+              if(count < 3){
+                let url = _url.get(this)
+                url['tupleBlock' + (count+1)] = offBlock.key
+                _url.set(this, url)
+              }
+              count++
+              _count.set(this, count)
               used = used.concat(randoms.map((block)=> {return block.key}))
               _usedRandoms.set(this, used)
               tuple.unshift(offBlock)
@@ -133,6 +167,9 @@ module.exports = class WritableOffStream extends Writable {
   _write (buf, enc, next) {
     // we need to accumulate when the bufs are tiny
     let accumulator = _accumulator.get(this)
+    let size= _size.get(this)
+    size += buf.length
+    _size.set(this, size)
     accumulator = Buffer.concat([ accumulator, buf ])
     _accumulator.set(this, accumulator)
     if (accumulator.length < _blockSize) {
@@ -162,18 +199,34 @@ module.exports = class WritableOffStream extends Writable {
               return
             }
             //create off block from
+            let count = _count.get(this)
             let offBlock = new Block(buf)
+            if(count === 0){
+              let url = _url.get(this)
+              url.hash = offBlock.key
+              _url.set(this, url)
+            }
+
             let descriptor = _descriptor.get(this)
             let tuple = []
             randoms.forEach((random)=> {
               offBlock = offBlock.parity(random)
               tuple.push(random)
             })
+            if(count < 3){
+              let url = _url.get(this)
+              url['tupleBlock' + (count+1)] = offBlock.key
+              _url.set(this, url)
+            }
+            count++
+            _count.set(this,count)
+
             //store the randoms used this round for exclusion
             used = used.concat(randoms.map((block)=> {return block.key}))
             _usedRandoms.set(this, used)
             tuple.unshift(offBlock)
             descriptor.tuple(tuple)
+
             //save resultant off block
             bc.put(offBlock, (err)=> {
               if (err) {
