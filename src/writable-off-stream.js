@@ -136,6 +136,7 @@ module.exports = class WritableOffStream extends Writable {
               _usedRandoms.set(this, used)
               tuple.unshift(offBlock)
               descriptor.tuple(tuple)
+              _descriptor.set(this, descriptor)
 
               bc.put(offBlock, (err)=> {
                 if (err) {
@@ -226,6 +227,7 @@ module.exports = class WritableOffStream extends Writable {
             _usedRandoms.set(this, used)
             tuple.unshift(offBlock)
             descriptor.tuple(tuple)
+            _descriptor.set(this, descriptor)
 
             //save resultant off block
             bc.put(offBlock, (err)=> {

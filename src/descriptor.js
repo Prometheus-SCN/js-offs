@@ -13,7 +13,7 @@ module.exports = class Descriptor {
     return (_blockArr.length != 0)
   }
 
-  //variadic function and does expect input
+  //variadic function and it does expect input
   tuple () {
     if(_blockArr.length == 0) {
       if (arguments.length === 0) {
@@ -29,8 +29,8 @@ module.exports = class Descriptor {
         args= [...arguments]
       }
 
-      let dblocks = _data.get(this)
-      let data = dblocks[ dblocks.length - 1 ]
+      let dblocks = _data.get(this) // descriptor blocks
+      let data = dblocks[ dblocks.length - 1 ] //data of current descriptor
       let tupBuf = new Buffer(0)
       for (let i = 0; i < args.length; i++) {
         let block = args[ i ]
@@ -39,13 +39,15 @@ module.exports = class Descriptor {
         }
         tupBuf = Buffer.concat([ tupBuf, new Buffer(block.key) ])
       }
-      if ((data.length + tupBuf.length) > (_blockSize - _descriptorPad )) {
+      //
+      if ((data.length + tupBuf.length) <= (_blockSize - _descriptorPad )) { 
+
         data = Buffer.concat([ data, tupBuf ])
         dblocks[ dblocks.length - 1 ] = data
         _data.set(this, dblocks)
       } else {
         data = tupBuf
-        dblocks[ dblocks.length ]
+        dblocks[ dblocks.length ] = data
         _data.set(this, dblocks)
       }
 
@@ -57,7 +59,7 @@ module.exports = class Descriptor {
   blocks () {
     if(_blockArr.length == 0) {
       let dblocks = _data.get(this)
-      if (dblocks.lenth === 1) {
+      if (dblocks.length === 1) {
         _blockArr = [ new Block(dblocks[ 0 ]) ]
         return _blockArr
       } else {

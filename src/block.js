@@ -23,14 +23,15 @@ module.exports = class Block {
       _data.set(this, data)
     } else {
       data = new Buffer(data)
-      if (Buffer.length > _blockSize) {
-        throw new Error('Invalid Block Size: Block exceeds 128kb')
-      }
-      if (Bufer.length < _blockSize) {
-        data = zeroPad(data)
-      }
-      _data.set(this, data)
     }
+    if (data.length > _blockSize) { //TODO: make test cases for all exceptions
+      throw new Error('Invalid Block Size: Block exceeds 128kb')
+    }
+    if (data.length < _blockSize) {
+      data = zeroPad(data)
+    }
+    _data.set(this, data)
+
   }
 
   get data () {
