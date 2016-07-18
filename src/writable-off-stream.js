@@ -125,7 +125,7 @@ module.exports = class WritableOffStream extends Writable {
                 offBlock = offBlock.parity(random)
                 tuple.push(random)
               })
-              if(count < 3){
+              if(count < _tupleSize){
                 let url = _url.get(this)
                 url['tupleBlock' + (count+1)] = offBlock.key
                 _url.set(this, url)

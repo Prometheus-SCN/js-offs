@@ -4,7 +4,8 @@ const BlockCache = require('./block-cache')
 const util = require('./utility')
 const fs =  require('fs')
 const ows = require('./writable-off-stream')
-
+const ors= require('./readable-off-stream')
+const through = require('through2')
 const OffUrl = require('./off-url')
 
 let offUrl = new OffUrl()
@@ -21,9 +22,9 @@ let ws= new ows('../block_cache')
 rs.on('error', (err)=> {throw err})
 //rs.on('end', ()=>{ console.log('read stream ended')})
 //rs.on('data', (data)=>{ console.log('data event: ' + data.length)})
-/*
+
 ws.on('error', (err)=> {throw err})
-ws.on('url', (url) => {
+/*ws.on('url', (url) => {
   console.log(url)
   console.log(url.descriptorHash)
   bc.get(url.descriptorHash, (err, block) =>{
@@ -32,30 +33,47 @@ ws.on('url', (url) => {
     }
     console.log('Retrieved: ' + block.data.length)
   })
-})
+})*/
 ws.on('finish', () => console.log('write stream ended'))
 ws.on('unpipe', () => console.log())
 rs.pipe(ws)
-*/
-/*
+
+
 ws.on('url', (url) => {
-  console.log(url.toString())
-  console.log(url.descriptorHash)
+  let rs=  new ors(url, '../block_cache')
+  rs.on('error', (err)=>{
+    console.log(err)
+  })
+  rs.pipe(through(()=>{}))
 })
+/*
 rs.pipe(ws)*/
-bc.get('QmV7BypqQzo8FMBJUzAc849tKbcqyFXjbaPH7YphPCJr7L', (err, block) =>{
+/*
+bc.get('Qmf1Sb4BHCzDoho8RWzUquBdLbr3q9twCA9u88ExRobV5q', (err, block) =>{
   if (err){
     throw err
   }
   let zeroes = new Buffer(1)
   zeroes = zeroes.fill(0)
   let end = block.data.indexOf(zeroes)
-  console.log('Retrieved: ' + block.data.toString())
-  console.log()
+
   let keybuf = block.data.slice(0, end)
   let keys = keybuf.length / 46
-  console.log(keys/3)
-})
+  let lastKey = keybuf.slice(keybuf.length -46, keybuf.length)
+  console.log(lastKey.length)
+  console.log(lastKey.toString('utf8'))
+  let blocks = []
+  for(let i = 0; i< keybuf.length; i += 46){
+    let block=  keybuf.slice(i, (i+46)).toString('utf8')
+    blocks.push(block)
+  }
+  console.log(blocks)
+  /*
+  bc.get(lastKey.toString('utf8'), (err, block) =>{
+    console.log('I got a block')
+  })*/
+//})
+
 /*
 console.log(block1.key)
 console.log(block2.key)
