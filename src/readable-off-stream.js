@@ -36,7 +36,6 @@ module.exports = class ReadableOffStream extends Readable {
   }
 
   _read () {
-    console.log('start')
     let url = _url.get(this)
     let size = _size.get(this)
     /*if(size === url.streamLength){
@@ -45,7 +44,6 @@ module.exports = class ReadableOffStream extends Readable {
     let descriptor = _descriptor.get(this)
     let bc = _blockCache.get(this)
     let getBlock = ()=>{
-      console.log('happened')
       let tuple =[]
       let key
 
@@ -57,13 +55,13 @@ module.exports = class ReadableOffStream extends Readable {
         if((size + sblock.data.length) > url.streamLength)
         {
           let diff = url.streamLength - (size + sblock.data.length)
-          size += diff
-          //console.log(url.streamLength)
-          size.set(this, size)
+          size = size + diff
+
+          _size.set(this, size)
           this.push(sblock.data.slice(0, diff))
         } else{
-          size += sblock.data.length
-          //console.log(size)
+          size = size + sblock.data.length
+
           _size.set(this, size)
           this.push(sblock.data)
         }
@@ -71,7 +69,6 @@ module.exports = class ReadableOffStream extends Readable {
 
       let i= -1
       let next = (err, block)=>{
-        console.log('getting next')
         if (err) {
           this.emit('error', err)
           return
@@ -148,7 +145,7 @@ module.exports = class ReadableOffStream extends Readable {
         }
 
       })
-    } else{
+    } else {
       getBlock()
     }
   }

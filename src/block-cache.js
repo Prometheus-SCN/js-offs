@@ -13,6 +13,7 @@ function sanitize (key, path) {
       return key
     }
   } else {
+    console.log(key)
     throw new Error("Invalid Key")
   }
 }

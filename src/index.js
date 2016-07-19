@@ -44,7 +44,18 @@ ws.on('url', (url) => {
   rs.on('error', (err)=>{
     console.log(err)
   })
-  rs.pipe(through(()=>{}))
+  rs.on('unpipe', ()=>{
+    console.log('unpipe')
+  })
+  rs.on('end', ()=>{
+    console.log('end')
+  })
+  setTimeout(()=>{
+    console.log(rs.isPaused())
+  }, 10000)
+  rs.pipe(through((buf, enc, nxt)=>{
+    nxt()
+  }))
 })
 /*
 rs.pipe(ws)*/
