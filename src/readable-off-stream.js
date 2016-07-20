@@ -59,6 +59,7 @@ module.exports = class ReadableOffStream extends Readable {
 
           _size.set(this, size)
           this.push(sblock.data.slice(0, diff))
+          this.push(null)
         } else{
           size = size + sblock.data.length
 
@@ -77,8 +78,8 @@ module.exports = class ReadableOffStream extends Readable {
         if (block){
           tuple.push(block)
         }
-        if( i< _tupleSize){
-          key =  descriptor.pop()
+        if( i < _tupleSize){
+          key =  descriptor.shift()
           _descriptor.set(this, descriptor)
           bc.get(key, next)
         } else {
@@ -146,6 +147,9 @@ module.exports = class ReadableOffStream extends Readable {
 
       })
     } else {
+      if(descriptor.length === 0){
+        return this.push(null)
+      }
       getBlock()
     }
   }
