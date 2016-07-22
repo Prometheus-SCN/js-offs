@@ -7,6 +7,14 @@ const ows = require('./writable-off-stream')
 const ors= require('./readable-off-stream')
 const through = require('through2')
 const OffUrl = require('./off-url')
+const importer = require('./importer')
+/*
+importer('./html5up-prologue',{bcPath: '../block_cache'}, (err, url)=>{
+  if(err){
+    throw err
+  }
+  console.log(url.toString())
+})*/
 
 let offUrl = new OffUrl()
 
@@ -20,11 +28,11 @@ let rs= fs.createReadStream('test.pdf')
 let ws= new ows('../block_cache')
 
 rs.on('error', (err)=> {throw err})
-//rs.on('end', ()=>{ console.log('read stream ended')})
-//rs.on('data', (data)=>{ console.log('data event: ' + data.length)})
-
+rs.on('end', ()=>{ console.log('read stream ended')})
+rs.on('data', (data)=>{ console.log('data event: ' + data.length)})
+/*
 ws.on('error', (err)=> {throw err})
-/*ws.on('url', (url) => {
+ws.on('url', (url) => {
   console.log(url)
   console.log(url.descriptorHash)
   bc.get(url.descriptorHash, (err, block) =>{
@@ -33,14 +41,16 @@ ws.on('error', (err)=> {throw err})
     }
     console.log('Retrieved: ' + block.data.length)
   })
-})*/
+})
+
 ws.on('finish', () => console.log('write stream ended'))
 ws.on('unpipe', () => console.log())
 rs.pipe(ws)
-
+*/
 
 ws.on('url', (url) => {
   let rs=  new ors(url, '../block_cache')
+  let ws= fs.createWriteStream('../test.pdf')
   rs.on('error', (err)=>{
     console.log(err)
   })
@@ -53,12 +63,10 @@ ws.on('url', (url) => {
   setTimeout(()=>{
     console.log(rs.isPaused())
   }, 10000)
-  rs.pipe(through((buf, enc, nxt)=>{
-    nxt()
-  }))
+  rs.pipe(ws)
 })
-/*
-rs.pipe(ws)*/
+
+rs.pipe(ws)
 /*
 bc.get('Qmf1Sb4BHCzDoho8RWzUquBdLbr3q9twCA9u88ExRobV5q', (err, block) =>{
   if (err){

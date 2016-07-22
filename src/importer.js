@@ -9,14 +9,14 @@ const streamifier = require('streamifier')
 mime.define({'offsystem/directory':['ofd'] })
 module.exports = importer
 
-function importer (path,callback) {
+function importer (path, options, callback) {
   path = pth.join(path)
-
+  let bcPath= options.bcPath
   if (!callback) {
     throw new Error("No Callback Method Provided")
   }
 
-  fs.stat(path, function (err, stats) {
+  fs.stat(path, (err, stats) => {
     if (err) {
       return callback(err, files)
     }
@@ -24,7 +24,7 @@ function importer (path,callback) {
       let url= new OffUrl()
       url.fileName= pth.basename(path)
       url.contentType = mime.lookup(path)
-      let ws= new ows('../block_cache',{url: url})
+      let ws= new ows({ path: bcPath, url: url}) 
       let rs= fs.createReadStream(path)
       rs.on('error', (err)=> { callback(err)})
       ws.on('error', (err)=> { callback(err)})
@@ -34,9 +34,9 @@ function importer (path,callback) {
       rs.pipe(ws)
     } else if (stats.isDirectory()) {
       let ofd = new Buffer(0)
-      let url= new OffUrl()
-      url.fileName= pth.basename(path) + '.ofd'
-      url.contentType = 'offsystem/directory'
+      let _url= new OffUrl()
+      _url.fileName= pth.basename(path) + '.ofd'
+      _url.contentType = 'offsystem/directory'
       fs.readdir(path, function (err, items) {
         if (err) {
           return callback(err)
@@ -47,7 +47,7 @@ function importer (path,callback) {
 
         let i = -1
         let current;
-        let next = function (err, url) {
+        let next = (err, url) => {
           if(err){
             return callback(err)
           }
@@ -57,9 +57,9 @@ function importer (path,callback) {
           i++
           if (i < contents.length) {
             current = contents[ i ]
-            importer(current, next)
+            importer(current, {bcPath: bcPath}, next)
           } else {
-            let ws= new ows('../block_cache',{url: url})
+            let ws= new ows({path:'../block_cache' , url: _url})
             let rs= streamifier.createReadStream(ofd)
             rs.on('error', (err)=> { callback(err)})
             ws.on('error', (err)=> { callback(err)})

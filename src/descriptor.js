@@ -3,19 +3,20 @@ const Block = require('./block')
 let _data = new WeakMap()
 const _descriptorPad = 46
 const _blockSize = 128000
-let _blockArr =[]
+let _blockArr  = new WeakMap()
 module.exports = class Descriptor {
   constructor () {
     _data.set(this, [ new Buffer(0) ])
+    _blockArr.set(this, [])
   }
   //once blocks have been created the descriptor is sealed
   get sealed(){
-    return (_blockArr.length != 0)
+    return (_blockArr.get(this).length !== 0)
   }
 
   //variadic function and it does expect input
   tuple () {
-    if(_blockArr.length == 0) {
+    if(!this.sealed) {
       if (arguments.length === 0) {
         throw new Error('Invalid Tuple')
       }
@@ -57,11 +58,13 @@ module.exports = class Descriptor {
   }
 
   blocks () {
-    if(_blockArr.length == 0) {
+    let blockArr = _blockArr.get(this)
+    if(blockArr.length == 0) {
       let dblocks = _data.get(this)
       if (dblocks.length === 1) {
-        _blockArr = [ new Block(dblocks[ 0 ]) ]
-        return _blockArr
+        blockArr = [ new Block(dblocks[ 0 ]) ]
+        _blockArr.set(this, blockArr)
+        return blockArr
       } else {
         let last
         for (let i = (dblocks.length - 1); i >= 0; i--) {
@@ -71,14 +74,15 @@ module.exports = class Descriptor {
             dblocks[ i ] = data
           }
           let block = new Block(data)
-          _blockArr.unshift(block)
+          blockArr.unshift(block)
+          _blockArr.set(this, blockArr)
           last = new Buffer(block.key)
         }
         _data.set(this, dblocks)
-        return _blockArr
+        return blockArr
       }
     } else{
-      return _blockArr
+      return blockArr
     }
   }
 }

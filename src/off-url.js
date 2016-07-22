@@ -11,6 +11,7 @@ _tupleBlock3 = new WeakMap()
 _streamOffset = new WeakMap()
 _streamOffsetLength = new WeakMap()
 _fileName = new WeakMap()
+_version = new WeakMap()
 module.exports = class OffUrl {
   constructor (options) {
     _serverAddress.set(this, 'http://localhost:23402')
@@ -18,12 +19,11 @@ module.exports = class OffUrl {
     _contentType.set(this, 'application/octet-stream')
     _streamOffset.set(this, 0)
     _streamOffsetLength.set(this, 0)
+    _version.set(this,'v3')
   }
 
-  toString () {
-    return  [this.serverAddress, this.applicationPath, this.contentType,
-      this.hash, this.streamLength, this.fileHash , this.descriptorHash, this.tupleBlock1,
-    this.tupleBlock2, this.tupleBlock3, this.streamOffset + ':' + this.streamOffsetLength, this.fileName].join('/')
+  toString () { // this is a version 3 url
+    return [ this.serverAddress, this.applicationPath, this.version, this.contentType, this.streamLength, this.fileHash, this.descriptorHash, this.fileName ].join('/')
   }
 
   get serverAddress () {
@@ -157,7 +157,16 @@ module.exports = class OffUrl {
     }
     _fileName.set(this, value)
   }
+  get version () {
+    return  _version.get(this)
+  }
 
+  set version(value) {
+    if (typeof value !== 'string') {
+      throw new Error("version must be a string")
+    }
+    _version.set(this, value)
+  }
   static fromURL () {
 
   }
