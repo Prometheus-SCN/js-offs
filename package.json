@@ -12,7 +12,9 @@
   "dependencies": {
     "block-stream2": "^1.1.0",
     "bs58": "^3.0.0",
+    "buffer-split": "^1.0.0",
     "buffer-xor": "^2.0.1",
+    "collect-stream": "^1.1.1",
     "end-of-stream": "^1.1.0",
     "express": "^4.14.0",
     "fs-blob-store": "^5.2.1",

@@ -5,7 +5,12 @@ const OffUrl =require('./off-url')
 const pth = require('path')
 const mime = require('mime')
 const streamifier = require('streamifier')
-
+let basename
+if(/^win/.test(process.platform)){
+  basename=pth.win32.basename
+} else {
+  basename=pth.posix.basename
+}
 mime.define({'offsystem/directory':['ofd'] })
 module.exports = importer
 
@@ -22,7 +27,7 @@ function importer (path, options, callback) {
     }
     if (stats.isFile()) {
       let url= new OffUrl()
-      url.fileName= pth.basename(path)
+      url.fileName= basename(path) //TODO: need to use the operating system specific variants
       url.contentType = mime.lookup(path)
       let ws= new ows({ path: bcPath, url: url}) 
       let rs= fs.createReadStream(path)

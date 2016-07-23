@@ -59,6 +59,17 @@ module.exports = class OffUrl {
     _contentType.set(this, value)
   }
 
+  get streamLength () {
+    return _streamLength.get(this)
+  }
+
+  set streamLength (value) {
+    if (isNaN(value)) {
+      throw new Error("Stream length must be a number")
+    }
+    _streamLength.set(this, value)
+  }
+  
   get hash () {
     return _hash.get(this)
   }
