@@ -17,7 +17,7 @@ if (/^win/.test(process.platform)) {
 let off = express()
 
 
-off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
+off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
   (req, res)=> {
     let url = new OffUrl()
     url.contentType = req.params[ 0 ]
@@ -28,6 +28,9 @@ off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQR
     let rs = new ors(url, '../block_cache')
     if (url.contentType === 'offsystem/directory') {
       collect(rs, (err, data)=> {
+        if(!data){
+          return res.status(404).send("Resource Not Found")
+        }
         let lines = data.toString('utf8').split('\n')
         let stats = parse(url.fileName)
         if (stats.dir) {
@@ -37,12 +40,15 @@ off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQR
             if (err) {
               throw err
             }
+            if(!data && i != -1){
+              return res.status(404).send("Resource Not Found")
+            }
             if (data) {
               lines = data.toString('utf8').split('\n')
             }
             i++
             if (i < dirs.length) {
-              let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+              let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
               let file =  dirs[ i ] + ".ofd"
               let found
               let path = lines.find((line)=> {
@@ -64,7 +70,7 @@ off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQR
                 return res.status(404).send("Resource Not Found")
               }
             } else {
-              let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+              let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
               let path = lines.find((line)=> {
                 return  basename(line) == stats.base
               })
@@ -80,7 +86,7 @@ off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQR
                 if (url.contentType === 'offsystem/directory') {
                   collect(rs, (err, data)=> {
                     let lines = data.toString('utf8').split('\n')
-                    let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+                    let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
                     let index = lines.find((line)=> {
                       return basename(line) == "index.html"
                     })
@@ -113,7 +119,7 @@ off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQR
           }
           next()
         } else {
-          let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+          let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
           let index = lines.find((line)=> {
             return basename(line) == "index.html"
           })
@@ -148,7 +154,7 @@ off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQR
    url.contentType = req.get('content-type')
    url.fileName = req.get('file-name')
    url.streamLength= req.get('stream-length')
-   console.log(req.body)
+
    let ws = new ows({ path: '../block_cache', url: url})
    ws.on('url', (url)=>{
      res.write(url.toString())
