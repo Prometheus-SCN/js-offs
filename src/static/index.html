@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Off System</title>
+    <link rel="stylesheet" href="dropzone.css">
+</head>
+<body>
+    <h1>Off System</h1>
+    <div id="dropzone">
+        Upload
+    </div>
+    <style>
+        #dropzone{
+            border-style: dotted;
+            border-width: 5px;
+            width: 800px;
+            height: 800px;
+            font-family: Arial;
+        }
+    </style>
+    <script src="dropzone.js"></script>
+    <script type="text/javascript">
+        var div = document.getElementById('dropzone');
+        var dropzone = new Dropzone(div, {url:'/offsystem', uploadMultiple: false ,  autoProcessQueue: false });
+        dropzone.on('drop', function(e) {
+            console.log(e)
+            var length = e.dataTransfer.items.length;
+            for (var i = 0; i < length; i++) {
+                var entry = e.dataTransfer.items[i].webkitGetAsEntry();
+                if (entry.isFile) {
+                    var file = e.dataTransfer.items[i].getAsFile();
+
+
+                        var xhr= new XMLHttpRequest();
+                        xhr.open('PUT','/offsystem', true);
+                        xhr.setRequestHeader('content-type', file.type);
+                        xhr.setRequestHeader('file-name', file.name);
+                        xhr.setRequestHeader('stream-length', file.size);
+                        xhr.addEventListener('load', function(e){
+                            console.log(e);
+                            dropzone.removeFile(file);
+                        })
+                        xhr.addEventListener('error', function(e){
+                            console.log(e);
+                            dropzone.removeFile(file);
+                        })
+                        xhr.send(file);
+
+
+
+
+                } else if (entry.isDirectory) {
+                    console.log('isDirectory')
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -8,14 +8,15 @@ const ors= require('./readable-off-stream')
 const through = require('through2')
 const OffUrl = require('./off-url')
 const importer = require('./importer')
-/*
+const mime = require('mime')
+
 importer('./html5up-prologue',{bcPath: '../block_cache'}, (err, url)=>{
   if(err){
     throw err
   }
   console.log(url.toString())
-})*/
-
+})
+/*
 let offUrl = new OffUrl()
 
 
@@ -25,11 +26,15 @@ let block1 = Block.randomBlock()
 let block2 = Block.randomBlock()
 let parity = Block.parityBlock(block1, block2)
 let rs= fs.createReadStream('test.pdf')
-let ws= new ows('../block_cache')
-
+let url = new OffUrl()
+url.contentType = mime.lookup('test.pdf')
+url.fileName= 'test.pdf'
+let ws= new ows({ path: '../block_cache', url: url})
+/*
 rs.on('error', (err)=> {throw err})
 rs.on('end', ()=>{ console.log('read stream ended')})
 rs.on('data', (data)=>{ console.log('data event: ' + data.length)})
+*/
 /*
 ws.on('error', (err)=> {throw err})
 ws.on('url', (url) => {
@@ -47,8 +52,9 @@ ws.on('finish', () => console.log('write stream ended'))
 ws.on('unpipe', () => console.log())
 rs.pipe(ws)
 */
-
+  /*
 ws.on('url', (url) => {
+  console.log(url.toString())
   let rs=  new ors(url, '../block_cache')
   let ws= fs.createWriteStream('../test.pdf')
   rs.on('error', (err)=>{

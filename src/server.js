@@ -2,6 +2,7 @@
 const express = require('express')
 const OffUrl = require('./off-url')
 const ors = require('./readable-off-stream')
+const ows = require('./writable-off-stream')
 const collect = require('collect-stream')
 const bufsplit = require('buffer-split')
 const pth = require('path')
@@ -14,15 +15,9 @@ if (/^win/.test(process.platform)) {
 }
 
 let off = express()
-/*
- off.use('/offsystem', express.static('wwww'))
- off.get('/', (req, res)=>{
- res.redirect('/offsystem')
- })
- off.get('/', (req, res)=>{
- res.redirect('/offsystem')
- })*/
-off.get(/\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
+
+
+off.get(/\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
   (req, res)=> {
     let url = new OffUrl()
     url.contentType = req.params[ 0 ]
@@ -47,7 +42,7 @@ off.get(/\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRST
             }
             i++
             if (i < dirs.length) {
-              let reg = /\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+              let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
               let file =  dirs[ i ] + ".ofd"
               let found
               let path = lines.find((line)=> {
@@ -69,7 +64,7 @@ off.get(/\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRST
                 return res.status(404).send("Resource Not Found")
               }
             } else {
-              let reg = /\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+              let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
               let path = lines.find((line)=> {
                 return  basename(line) == stats.base
               })
@@ -85,7 +80,7 @@ off.get(/\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRST
                 if (url.contentType === 'offsystem/directory') {
                   collect(rs, (err, data)=> {
                     let lines = data.toString('utf8').split('\n')
-                    let reg = /\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+                    let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
                     let index = lines.find((line)=> {
                       return basename(line) == "index.html"
                     })
@@ -118,7 +113,7 @@ off.get(/\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRST
           }
           next()
         } else {
-          let reg = /\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
+          let reg = /\/offsystem\/v3\/([-+\w]+\/[-+\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
           let index = lines.find((line)=> {
             return basename(line) == "index.html"
           })
@@ -146,11 +141,23 @@ off.get(/\/offsystem\/v3\/([-\w]+\/[-\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRST
       rs.pipe(res)
     }
   })
-/*
- off.put('/offsystem', (req, res)=>{
- req.files.displayImage.path
- })*/
 
+ off.put('/offsystem/', (req, res)=>{
+   let url = new OffUrl()
+   url.serverAddress= req.get('server-address') || url.serverAddress
+   url.contentType = req.get('content-type')
+   url.fileName = req.get('file-name')
+   url.streamLength= req.get('stream-length')
+   console.log(req.body)
+   let ws = new ows({ path: '../block_cache', url: url})
+   ws.on('url', (url)=>{
+     res.write(url.toString())
+     res.end()
+   })
+   req.pipe(ws)
+
+ })
+off.use(express.static('./static'))
 off.listen(23402, ()=> {
   console.log('listening at localhost:23402')
 })
