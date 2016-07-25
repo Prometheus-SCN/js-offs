@@ -151,7 +151,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
  off.put('/offsystem/', (req, res)=>{
    let url = new OffUrl()
    url.serverAddress= req.get('server-address') || url.serverAddress
-   url.contentType = req.get('content-type')
+   url.contentType = req.get('content-type')  || url.contentType
    url.fileName = req.get('file-name')
    url.streamLength= req.get('stream-length')
 

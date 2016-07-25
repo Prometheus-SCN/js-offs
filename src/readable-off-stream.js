@@ -111,7 +111,7 @@ module.exports = class ReadableOffStream extends Readable {
           }
           _descriptor.set(this, descriptor)
           //get the next descriptor block
-          let nextDesc = keybuf.slice(keybuf.length - _descriptorPad, keybuf.length).toSting('utf8')
+          let nextDesc = keybuf.slice(keybuf.length - _descriptorPad, keybuf.length).toString('utf8')
           //callback loop function
           let getNext = (err, block)=> {
             if (err) {

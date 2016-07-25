@@ -21,13 +21,14 @@
         </div>
 
     </div>
+    <div id="dztrash" style="display:none"></div>
 
     <script src="dropzone.js"></script>
 
     <script type="text/javascript">
         var div = document.getElementById('dropzone');
         var resolverLink= document.getElementById('resolverLink');
-        var dropzone = new Dropzone(div, {url:'/offsystem', uploadMultiple: false ,  autoProcessQueue: false });
+        var dropzone = new Dropzone(div, {url:'/offsystem', previewsContainer: 'dztrash', uploadMultiple: false ,  autoProcessQueue: false });
         var loader = document.getElementById('loader');
         var message = document.getElementById('uploadMessage');
         var icon = document.getElementById('uploadIcon');
@@ -62,7 +63,7 @@
             function uploadFile(file, dropzone){
                 var xhr= new XMLHttpRequest();
                 xhr.open('PUT','/offsystem', true);
-                xhr.setRequestHeader('content-type', file.type);
+                xhr.setRequestHeader('content-type', file.type || 'application/octet-stream');
                 xhr.setRequestHeader('file-name', file.name);
                 xhr.setRequestHeader('stream-length', file.size);
                 xhr.addEventListener('load', function(e){
