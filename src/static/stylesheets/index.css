@@ -22,17 +22,19 @@ h1, h2, h3{
     align-self: center;
     align-content: center;
     justify-content: center;
+    font-weight: inherit;
 }
 
 #dropzone{
     font-family:Odin;
     background-color: #edf0f2;
     padding: 0;
-    margin:0 auto 40px auto;
+    margin:0 auto 0 auto;
     display: flex;
     border-color: #878787;
     border-style: dotted;
-    border-width: 5px;
+    border-width: 10px;
+    padding:3px;
     color: #878787;
     outline: 5px solid #edf0f2;
 
@@ -61,6 +63,7 @@ h1, h2, h3{
 #container{
     width:100%;
     background-color: #313181;
+    padding-bottom: 40px;
 }
 
 .button {
@@ -88,5 +91,5 @@ h1, h2, h3{
 .upload{
     width: 208px;
     height: 208px;
-    margin: 0 auto 0 auto;
+    margin: 0 auto 3px auto;
 }
