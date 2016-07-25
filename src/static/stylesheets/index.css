@@ -34,6 +34,7 @@ h1, h2, h3{
     border-style: dotted;
     border-width: 5px;
     color: #878787;
+    outline: 5px solid #edf0f2;
 
     width:  80%;
     height: 250px;
