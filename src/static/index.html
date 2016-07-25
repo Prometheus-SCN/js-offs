@@ -16,9 +16,10 @@
     <div id="container">
         <div class="resolver"><input id="resolverLink" type="text" class="textbox"><input type="button" class="button" onclick="resolve()" value="resolve" ></div>
         <div id="dropzone">
-            <h3>Drag and Drop a File or Folder</h3>
-            <img src="images/upload.svg" class="upload">
+            <h3 id="uploadMessage">Drag and Drop a File or Folder</h3>
+            <img id="uploadIcon" src="images/upload.svg" class="upload">
         </div>
+
     </div>
 
     <script src="dropzone.js"></script>
@@ -27,10 +28,14 @@
         var div = document.getElementById('dropzone');
         var resolverLink= document.getElementById('resolverLink');
         var dropzone = new Dropzone(div, {url:'/offsystem', uploadMultiple: false ,  autoProcessQueue: false });
+        var loader = document.getElementById('loader');
+        var message = document.getElementById('uploadMessage');
+        var icon = document.getElementById('uploadIcon');
         function resolve(){
             window.location= resolverLink.value;
         }
         dropzone.on('drop', function(e) {
+            startLoader();
             var length = e.dataTransfer.items.length;
             for (var i = 0; i < length; i++) {
                 var entry = e.dataTransfer.items[i].webkitGetAsEntry();
@@ -38,7 +43,21 @@
                     uploadFile( e.dataTransfer.items[i].getAsFile(), dropzone);
                 } else if (entry.isDirectory) {
                     console.log('isDirectory')
+                    console.log(e.dataTransfer.items[i])
                 }
+            }
+            function getRandomInt(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+            function startLoader(){
+                message.innerHTML='Dissolving...';
+                icon.setAttribute('src','images/Preloader_' + getRandomInt(1,7) +'.gif');
+                div.setAttribute('style',"background-color: #fff; outline: 5px solid #fff;")
+            }
+            function endLoader(){
+                message.innerHTML='Drag and Drop a File or Folder';
+                icon.setAttribute('src','images/upload.svg');
+                div.setAttribute('style',"")
             }
             function uploadFile(file, dropzone){
                 var xhr= new XMLHttpRequest();
@@ -49,9 +68,11 @@
                 xhr.addEventListener('load', function(e){
                     resolverLink.value= e.target.responseText
                     dropzone.removeFile(file);
+                    setTimeout(endLoader,3000);
                 })
                 xhr.addEventListener('error', function(e){
                     dropzone.removeFile(file);
+                    setTimeout(endLoader,3000);
                 })
                 xhr.send(file);
             }
