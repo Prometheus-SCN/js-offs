@@ -3,56 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <title>Off System</title>
-    <link rel="stylesheet" href="dropzone.css">
+    <link rel="stylesheet" href="./stylesheets/index.css">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <link rel="image_src" href="/images/off-logo.gif" />
 </head>
 <body>
-    <h1>Off System</h1>
-    <div id="dropzone">
-        Upload
+    <div id="billboard">
+        <img src="images/off-logo-lettered.svg" id="logo">
+        <h1>Owner Free File System</h1>
+        <h2>Own Nothing! Access Everything!</h2>
     </div>
-    <style>
-        #dropzone{
-            border-style: dotted;
-            border-width: 5px;
-            width: 800px;
-            height: 800px;
-            font-family: Arial;
-        }
-    </style>
+    <div id="container">
+        <div class="resolver"><input id="resolverLink" type="text" class="textbox"><input type="button" class="button" onclick="resolve()" value="resolve" ></div>
+        <div id="dropzone">
+            <h3>Drag and Drop a File or Folder</h3>
+            <img src="images/upload.svg">
+        </div>
+    </div>
+
     <script src="dropzone.js"></script>
+
     <script type="text/javascript">
         var div = document.getElementById('dropzone');
+        var resolverLink= document.getElementById('resolverLink');
         var dropzone = new Dropzone(div, {url:'/offsystem', uploadMultiple: false ,  autoProcessQueue: false });
+        function resolve(){
+            window.location= resolverLink.value;
+        }
         dropzone.on('drop', function(e) {
-            console.log(e)
             var length = e.dataTransfer.items.length;
             for (var i = 0; i < length; i++) {
                 var entry = e.dataTransfer.items[i].webkitGetAsEntry();
                 if (entry.isFile) {
-                    var file = e.dataTransfer.items[i].getAsFile();
-
-
-                        var xhr= new XMLHttpRequest();
-                        xhr.open('PUT','/offsystem', true);
-                        xhr.setRequestHeader('content-type', file.type);
-                        xhr.setRequestHeader('file-name', file.name);
-                        xhr.setRequestHeader('stream-length', file.size);
-                        xhr.addEventListener('load', function(e){
-                            console.log(e);
-                            dropzone.removeFile(file);
-                        })
-                        xhr.addEventListener('error', function(e){
-                            console.log(e);
-                            dropzone.removeFile(file);
-                        })
-                        xhr.send(file);
-
-
-
-
+                    uploadFile( e.dataTransfer.items[i].getAsFile(), dropzone);
                 } else if (entry.isDirectory) {
                     console.log('isDirectory')
                 }
+            }
+            function uploadFile(file, dropzone){
+                var xhr= new XMLHttpRequest();
+                xhr.open('PUT','/offsystem', true);
+                xhr.setRequestHeader('content-type', file.type);
+                xhr.setRequestHeader('file-name', file.name);
+                xhr.setRequestHeader('stream-length', file.size);
+                xhr.addEventListener('load', function(e){
+                    resolverLink.value= e.target.responseText
+                    dropzone.removeFile(file);
+                })
+                xhr.addEventListener('error', function(e){
+                    dropzone.removeFile(file);
+                })
+                xhr.send(file);
             }
         });
     </script>
