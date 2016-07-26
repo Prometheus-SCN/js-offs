@@ -103,7 +103,7 @@ module.exports = class ReadableOffStream extends Readable {
         let keys = keybuf.length / _descriptorPad // determine total number of keys available
 
 
-        if (keys % _tupleSize === 1) {// if the keys have a remainder there is more than one descriptor block
+        if (keys % _tupleSize !== 0) {// if the keys have a remainder there is more than one descriptor block
           //loop through all but last key and add to descriptor set
           for (let i = 0; i < keybuf.length - _descriptorPad; i += _descriptorPad) {
             let block = keybuf.slice(i, (i + _descriptorPad)).toString('utf8')
@@ -122,7 +122,12 @@ module.exports = class ReadableOffStream extends Readable {
             let keybuf = block.data.slice(0, end)
             let keys = keybuf.length / _descriptorPad
             if (keys % _tupleSize !== 0) {
-              let nextDesc = keybuf.slice(keybuf.length - _descriptorPad, keybuf.length).toSting('utf8')
+              let nextDesc = keybuf.slice(keybuf.length - _descriptorPad, keybuf.length).toString('utf8')
+              for (let i = 0; i < keybuf.length - _descriptorPad; i += _descriptorPad) {
+                let block = keybuf.slice(i, (i + _descriptorPad)).toString('utf8')
+                descriptor.push(block)
+              }
+              _descriptor.set(this, descriptor)
               bc.get(nextDesc, getNext)
             } else {
               for (let i = 0; i < keybuf.length; i += _descriptorPad) {
@@ -132,9 +137,8 @@ module.exports = class ReadableOffStream extends Readable {
               _descriptor.set(this, descriptor)
               getBlock()
             }
-
           }
-
+          bc.get(nextDesc, getNext)
         } else {
           //loop till the end adding to the descriptor set
           for (let i = 0; i < keybuf.length; i += _descriptorPad) {
