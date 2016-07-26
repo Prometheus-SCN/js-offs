@@ -71,9 +71,9 @@ module.exports = class WritableOffStream extends Writable {
             let block = dBlocks[ i ]
             bc.put(block, (err)=> {
               if (err) {
-                return next(err)
+                return process.nextTick(()=>{next(err)})
               }
-              return next(err)
+              return process.nextTick(()=>{next(err)})
             })
           } else {
             let hasher = _hasher.get(this)
@@ -143,7 +143,7 @@ module.exports = class WritableOffStream extends Writable {
                   this.emit('error', err)
                   return
                 }
-                return nxt(null, buf)
+                return process.nextTick(()=>{nxt(null, buf)})
               })
 
             })
@@ -152,11 +152,11 @@ module.exports = class WritableOffStream extends Writable {
             let hasher = _hasher.get(this)
             hasher.update(buf)
             _hasher.set(this, hasher)
-            return nxt()
+            return process.nextTick(()=>{nxt()})
           }))
           .on('finish', genURL)
       } else {
-        genURL()
+        process.nextTick(genURL)
       }
     })
   }
@@ -235,7 +235,7 @@ module.exports = class WritableOffStream extends Writable {
                 this.emit('error', err)
                 return
               }
-              return nxt(null, buf)
+              return process.nextTick(()=>{nxt(null, buf)})
             })
 
           })
@@ -244,7 +244,7 @@ module.exports = class WritableOffStream extends Writable {
           let hasher = _hasher.get(this)
           hasher.update(buf)
           _hasher.set(this, hasher)
-          return nxt()
+          return process.nextTick(nxt)
         }))
         .on('finish', ()=> {
           next()

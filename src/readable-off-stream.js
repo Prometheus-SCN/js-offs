@@ -83,7 +83,7 @@ module.exports = class ReadableOffStream extends Readable {
           _descriptor.set(this, descriptor)
           bc.get(key, next)
         } else {
-          return yieldBlock()
+          return process.nextTick(()=>{yieldBlock()})
         }
       }
       next()
@@ -135,7 +135,7 @@ module.exports = class ReadableOffStream extends Readable {
                 descriptor.push(block)
               }
               _descriptor.set(this, descriptor)
-              getBlock()
+              process.nextTick(getBlock)
             }
           }
           bc.get(nextDesc, getNext)
@@ -146,7 +146,7 @@ module.exports = class ReadableOffStream extends Readable {
             descriptor.push(block)
           }
           _descriptor.set(this, descriptor)
-          getBlock()
+          process.nextTick(getBlock)
         }
 
       })
@@ -154,7 +154,7 @@ module.exports = class ReadableOffStream extends Readable {
       if(descriptor.length === 0){
         return this.push(null)
       }
-      getBlock()
+      process.nextTick(getBlock)
     }
   }
 }

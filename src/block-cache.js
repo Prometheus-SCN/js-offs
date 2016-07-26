@@ -13,7 +13,6 @@ function sanitize (key, path) {
       return key
     }
   } else {
-    console.log(key)
     throw new Error("Invalid Key")
   }
 }
@@ -41,14 +40,14 @@ module.exports =
         throw new Error('Invalid Callback')
       }
       if (!(block instanceof Block)) {
-        return cb(new Error('Invalid Block'))
+        return process.nextTick(()=>{cb(new Error('Invalid Block'))})
       }
 
       this.has(block.key, (found, fd)=> {
         if (!found) {
           fs.writeFile(fd, block.data, cb)
         } else {
-          return cb()
+          return process.nextTick(cb)
         }
       })
     }
@@ -60,9 +59,9 @@ module.exports =
       let fd = sanitize(key, this.path)
       fs.readFile(fd, (err, buf) => {
         if (err) {
-         return cb(err)
+         return process.nextTick(()=>{cb(err)})
         } else {
-          return cb(null, new Block(buf))
+          return process.nextTick(()=>{cb(null, new Block(buf))})
         }
       })
     }
@@ -74,16 +73,16 @@ module.exports =
       let fd = sanitize(key, this.path)
       fs.stat(fd, (err)=> {
         if (err) {
-          return cb(false, fd)
+          return process.nextTick(()=>{cb(false, fd)})
         } else {
-          return cb(true, fd)
+          return process.nextTick(()=>{cb(true, fd)})
         }
       })
     }
 
     randomBlocks (number, used, cb) {
       if (isNaN(number)) {
-        return cb(new Error('Invalid Number'))
+        return process.nextTick(()=>{cb(new Error('Invalid Number'))})
       }
       if(typeof used === 'function'){
         cb= used
@@ -94,7 +93,7 @@ module.exports =
       let commit = false
       fs.readdir(this.path, (err, items)=> {
         if (err) {
-          return cb(err)
+          return process.nextTick(()=>{cb(err)})
         }
 
         items = items.filter((block)=>{
@@ -119,7 +118,7 @@ module.exports =
           let i = -1
           let next= (err, block)=>{
             if(err){
-              return cb(err)
+              return process.nextTick(()=>{cb(err)})
             }
             if (block) {
               blockArray.push(block)
@@ -132,18 +131,18 @@ module.exports =
                 let i = -1
                 let commit = (err)=>{
                   if(err){
-                    return cb(err)
+                    return process.nextTick(()=>{cb(err)})
                   }
                   i++
                   if( i < blockArray.length){
                     this.put(blockArray[i], commit)
                   } else {
-                    return cb(null, blockArray)
+                    return process.nextTick(()=>{cb(null, blockArray)})
                   }
                 }
                 commit()
               } else{
-                return cb(null, blockArray)
+                return process.nextTick(()=>{cb(null, blockArray)})
               }
             }
           }
@@ -153,18 +152,18 @@ module.exports =
             let i = -1
             let commit = (err)=>{
               if(err){
-                return cb(err)
+                return process.nextTick(()=>{cb(err)})
               }
               i++
               if( i < blockArray.length){
                 this.put(blockArray[i], commit)
               } else {
-                return cb(null, blockArray)
+                return process.nextTick(()=>{cb(null, blockArray)})
               }
             }
             commit()
           } else{
-            return cb(null, blockArray)
+            return process.nextTick(()=>{cb(null, blockArray)})
           }
         }
       })
