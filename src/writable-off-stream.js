@@ -179,76 +179,55 @@ module.exports = class WritableOffStream extends Writable {
       buf = accumulator.slice(0, _blockSize)
       accumulator = accumulator.slice(_blockSize)
       _accumulator.set(this, accumulator)
-      // stream for the purpose of chunking 128kb blocks
-      let bufStream
-      if (Buffer.isBuffer(buf)) {
-        bufStream = streamifier.createReadStream(buf)
-      }
-      if (!isStream.isReadable(bufStream)) {
-        this.emit('error', new Error('Invalid Input'))
-        return
-      }
+      let hasher = _hasher.get(this)
+      hasher.update(buf)
+      _hasher.set(this, hasher)
       let bc = _blockCache.get(this)
       let used = _usedRandoms.get(this)
-      //Start Chunking and processing chunks into blocks
-      bufStream.pipe(blocker({ size: _blockSize, zeroPadding: false }))
-        .pipe(through((buf, enc, nxt)=> {
+      bc.randomBlocks((_tupleSize - 1), used, (err, randoms)=> {
+        if (err) {
+          this.emit('error', err)
+          return
+        }
+        //create off block from
+        let count = _count.get(this)
+        let offBlock = new Block(buf)
+        if (count === 0) {
+          let url = _url.get(this)
+          url.hash = offBlock.key
+          _url.set(this, url)
+        }
 
-          bc.randomBlocks((_tupleSize - 1), used, (err, randoms)=> {
-            if (err) {
-              this.emit('error', err)
-              return
-            }
-            //create off block from
-            let count = _count.get(this)
-            let offBlock = new Block(buf)
-            if(count === 0){
-              let url = _url.get(this)
-              url.hash = offBlock.key
-              _url.set(this, url)
-            }
-
-            let descriptor = _descriptor.get(this)
-            let tuple = []
-            randoms.forEach((random)=> {
-              offBlock = offBlock.parity(random)
-              tuple.push(random)
-            })
-            if(count < 3){
-              let url = _url.get(this)
-              url['tupleBlock' + (count+1)] = offBlock.key
-              _url.set(this, url)
-            }
-            count++
-            _count.set(this,count)
-
-            //store the randoms used this round for exclusion
-            used = used.concat(randoms.map((block)=> {return block.key}))
-            _usedRandoms.set(this, used)
-            tuple.unshift(offBlock)
-            descriptor.tuple(tuple)
-            _descriptor.set(this, descriptor)
-
-            //save resultant off block
-            bc.put(offBlock, (err)=> {
-              if (err) {
-                this.emit('error', err)
-                return
-              }
-              return process.nextTick(()=>{nxt(null, buf)})
-            })
-
-          })
-        }))//hash original file
-        .pipe(through((buf, enc, nxt)=> {
-          let hasher = _hasher.get(this)
-          hasher.update(buf)
-          _hasher.set(this, hasher)
-          return process.nextTick(nxt)
-        }))
-        .on('finish', ()=> {
-          next()
+        let descriptor = _descriptor.get(this)
+        let tuple = []
+        randoms.forEach((random)=> {
+          offBlock = offBlock.parity(random)
+          tuple.push(random)
         })
+        if (count < 3) {
+          let url = _url.get(this)
+          url[ 'tupleBlock' + (count + 1) ] = offBlock.key
+          _url.set(this, url)
+        }
+        count++
+        _count.set(this, count)
+
+        //store the randoms used this round for exclusion
+        used = used.concat(randoms.map((block)=> {return block.key}))
+        _usedRandoms.set(this, used)
+        tuple.unshift(offBlock)
+        descriptor.tuple(tuple)
+        _descriptor.set(this, descriptor)
+
+        //save resultant off block
+        bc.put(offBlock, (err)=> {
+          if (err) {
+            this.emit('error', err)
+            return
+          }
+          return process.nextTick(next)
+        })
+      })
     }
   }
 
