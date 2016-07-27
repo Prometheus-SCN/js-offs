@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Off System</title>
     <link rel="stylesheet" href="./stylesheets/index.css">
+    <link rel="stylesheet" href="./stylesheets/progressjs.css">
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <link rel="image_src" href="/images/off-logo.gif" />
 </head>
@@ -14,7 +15,7 @@
         <h2>Own Nothing! Access Everything!</h2>
     </div>
     <div id="container">
-        <div class="resolver"><input id="resolverLink" type="text" class="textbox"><input type="button" class="button" onclick="resolve()" value="resolve" ></div>
+        <div class="resolver"><input id="resolverLink" type="text" class="textbox" onkeypress="return enter(event)"><input type="button" class="button" onclick="resolve()" value="Resolve" ></div>
         <div id="dropzone">
             <h3 id="uploadMessage">Drag and Drop a File or Folder</h3>
             <img id="uploadIcon" src="images/upload.svg" class="upload">
@@ -24,7 +25,7 @@
     <div id="dztrash" style="display:none"></div>
 
     <script src="dropzone.js"></script>
-
+    <script src="progress.js"></script>
     <script type="text/javascript">
         var div = document.getElementById('dropzone');
         var resolverLink= document.getElementById('resolverLink');
@@ -32,8 +33,17 @@
         var loader = document.getElementById('loader');
         var message = document.getElementById('uploadMessage');
         var icon = document.getElementById('uploadIcon');
+        var timer
         function resolve(){
-            window.location= resolverLink.value;
+            if(resolverLink.value) {
+                window.location = resolverLink.value;
+            }
+        }
+        function enter(e){
+            if(e.keyCode == 13){
+                resolve()
+            }
+            return false
         }
         dropzone.on('drop', function(e) {
             startLoader();
@@ -51,29 +61,49 @@
                 return Math.floor(Math.random() * (max - min + 1)) + min;
             }
             function startLoader(){
+                progressJs().start()
                 message.innerHTML='Dissolving...';
+                var messages= ['Dissolving', 'Dissolving.', 'Dissolving..','Dissolving...'];
+                var i = 0;
+                timer= setInterval(function(){
+                    i++;
+                    if( i > messages.length-1){
+                        i = 0;
+                    }
+                    message.innerHTML= messages[i];
+
+                }, 500);
                 icon.setAttribute('src','images/Preloader_' + getRandomInt(1,7) +'.gif');
                 div.setAttribute('style',"background-color: #fff; outline: 5px solid #fff;")
             }
             function endLoader(){
+                progressJs().end()
+                clearInterval(timer)
                 message.innerHTML='Drag and Drop a File or Folder';
                 icon.setAttribute('src','images/upload.svg');
-                div.setAttribute('style',"")
+                div.setAttribute('style',"");
+                resolverLink.focus();
             }
             function uploadFile(file, dropzone){
                 var xhr= new XMLHttpRequest();
                 xhr.open('PUT','/offsystem', true);
+                xhr.setRequestHeader('server-address', window.location.origin);
                 xhr.setRequestHeader('content-type', file.type || 'application/octet-stream');
                 xhr.setRequestHeader('file-name', file.name);
                 xhr.setRequestHeader('stream-length', file.size);
+                xhr.setRequestHeader('content-length', file.size);
                 xhr.addEventListener('load', function(e){
                     resolverLink.value= e.target.responseText
+                    console.log(e)
                     dropzone.removeFile(file);
-                    setTimeout(endLoader,3000);
+                    setTimeout(endLoader,1000);
                 })
                 xhr.addEventListener('error', function(e){
                     dropzone.removeFile(file);
-                    setTimeout(endLoader,3000);
+                    setTimeout(endLoader,1000);
+                })
+                xhr.addEventListener('progress', function(e){
+                    console.log(e)
                 })
                 xhr.send(file);
             }

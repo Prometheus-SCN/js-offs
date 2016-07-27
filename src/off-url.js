@@ -1,3 +1,4 @@
+const urlencode = require('urlencode')
 _serverAddress = new WeakMap()
 _applicationPath = new WeakMap()
 _contentType = new WeakMap()
@@ -19,11 +20,11 @@ module.exports = class OffUrl {
     _contentType.set(this, 'application/octet-stream')
     _streamOffset.set(this, 0)
     _streamOffsetLength.set(this, 0)
-    _version.set(this,'v3')
+    _version.set(this, 'v3')
   }
 
   toString () { // this is a version 3 url
-    return [ this.serverAddress, this.applicationPath, this.version, this.contentType, this.streamLength, this.fileHash, this.descriptorHash, this.fileName ].join('/')
+    return [ this.serverAddress, this.applicationPath, this.version, this.contentType, this.streamLength, this.fileHash, this.descriptorHash, urlencode(this.fileName) ].join('/')
   }
 
   get serverAddress () {
@@ -69,7 +70,7 @@ module.exports = class OffUrl {
     }
     _streamLength.set(this, value)
   }
-  
+
   get hash () {
     return _hash.get(this)
   }
@@ -159,25 +160,27 @@ module.exports = class OffUrl {
   }
 
   get fileName () {
-    return  _fileName.get(this)
+    return _fileName.get(this)
   }
 
-  set fileName(value) {
+  set fileName (value) {
     if (typeof value !== 'string') {
       throw new Error("File name must be a string")
     }
     _fileName.set(this, value)
   }
+
   get version () {
-    return  _version.get(this)
+    return _version.get(this)
   }
 
-  set version(value) {
+  set version (value) {
     if (typeof value !== 'string') {
       throw new Error("version must be a string")
     }
     _version.set(this, value)
   }
+
   static fromURL () {
 
   }

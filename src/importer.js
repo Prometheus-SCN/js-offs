@@ -34,7 +34,7 @@ function importer (path, options, callback) {
       rs.on('error', (err)=> { callback(err)})
       ws.on('error', (err)=> { callback(err)})
       ws.on('url', (url)=> {
-        callback(null, url)
+        process.nextTick(()=>{callback(null, url)})
       })
       rs.pipe(ws)
     } else if (stats.isDirectory()) {
@@ -44,7 +44,7 @@ function importer (path, options, callback) {
       _url.contentType = 'offsystem/directory'
       fs.readdir(path, function (err, items) {
         if (err) {
-          return callback(err)
+          return process.nextTick(()=>{callback(err)})
         }
         let contents = items.map(function (item) {
           return pth.join(path, item)
@@ -54,7 +54,7 @@ function importer (path, options, callback) {
         let current;
         let next = (err, url) => {
           if(err){
-            return callback(err)
+            return process.nextTick(()=>{callback(err)})
           }
           if (url){
             ofd= Buffer.concat([ofd, new Buffer(url.toString() + '\n')])
@@ -69,7 +69,7 @@ function importer (path, options, callback) {
             rs.on('error', (err)=> { callback(err)})
             ws.on('error', (err)=> { callback(err)})
             ws.on('url', (url)=> {
-              callback(null, url)
+              process.nextTick(()=>{callback(null, url)})
             })
             rs.pipe(ws)
           }

@@ -24,7 +24,8 @@
     "multihashing": "^0.2.1",
     "readable-stream": "^2.1.4",
     "streamifier": "^0.1.1",
-    "through2": "^2.0.1"
+    "through2": "^2.0.1",
+    "urlencode": "^1.1.0"
   },
   "devDependencies": {}
 }

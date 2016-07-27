@@ -25,6 +25,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
     url.fileHash = req.params[ 2 ]
     url.descriptorHash = req.params[ 3 ]
     url.fileName = req.params[ 4 ]
+    res.set('content-length', url.streamLength)
     let rs = new ors(url, '../block_cache')
     if (url.contentType === 'offsystem/directory') {
       collect(rs, (err, data)=> {
@@ -64,7 +65,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.fileName = file
                 let rs = new ors(url, '../block_cache')
                 if (url.contentType === 'offsystem/directory') {
-                  collect(rs, next)
+                  process.nextTick(()=>{collect(rs, next)})
                 }
               } else {
                 return res.status(404).send("Resource Not Found")
