@@ -2,3 +2,4 @@
 /node_modules
 /block_cache
 /src/test.pdf
+/.block-cache

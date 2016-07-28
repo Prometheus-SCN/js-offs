@@ -91,10 +91,8 @@
                 xhr.setRequestHeader('content-type', file.type || 'application/octet-stream');
                 xhr.setRequestHeader('file-name', file.name);
                 xhr.setRequestHeader('stream-length', file.size);
-                xhr.setRequestHeader('content-length', file.size);
                 xhr.addEventListener('load', function(e){
                     resolverLink.value= e.target.responseText
-                    console.log(e)
                     dropzone.removeFile(file);
                     setTimeout(endLoader,1000);
                 })
@@ -102,8 +100,8 @@
                     dropzone.removeFile(file);
                     setTimeout(endLoader,1000);
                 })
-                xhr.addEventListener('progress', function(e){
-                    console.log(e)
+                xhr.upload.addEventListener('progress', function(e){
+                    progressJs().set((e.loaded/e.total) * 100)
                 })
                 xhr.send(file);
             }

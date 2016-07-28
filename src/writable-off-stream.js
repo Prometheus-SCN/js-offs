@@ -14,23 +14,26 @@ const _tupleSize = 3
 const _blockSize = 128000
 let _path = new WeakMap()
 let _blockCache = new WeakMap()
-let _usedRandoms = new WeakMap()
 let _hasher = new WeakMap()
 let _descriptor = new WeakMap()
 let _accumulator = new WeakMap()
 let _url = new WeakMap()
 let _size = new WeakMap()
 let _count = new WeakMap()
+let _usageSession= new WeakMap()
+
 
 module.exports = class WritableOffStream extends Writable {
   constructor (opts) {
     if (!opts) {
       throw new Error('Invalid Options')
     }
-    if (typeof opts === 'string') {
-      opts = { path: opts }
+    if (opts instanceof BlockCache) {
+      opts = { bc: opts }
     }
-
+    if (!opts.bc) {
+      throw new Error('Invalid Block Cache')
+    }
     opts.highWaterMark = _blockSize
     super(opts)
     if (opts.url && (opts.url instanceof OffUrl)){
@@ -40,13 +43,7 @@ module.exports = class WritableOffStream extends Writable {
       _url.set(this, opts.url)
     }
 
-    if (opts.path) {
-      _path.set(this, opts)
-    } else {
-      throw new Error('Invalid Path')
-    }
-    _blockCache.set(this, new BlockCache(opts.path))
-    _usedRandoms.set(this, [])
+    _blockCache.set(this, opts.bc)
     _descriptor.set(this, new Descriptor())
     _accumulator.set(this, new Buffer(0))
     _hasher.set(this, util.hasher())
@@ -76,6 +73,8 @@ module.exports = class WritableOffStream extends Writable {
               return process.nextTick(()=>{next(err)})
             })
           } else {
+            let usageSession = _usageSession.get(this)
+            bc.endSession(usageSession)
             let hasher = _hasher.get(this)
             let url = _url.get(this)
             let size = _size.get(this)
@@ -100,17 +99,19 @@ module.exports = class WritableOffStream extends Writable {
           this.emit('error', new Error('Invalid Input'))
           return
         }
+        let bc = _blockCache.get(this)
+        let usageSession = _usageSession.get(this)
 
-        let used = _usedRandoms.get(this)
         //Start Chunking and processing chunks into blocks
         bufStream.pipe(blocker({ size: _blockSize, zeroPadding: false }))
           .pipe(through((buf, enc, nxt)=> {
-
-            bc.randomBlocks((_tupleSize - 1), used, (err, randoms)=> {
+            let bc = _blockCache.get(this)
+            bc.randomBlocks((_tupleSize - 1), usageSession, (err, usageSession, randoms)=> {
               if (err) {
                 this.emit('error', err)
                 return
               }
+              _usageSession.set(usageSession)
                //create off block from
               let count = _count.get(this)
               let offBlock = new Block(buf)
@@ -132,8 +133,6 @@ module.exports = class WritableOffStream extends Writable {
               }
               count++
               _count.set(this, count)
-              used = used.concat(randoms.map((block)=> {return block.key}))
-              _usedRandoms.set(this, used)
               tuple.unshift(offBlock)
               descriptor.tuple(tuple)
               _descriptor.set(this, descriptor)
@@ -183,12 +182,13 @@ module.exports = class WritableOffStream extends Writable {
       hasher.update(buf)
       _hasher.set(this, hasher)
       let bc = _blockCache.get(this)
-      let used = _usedRandoms.get(this)
-      bc.randomBlocks((_tupleSize - 1), used, (err, randoms)=> {
+      let usageSession = _usageSession.get(this)
+      bc.randomBlocks((_tupleSize - 1), usageSession, (err, usageSession, randoms)=> {
         if (err) {
           this.emit('error', err)
           return
         }
+        _usageSession.set(usageSession)
         //create off block from
         let count = _count.get(this)
         let offBlock = new Block(buf)
@@ -212,9 +212,6 @@ module.exports = class WritableOffStream extends Writable {
         count++
         _count.set(this, count)
 
-        //store the randoms used this round for exclusion
-        used = used.concat(randoms.map((block)=> {return block.key}))
-        _usedRandoms.set(this, used)
         tuple.unshift(offBlock)
         descriptor.tuple(tuple)
         _descriptor.set(this, descriptor)

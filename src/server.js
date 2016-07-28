@@ -4,7 +4,7 @@ const OffUrl = require('./off-url')
 const ors = require('./readable-off-stream')
 const ows = require('./writable-off-stream')
 const collect = require('collect-stream')
-const bufsplit = require('buffer-split')
+const BlockCache = require('./block-cache')
 const pth = require('path')
 let basename
 let parse = pth.posix.parse
@@ -13,7 +13,7 @@ if (/^win/.test(process.platform)) {
 } else {
   basename = pth.posix.basename
 }
-
+let bc = new BlockCache('../.block-cache')
 let off = express()
 
 
@@ -25,8 +25,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
     url.fileHash = req.params[ 2 ]
     url.descriptorHash = req.params[ 3 ]
     url.fileName = req.params[ 4 ]
-    res.set('content-length', url.streamLength)
-    let rs = new ors(url, '../block_cache')
+    let rs = new ors(url, bc)
     if (url.contentType === 'offsystem/directory') {
       collect(rs, (err, data)=> {
         if(!data){
@@ -63,9 +62,9 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.fileHash = matches[ 3 ]
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = file
-                let rs = new ors(url, '../block_cache')
+                let rs = new ors(url, bc)
                 if (url.contentType === 'offsystem/directory') {
-                  process.nextTick(()=>{collect(rs, next)})
+                  collect(rs, next)
                 }
               } else {
                 return res.status(404).send("Resource Not Found")
@@ -83,7 +82,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.fileHash = matches[ 3 ]
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = stats.base
-                let rs = new ors(url, '../block_cache')
+                let rs = new ors(url, bc)
                 if (url.contentType === 'offsystem/directory') {
                   collect(rs, (err, data)=> {
                     let lines = data.toString('utf8').split('\n')
@@ -99,7 +98,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                       url.fileHash = matches[ 3 ]
                       url.descriptorHash = matches[ 4 ]
                       url.fileName = "index.html"
-                      let rs = new ors(url, '../block_cache')
+                      let rs = new ors(url, bc)
                       res.type(url.contentType)
                       return rs.pipe(res)
                     } else {
@@ -132,7 +131,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             url.fileHash = matches[ 3 ]
             url.descriptorHash = matches[ 4 ]
             url.fileName = "index.html"
-            let rs = new ors(url, '../block_cache')
+            let rs = new ors(url, bc)
             res.type(url.contentType)
             return rs.pipe(res)
           } else {
@@ -149,21 +148,21 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
     }
   })
 
- off.put('/offsystem/', (req, res)=>{
-   let url = new OffUrl()
-   url.serverAddress= req.get('server-address') || url.serverAddress
-   url.contentType = req.get('content-type')  || url.contentType
-   url.fileName = req.get('file-name')
-   url.streamLength= req.get('stream-length')
+off.put('/offsystem/', (req, res)=>{
+  let url = new OffUrl()
+  url.serverAddress= req.get('server-address') || url.serverAddress
+  url.contentType = req.get('content-type')
+  url.fileName = req.get('file-name')
+  url.streamLength= req.get('stream-length')
 
-   let ws = new ows({ path: '../block_cache', url: url})
-   ws.on('url', (url)=>{
-     res.write(url.toString())
-     res.end()
-   })
-   req.pipe(ws)
+  let ws = new ows({ bc: bc, url: url})
+  ws.on('url', (url)=>{
+    res.write(url.toString())
+    res.end()
+  })
+  req.pipe(ws)
 
- })
+})
 off.use(express.static('./static'))
 off.listen(23402, ()=> {
   console.log('listening at localhost:23402')

@@ -9,12 +9,35 @@ const through = require('through2')
 const OffUrl = require('./off-url')
 const importer = require('./importer')
 const mime = require('mime')
-
-importer('./html5up-prologue',{bcPath: '../block_cache'}, (err, url)=>{
+let bc = new BlockCache('../.block-cache')
+/*
+importer('./html5up-prologue',{bc: bc}, (err, url)=>{
   if(err){
     throw err
   }
   console.log(url.toString())
+})*/
+
+
+let descriptorPad = 46
+let blockSize = 128000
+let streamLength = 737512570
+bc.get('QmTT8fRS66xYjARBrYS31CU9YDxGvist9RnnshwX3ecdFH',(err, block)=>{
+  if(err){
+    throw err
+  }
+  let blocks= Math.ceil(streamLength/blockSize)
+  let ttlDescSize = blocks * descriptorPad
+  let descBlocks= Math.ceil(ttlDescSize/blockSize)
+  let cutPoint
+  if(ttlDescSize > blockSize){
+
+  } else{
+    cutPoint = blockSize - ttlDescSize
+  }
+  let fullDescBlock =Math.floor(blockSize/descriptorPad)
+  let keybuf = block.data.slice(0, blockSize - cutPoint)
+  console.log(keybuf.length % descriptorPad)
 })
 /*
 let offUrl = new OffUrl()

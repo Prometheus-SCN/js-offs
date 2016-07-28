@@ -5,6 +5,7 @@ const OffUrl =require('./off-url')
 const pth = require('path')
 const mime = require('mime')
 const streamifier = require('streamifier')
+const BlockCache = require('./block-cache')
 let basename
 if(/^win/.test(process.platform)){
   basename=pth.win32.basename
@@ -15,8 +16,20 @@ mime.define({'offsystem/directory':['ofd'] })
 module.exports = importer
 
 function importer (path, options, callback) {
+  if (!path) {
+    throw new Error("Invalid Path")
+  }
   path = pth.join(path)
-  let bcPath= options.bcPath
+  if (!options) {
+    throw new Error("Invalid Options")
+  }
+  if (options instanceof BlockCache) {
+    options = { bc: options }
+  }
+  if (!options.bc) {
+    throw new Error('Invalid Block Cache')
+  }
+  let bc= options.bc
   if (!callback) {
     throw new Error("No Callback Method Provided")
   }
@@ -29,7 +42,7 @@ function importer (path, options, callback) {
       let url= new OffUrl()
       url.fileName= basename(path) //TODO: need to use the operating system specific variants
       url.contentType = mime.lookup(path)
-      let ws= new ows({ path: bcPath, url: url}) 
+      let ws= new ows({ bc: bc, url: url})
       let rs= fs.createReadStream(path)
       rs.on('error', (err)=> { callback(err)})
       ws.on('error', (err)=> { callback(err)})
@@ -62,9 +75,9 @@ function importer (path, options, callback) {
           i++
           if (i < contents.length) {
             current = contents[ i ]
-            importer(current, {bcPath: bcPath}, next)
+            importer(current, {bc: bc}, next)
           } else {
-            let ws= new ows({path:'../block_cache' , url: _url})
+            let ws= new ows({bc: bc , url: _url})
             let rs= streamifier.createReadStream(ofd)
             rs.on('error', (err)=> { callback(err)})
             ws.on('error', (err)=> { callback(err)})
