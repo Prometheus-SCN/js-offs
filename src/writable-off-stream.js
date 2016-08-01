@@ -3,6 +3,7 @@ const blocker = require('block-stream2')
 const Writable = require('readable-stream').Writable;
 const BlockCache = require('./block-cache')
 const Descriptor = require('./descriptor')
+const config= require('../config')
 const Block = require('./block')
 const util = require('./utility')
 const bs58 = require('bs58')
@@ -10,8 +11,8 @@ const through = require('through2')
 const isStream = require('isstream')
 const streamifier = require('streamifier')
 const OffUrl = require('./off-url')
-const _tupleSize = 3
-const _blockSize = 128000
+const _tupleSize = config.tupleSize
+const _blockSize = config.blockSize
 let _path = new WeakMap()
 let _blockCache = new WeakMap()
 let _hasher = new WeakMap()
@@ -111,7 +112,7 @@ module.exports = class WritableOffStream extends Writable {
                 this.emit('error', err)
                 return
               }
-              _usageSession.set(usageSession)
+              _usageSession.set(this, usageSession)
                //create off block from
               let count = _count.get(this)
               let offBlock = new Block(buf)
@@ -131,6 +132,7 @@ module.exports = class WritableOffStream extends Writable {
                 url['tupleBlock' + (count+1)] = offBlock.key
                 _url.set(this, url)
               }
+
               count++
               _count.set(this, count)
               tuple.unshift(offBlock)
@@ -188,7 +190,7 @@ module.exports = class WritableOffStream extends Writable {
           this.emit('error', err)
           return
         }
-        _usageSession.set(usageSession)
+        _usageSession.set(this, usageSession)
         //create off block from
         let count = _count.get(this)
         let offBlock = new Block(buf)
@@ -209,6 +211,7 @@ module.exports = class WritableOffStream extends Writable {
           url[ 'tupleBlock' + (count + 1) ] = offBlock.key
           _url.set(this, url)
         }
+
         count++
         _count.set(this, count)
 

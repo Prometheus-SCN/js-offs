@@ -5,6 +5,7 @@ const ors = require('./readable-off-stream')
 const ows = require('./writable-off-stream')
 const collect = require('collect-stream')
 const BlockCache = require('./block-cache')
+const config = require('../config')
 const pth = require('path')
 let basename
 let parse = pth.posix.parse
@@ -13,7 +14,7 @@ if (/^win/.test(process.platform)) {
 } else {
   basename = pth.posix.basename
 }
-let bc = new BlockCache('../.block-cache')
+let bc = new BlockCache(config.path)
 let off = express()
 
 
@@ -63,6 +64,9 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = file
                 let rs = new ors(url, bc)
+                rs.on('eror', (err)=>{
+                  res.status(500).send(err)
+                })
                 if (url.contentType === 'offsystem/directory') {
                   collect(rs, next)
                 }
@@ -83,6 +87,9 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = stats.base
                 let rs = new ors(url, bc)
+                rs.on('eror', (err)=>{
+                  res.status(500).send(err)
+                })
                 if (url.contentType === 'offsystem/directory') {
                   collect(rs, (err, data)=> {
                     let lines = data.toString('utf8').split('\n')
@@ -132,6 +139,9 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             url.descriptorHash = matches[ 4 ]
             url.fileName = "index.html"
             let rs = new ors(url, bc)
+            rs.on('eror', (err)=>{
+              res.status(500).send(err)
+            })
             res.type(url.contentType)
             return rs.pipe(res)
           } else {

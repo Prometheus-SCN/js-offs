@@ -57,12 +57,15 @@ module.exports =
       this.has(block.key, (found)=> {
         if (!found) {
           let fd = sanitize(block.key, this.path)
+
           let blocks = this.blocks
           blocks.push(block.key)
-          _blocks.set(blocks)
+          _blocks.set(this, blocks)
+
           if (usageSession) {
             let sessions = _sessions.get(this)
             let remove = []
+
             for (let i = 0; i < sessions.length; i++) {
               let session = sessions[ i ]
               if (session.id !== usageSession.id) {
@@ -153,7 +156,7 @@ module.exports =
         if (!usageSession) {
           usageSession = { id: _sessionCounter }
           _sessionCounter++
-          _usageSessions.set(usageSession, this.blocks)
+          _usageSessions.set(usageSession, this.blocks.slice(0))
         }
         let items = _usageSessions.get(usageSession)
         number = Math.floor(number)
@@ -196,7 +199,7 @@ module.exports =
                   }
                   i++
                   if (i < blockArray.length) {
-                    this.put(blockArray[ i ], commit)
+                    this.put(blockArray[ i ], usageSession, commit )
                   } else {
                     return process.nextTick(()=> {cb(null, usageSession, blockArray)})
                   }
@@ -221,7 +224,7 @@ module.exports =
               }
               i++
               if (i < blockArray.length) {
-                this.put(blockArray[ i ], commit)
+                this.put(blockArray[ i ], usageSession, commit)
               } else {
                 return process.nextTick(()=> {cb(null, usageSession, blockArray)})
               }

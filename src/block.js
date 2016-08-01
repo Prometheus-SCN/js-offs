@@ -3,15 +3,16 @@ const util = require('./utility')
 const crypto = require('crypto')
 const xor = require('buffer-xor')
 const bs58 = require('bs58')
+const config= require('../config')
 
 let _data = new WeakMap()
 let _key = new WeakMap()
-const _blockSize = 128000
+let _hash = new WeakMap()
+const _blockSize = config.blockSize
 
-function zeroPad (buf) {
-  var zeroes = new Buffer(_blockSize - buf.length);
-  zeroes.fill(0);
-  return Buffer.concat([ buf, zeroes ])
+function randomPad (buf) {
+  let random = crypto.randomBytes(_blockSize - buf.length)
+  return Buffer.concat([ buf, random ])
 }
 module.exports = class Block {
   constructor (data) {
@@ -28,14 +29,24 @@ module.exports = class Block {
       throw new Error('Invalid Block Size: Block exceeds 128kb')
     }
     if (data.length < _blockSize) {
-      data = zeroPad(data)
+      data = randomPad(data)
     }
     _data.set(this, data)
 
   }
 
   get data () {
-    return _data.get(this)
+    return _data.get(this).slice(0)
+  }
+  get hash(){
+    let hash= _hash.get(this)
+    if(hash){
+      return hash.slice(0)
+    } else{
+      hash = util.hash(this.data)
+      _hash.set(this, hash)
+      return hash.slice(0)
+    }
   }
 
   get key () {
@@ -43,7 +54,7 @@ module.exports = class Block {
     if (key) {
       return key
     } else {
-      key = bs58.encode(util.hash(this.data))
+      key = bs58.encode(this.hash)
       _key.set(this, key)
       return key
     }
