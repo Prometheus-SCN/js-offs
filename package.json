@@ -11,6 +11,7 @@
   "license": "GPL-3.0",
   "dependencies": {
     "block-stream2": "^1.1.0",
+    "bloomfilter": "0.0.16",
     "bs58": "^3.0.0",
     "buffer-split": "^1.0.0",
     "buffer-xor": "^2.0.1",
