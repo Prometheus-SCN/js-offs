@@ -70,7 +70,6 @@ module.exports= class BloomSieve {
     if (!(newRank instanceof Bloom)){
       throw new Error('Invalid Rebuilt Rank')
     }
-    console.log(`new rank has ${newRank.count}`)
     sieve[mark]= newRank
   }
 }
