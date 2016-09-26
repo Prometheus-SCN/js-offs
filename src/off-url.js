@@ -138,23 +138,23 @@ module.exports = class OffUrl {
   }
 
   get streamOffset () {
-    return _streamOffset.get(this)
+    return _streamOffset.get(this) || 0
   }
 
   set streamOffset (value) {
-    if (typeof value !== 'number') {
-      throw new Error("Stream offset must be a string")
+    if (!Number.isInteger(value)) {
+      throw new Error("Stream offset must be an integer")
     }
     _streamOffset.set(this, value)
   }
 
   get streamOffsetLength () {
-    return _streamOffsetLength.get(this)
+    return _streamOffsetLength.get(this) || this.streamLength
   }
 
   set streamOffsetLength (value) {
-    if (typeof value !== 'number') {
-      throw new Error("Stream offset length must be a string")
+    if (!Number.isInteger(value)) {
+      throw new Error("Stream offset length must be an integer")
     }
     _streamOffsetLength.set(this, value)
   }

@@ -1,8 +1,12 @@
 'use strict'
+const cbor = require('cbor-js')
+const toAb = require('to-array-buffer')
+const abToB = require('arraybuffer-to-buffer')
 const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
 let _sieve = new WeakMap()
 let _cfSize= new WeakMap()
 let _bSize= new WeakMap()
+let _fpSize = new WeakMap()
 let _scale = new WeakMap()
 module.exports= class CuckooSieve{
   constructor(cfSize, bSize, fpSize, scale){
@@ -69,6 +73,15 @@ module.exports= class CuckooSieve{
     }
     sieve[mark].add(item)
   }
+  remove(item){
+    let sieve = _sieve.get(this)
+    for(let i = sieve.length-1 ; i >= 0; i--){
+      let rank = sieve[i]
+      if (rank.remove(item)){
+        break;
+      }
+    }
+  }
   get max(){
     let sieve = _sieve.get(this)
     return sieve.length
@@ -83,7 +96,28 @@ module.exports= class CuckooSieve{
     }
     return 0
   }
+  toString(){
+    let sieve = _sieve.get(this)
+    let string= ''
+    for(let i = 0; i < sieve.length; i++  ){
+      let rank = sieve[i]
+      if(rank.count > 0){
+        if (string === '') {
+          string += `Rank ${(i+1)}: ${rank.count}`
+        } else {
+          string += '\n' + `Rank ${(i+1)}: ${rank.count}`
+        }
+      }
+    }
+    return string
+  }
   countAtRank(rank){
+    if(!Number.isInteger(rank)){
+      throw new TypeError("Invalid Rank")
+    }
+    if (rank < 1){
+      throw new TypeError("Rank must be greater than 0")
+    }
     let mark = rank-1
     if(mark > this.max || mark < 0){
       return 0
@@ -117,6 +151,7 @@ module.exports= class CuckooSieve{
   }
   static fromCBOR(buf){
     let obj = cbor.decode(toAb(buf))
+    obj.sieve= obj.sieve.map((filter)=> {return Cuckoo.fromJSON(filter)})
     return CuckooSieve.fromJSON(obj)
   }
 }

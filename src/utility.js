@@ -19,7 +19,10 @@ util.sanitize = (key, path)=> {
       return key
     }
   } else {
-    throw new Error("Invalid Key")
+    throw new TypeError("Invalid Key")
   }
+}
+util.getRandomInt=  (min, max)=> {
+  return Math.floor(Math.random() * (max - min)) + min;
 }
 module.exports= util

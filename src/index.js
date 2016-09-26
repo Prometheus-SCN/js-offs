@@ -9,13 +9,194 @@ const through = require('through2')
 const OffUrl = require('./off-url')
 const importer = require('./importer')
 const mime = require('mime')
-const Bloom = require('./scalable-bloom-filter')
+const collect = require('collect-stream')
+//const Bloom = require('./scalable-bloom-filter')
 const bs58 = require('bs58')
 const crypto= require('crypto')
-const BloomSieve = require('./bloom-sieve')
+//const BloomSieve = require('./bloom-sieve')
+const CuckooSieve = require('./cuckoo-sieve')
+const Bucket = require('./fibonacci-bucket')
+const CuckooFilter= require('cuckoo-filter').CuckooFilter
+const Cache= require('./fibonacci-cache')
 
+let cache =  new Cache('../.block-cache')
+let blocks = []
+let cuckoo= new CuckooFilter(1000,3,6)
+for (let i = 0; i < 20; i++) {
+  let block = Block.randomBlock()
+  blocks.push(block)
+}
+cache.on('promote', (block)=>{
+  console.log(`promoted ${block.key}`)
+})
+let i = -1
+let deleteStuff = (err)=>{
+  if(err){
+    throw err
+  }
+  if( i != -1) {
+    console.log(`removed block ${blocks[ i ].key}`)
+  }
+  i++
+  if (i < blocks.length){
+    cache.remove(blocks[i].key, deleteStuff)
+  }else{
+    i= -1
+    return
+  }
+}
+let getStuff = (err, block)=>{
+  if(err){
+    throw err
+  }
+  if(block){
+    console.log(`got block ${block.key}`)
+  }
+  i++
+  if (i < blocks.length){
+    cache.get(blocks[i].key, getStuff)
+  }else{
+    i= -1
+    return deleteStuff()
+  }
+}
 
+let thenAgain = (err)=>{
+  if(err){
+    throw err
+  }
+  i++
+  if (i < blocks.length){
+    cache.put(blocks[i], thenAgain)
+  }else{
+    i= -1
+    return getStuff()
+  }
+}
 
+let then = (err)=>{
+  if(err){
+    throw err
+  }
+  i++
+  if (i < blocks.length){
+    cache.put(blocks[i], then)
+  }else{
+    i= -1
+    return thenAgain()
+  }
+}
+let next = (err)=>{
+  if(err){
+    throw err
+  }
+  i++
+  if (i < blocks.length){
+    cache.put(blocks[i], next)
+  }else{
+    i= -1
+    return then()
+  }
+}
+let getRandomBlocks= (err, items, blocks)=>{
+  if(err){
+    console.log(err)
+  }
+  console.log(`bucket: ${items.bucket}`)
+  console.log(items.items)
+  console.log(blocks)
+
+}
+cache.randomBlocks(3, cuckoo, getRandomBlocks)
+next()
+/*
+let fibBucket = new Bucket('../.block-cache')
+let blocks = []
+for (let i = 0; i < 20; i++) {
+  let block = Block.randomBlock()
+  blocks.push(block)
+}
+let i = -1
+let then = ()=>{
+  let cuckoo= new CuckooFilter(1000,3,6)
+  fibBucket.randomBlocks(2, cuckoo, (err, items, blocks)=>{
+    if(err){
+      throw err
+    }
+    console.log(items)
+    console.log(blocks)
+  })
+}
+let next = (err)=>{
+  if(err){
+    throw err
+  }
+  i++
+  if (i < blocks.length){
+    fibBucket.tally(blocks[i].key)
+    fibBucket.put(blocks[i], next)
+  }else{
+    i= -1
+    return then()
+  }
+}
+
+next(null, then)
+*/
+
+/*
+let keys = []
+for (let i = 0; i < 20; i++) {
+  let key = bs58.encode(util.hash(crypto.randomBytes(34)))
+  keys.push(key)
+}
+let sieve = new CuckooSieve(10, 3, 6, 2 )
+for (let i = 0; i < 20000; i++) {
+  let index= util.getRandomInt(0, keys.length-1)
+  sieve.tally(keys[index])
+}
+*/
+/*
+for (let i = 0; i < sieve.max; i++) {
+  console.log(`Rank ${(i+1)}:  ${sieve.countAtRank((i+1))}`)
+}*/
+/*
+console.log(`Key ${keys[2]} is ranked ${sieve.rank(keys[2])} `)
+let found
+let rank = getRandomInt (1, sieve.max)
+console.log(`Removing from ${rank} with ${sieve.countAtRank(rank)} hits`)
+
+if(found){
+  console.log(`Key ${found} is ranked ${sieve.rank(found)} `)
+}
+console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
+*/
+/*
+fs.readFile('test.pdf', (err, data)=>{
+  if(err){
+    throw err
+  }
+  let slice = data.slice(288, 1000)
+  console.log(slice)
+  let url = new OffUrl()
+  let bc = new BlockCache('../.block-cache')
+  let rs = fs.createReadStream('test.pdf')
+  url.fileName= 'test.pdf'
+  url.contentType = mime.lookup('test.pdf')
+  let ws = new ows({bc: bc, url: url})
+  ws.on('url', (url)=>{
+    url.streamOffset = 288
+    url.streamOffsetLength = 1000
+    let rs = new ors(url, bc)
+    collect(rs, (err, data)=> {
+      console.log(data)
+      console.log(slice.equals(data))
+    })
+  })
+  rs.pipe(ws)
+
+})*/
+/*
 let sequence = [0, 1]
 function fibSequence(num){
   let output = 0
@@ -27,6 +208,7 @@ function fibSequence(num){
   return output
 }
 console.log(fibSequence(1))
+*/
 /*
 function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min)) + min;

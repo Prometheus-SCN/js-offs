@@ -5,13 +5,16 @@ const pth = require('path')
 const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
 const Sieve = require('./cuckoo-sieve')
 const config = require('../config')
+const Block = require('./block')
 const _contents = new WeakMap()
 const _hitBox = new WeakMap()
 const _number = new WeakMap()
 const _limit = new WeakMap()
 const _path = new WeakMap()
+let _dirty = new WeakMap()
 function fibSequence (num) {
   let output = 0
+  let sequence=[0,1]
   for (var i = 0; i < num; i++) {
     sequence.push(sequence[ 0 ] + sequence[ 1 ])
     sequence.splice(0, 1)
@@ -21,19 +24,19 @@ function fibSequence (num) {
 }
 
 module.exports = class FibonacciBucket {
-  construct (path, number) {
+  constructor (path, number) {
     if (!number) {
       number = 1
     }
-    if (Number.isInteger(number)) {
-      throw TypeError('Invalid Path')
+    if (!Number.isInteger(number)) {
+      throw TypeError('Invalid Number')
     }
     if (typeof path !== 'string') {
       throw TypeError('Invalid Path')
     }
-    path = path.join(path, `.f${number}`)
+    path = pth.join(path, `.f${number}`)
     mkdirp.sync(path)
-    _path.set(path)
+    _path.set(this, path)
     _number.set(this, 1)
     _limit.set(this, fibSequence(number + 1))
 
@@ -41,7 +44,7 @@ module.exports = class FibonacciBucket {
 
     _contents.set(this, contents)
 
-    let hitBox = new Sieve(800, config.bucketSize, config.fingerprintSize, config.scale)
+    let hitBox = new Sieve(config.hitBoxSize, config.bucketSize, config.fingerprintSize, config.scale)
 
     _hitBox.set(this, hitBox)
   }
@@ -56,18 +59,23 @@ module.exports = class FibonacciBucket {
   }
 
   get path () {
-    return _path.get(this).slice(0)
+    return _path.get(this)
   }
 
-  tally (block) {
+  tally (key) {
     let hitBox = _hitBox.get(this)
     let limit = _limit.get(this)
-    hitBox.tally(block.key)
-    if (hitBox.rank(block.key) >= limit) {
+    hitBox.tally(key)
+    _dirty.set(this, true)
+    if (hitBox.rank(key) >= limit) {
       return true
     } else {
       return false
     }
+  }
+  unTally (key) {
+    let hitBox = _hitBox.get(this)
+    hitBox.remove(key)
   }
 
   rank (block) {
@@ -76,8 +84,15 @@ module.exports = class FibonacciBucket {
   }
 
   put (block, cb) {
+    let contents = _contents.get(this)
     let fd = util.sanitize(block.key, this.path)
-    fs.writeFile(fd, block.data, cb)
+    fs.writeFile(fd, block.data, (err)=>{
+      if(!err){
+        _dirty.set(this, true)
+        contents.add(block.key)
+      }
+      return process.nextTick(()=>{cb(err)})
+    })
   }
 
   get (key, cb) {
@@ -96,9 +111,83 @@ module.exports = class FibonacciBucket {
     let fd = util.sanitize(key, this.path)
     fs.unlink(fd, (err) => {
       if(!err){
+        _dirty.set(this, true)
         contents.remove(key)
       }
       return process.nextTick(()=> {cb(err)})
     })
+  }
+
+  save(cb){
+    let path= _path.get(this)
+    let content= _content.get(this)
+    let fd =  pth.join(path, `f${number}.content`)
+    fs.writeFile(fd, content.toCBOR(),(err)=>{
+      if(err){
+        return process.nextTick(()=>{ return cb(err)})
+      }
+      let hitBox = _hitBox.get(this)
+      let fd =  pth.join(path, `f${number}.hitbox`)
+      fs.writeFile(fd, _hitBox.toCBOR(),(err)=>{
+        if(err){
+          return process.nextTick(()=>{ return cb(err)})
+        }
+        _dirty.set(this, false)
+        return process.nextTick(cb)
+      })
+    })
+
+  }
+
+  randomBlocks(number, usageFilter , items, cb){
+    if(typeof items === 'function'){
+      cb=items
+      items= null
+    }
+
+    let getRandoms = (err, items)=> {
+      if (err) {
+        return process.nextTick(()=> {cb(err)})
+      }
+      items = items.filter((item)=>{ return !usageFilter.contains(item)})
+      if(items.length > 0){
+        let visit = []
+        let stop = items.length >= number ? number  : items.length
+        for (let i = 0; i < stop ; i++) {
+          let next = util.getRandomInt(0, items.length)
+          while (visit.find((num)=> {return next === num})) {
+            next = util.getRandomInt(0, items.length)
+          }
+          visit.push(next)
+        }
+        let blockArray = []
+        let i = -1
+        let next = (err, block)=> {
+          if (err) {
+            return process.nextTick(()=> {cb(err)})
+          }
+
+          if (block) {
+            blockArray.push(block)
+          }
+
+          i++
+          if (i < visit.length) {
+            usageFilter.add(items[ visit[ i ] ])
+            this.get(items[ visit[ i ] ], next)
+          } else {
+            return process.nextTick(()=> {cb(null, items, blockArray)})
+          }
+        }
+        next()
+      } else{
+        return process.nextTick(()=> {cb(null, items, [])})
+      }
+    }
+    if (items){
+      getRandoms(null, items)
+    }else {
+      fs.readdir(this.path, getRandoms)
+    }
   }
 }

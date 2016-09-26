@@ -20,9 +20,19 @@ let off = express()
 
 off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
   (req, res)=> {
+    let start = 0
+    let end = parseInt(req.params[ 1 ])
+    if (req.headers.range){
+      let range = req.headers.range
+      let positions = range.replace(/bytes=/, "").split("-")
+      start = positions[ 0 ] ? parseInt(positions[ 0 ]) : null
+      end = positions[ 1 ] ? parseInt(positions[ 1 ]) : req.params[ 1 ]
+    }
     let url = new OffUrl()
     url.contentType = req.params[ 0 ]
+    url.streamOffset = start
     url.streamLength = req.params[ 1 ]
+    url.streamOffsetLength  =  parseInt(end)
     url.fileHash = req.params[ 2 ]
     url.descriptorHash = req.params[ 3 ]
     url.fileName = req.params[ 4 ]
@@ -115,7 +125,6 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
 
                   })
                 } else {
-                  res.type(url.contentType)
                   return rs.pipe(res)
                 }
 
@@ -153,7 +162,19 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
         }
       })
     } else {
-      res.type(url.contentType)
+      if (req.headers.range) {
+        res.writeHead(206, {
+          "Content-Range": "bytes " + start + "-" + end + "/" + req.params[ 1 ],
+          "Accept-Ranges": "bytes",
+          "Content-Length": req.params[ 1 ],
+          "Content-Type": url.contentType
+        })
+      } else{
+        console.log('happened')
+        res.writeHead(200, {
+          "Content-Type": url.contentType
+        })
+      }
       rs.pipe(res)
     }
   })
