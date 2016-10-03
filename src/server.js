@@ -17,12 +17,11 @@ if (/^win/.test(process.platform)) {
 let bc = new BlockCache(config.path)
 let off = express()
 
-
 off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
   (req, res)=> {
     let start = 0
     let end = parseInt(req.params[ 1 ])
-    if (req.headers.range){
+    if (req.headers.range) {
       let range = req.headers.range
       let positions = range.replace(/bytes=/, "").split("-")
       start = positions[ 0 ] ? parseInt(positions[ 0 ]) : null
@@ -32,14 +31,14 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
     url.contentType = req.params[ 0 ]
     url.streamOffset = start
     url.streamLength = req.params[ 1 ]
-    url.streamOffsetLength  =  parseInt(end)
+    url.streamOffsetLength = parseInt(end)
     url.fileHash = req.params[ 2 ]
     url.descriptorHash = req.params[ 3 ]
     url.fileName = req.params[ 4 ]
     let rs = new ors(url, bc)
     if (url.contentType === 'offsystem/directory') {
       collect(rs, (err, data)=> {
-        if(!data){
+        if (!data) {
           return res.status(404).send("Resource Not Found")
         }
         let lines = data.toString('utf8').split('\n')
@@ -51,7 +50,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             if (err) {
               throw err
             }
-            if(!data && i != -1){
+            if (!data && i != -1) {
               return res.status(404).send("Resource Not Found")
             }
             if (data) {
@@ -60,10 +59,10 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             i++
             if (i < dirs.length) {
               let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
-              let file =  dirs[ i ] + ".ofd"
+              let file = dirs[ i ] + ".ofd"
               let found
               let path = lines.find((line)=> {
-                return  basename(line) == file
+                return basename(line) == file
               })
               if (path) {
                 let matches = path.match(reg)
@@ -74,7 +73,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = file
                 let rs = new ors(url, bc)
-                rs.on('eror', (err)=>{
+                rs.on('eror', (err)=> {
                   res.status(500).send(err)
                 })
                 if (url.contentType === 'offsystem/directory') {
@@ -86,7 +85,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             } else {
               let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\//
               let path = lines.find((line)=> {
-                return  basename(line) == stats.base
+                return basename(line) == stats.base
               })
               if (path) {
                 let matches = path.match(reg)
@@ -97,7 +96,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = stats.base
                 let rs = new ors(url, bc)
-                rs.on('eror', (err)=>{
+                rs.on('eror', (err)=> {
                   res.status(500).send(err)
                 })
                 if (url.contentType === 'offsystem/directory') {
@@ -148,7 +147,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             url.descriptorHash = matches[ 4 ]
             url.fileName = "index.html"
             let rs = new ors(url, bc)
-            rs.on('eror', (err)=>{
+            rs.on('eror', (err)=> {
               res.status(500).send(err)
             })
             res.type(url.contentType)
@@ -169,7 +168,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
           "Content-Length": req.params[ 1 ],
           "Content-Type": url.contentType
         })
-      } else{
+      } else {
         console.log('happened')
         res.writeHead(200, {
           "Content-Type": url.contentType
@@ -179,15 +178,15 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
     }
   })
 
-off.put('/offsystem/', (req, res)=>{
+off.put('/offsystem/', (req, res)=> {
   let url = new OffUrl()
-  url.serverAddress= req.get('server-address') || url.serverAddress
+  url.serverAddress = req.get('server-address') || url.serverAddress
   url.contentType = req.get('content-type')
   url.fileName = req.get('file-name')
-  url.streamLength= req.get('stream-length')
+  url.streamLength = req.get('stream-length')
 
-  let ws = new ows({ bc: bc, url: url})
-  ws.on('url', (url)=>{
+  let ws = new ows({ bc: bc, url: url })
+  ws.on('url', (url)=> {
     res.write(url.toString())
     res.end()
   })

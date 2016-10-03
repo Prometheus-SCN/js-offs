@@ -1,5 +1,7 @@
 module.exports = {
-  path:'../.block-cache',
+  blockPath:'../.block-cache',
+  miniPath: '../.mini-cache',
+  nanoPath: '../.nano-cache',
   tupleSize: 3,
   blockSize: 128000,
   miniBlockSize: 1000,
@@ -8,8 +10,15 @@ module.exports = {
   failureRate: .1789,
   scale: 2,
   filterSize: 20000,
-  fingerprintSize: 6,
+  fingerprintSize: 8,
   hitBoxSize: 100,
   bucketSize: 4,
-  scale: 2
+  startPort: 7200,
+  numPortTries : 2,
+  timeout: 20000,
+  packetSize: 512,
+  nodeCount: 10,
+  concurrency:3,
+  kbucketSize: 20,
+  storeCount: 1
 }

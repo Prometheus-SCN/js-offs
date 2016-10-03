@@ -7,37 +7,41 @@ let _bloom = new WeakMap()
 let _failureRate = new WeakMap()
 let _count = new WeakMap()
 const maxInt = 2147483647
-class BloomFilter{
-  constructor(size, failureRate) {
-    if(!Number.isInteger(size)){
+class BloomFilter {
+  constructor (size, failureRate) {
+    if (!Number.isInteger(size)) {
       throw new Error("Invalid Size Count")
     }
-    if(isNaN(failureRate) || ( failureRate < 0) || (failureRate > 1)){
+    if (isNaN(failureRate) || ( failureRate < 0) || (failureRate > 1)) {
       throw new Error("Invalid Failure Rate")
     }
     let max = maxSize(failureRate)
-    if (size > max){
-      size= max
+    if (size > max) {
+      size = max
     }
     _count.set(this, 0)
     _size.set(this, size)
     let bits = bloomBits(size, failureRate)
-    let hashes  = bloomFunctions(size, bits)
-    if (bits > maxInt){
+    let hashes = bloomFunctions(size, bits)
+    if (bits > maxInt) {
       bits = maxInt
     }
     _bloom.set(this, new Bloom(bits, hashes))
   }
-  get size(){
+
+  get size () {
     return _size.get(this)
   }
-  get count(){
+
+  get count () {
     return _count.get(this)
   }
-  get reliable(){
-    return this.count < Math.floor(this.size/2)
+
+  get reliable () {
+    return this.count < Math.floor(this.size / 2)
   }
-  add(item){
+
+  add (item) {
     let bloom = _bloom.get(this)
     let count = _count.get(this)
     count++
@@ -45,12 +49,12 @@ class BloomFilter{
     bloom.add(item)
     _bloom.set(this, bloom)
   }
-  contains(item){
+
+  contains (item) {
     let bloom = _bloom.get(this)
     return bloom.test(item)
   }
 }
-
 
 module.exports = class ScalableBloomFilter {
   constructor (size, failureRate, scale) {
@@ -62,8 +66,9 @@ module.exports = class ScalableBloomFilter {
     _scale.set(this, scale)
     _failureRate.set(this, failureRate)
   }
-  add(item){
-    if(!this.contains(item)) {
+
+  add (item) {
+    if (!this.contains(item)) {
       let filterSeries = _filterSeries.get(this)
       let current = filterSeries.find((bloom)=> {
         return bloom.reliable
@@ -79,34 +84,36 @@ module.exports = class ScalableBloomFilter {
       current.add(item)
     }
   }
-  contains(item){
+
+  contains (item) {
     let filterSeries = _filterSeries.get(this)
     let found = false
-    for (let i = 0; i < filterSeries.length; i++){
-      found = filterSeries[i].contains(item)
-      if(found){
+    for (let i = 0; i < filterSeries.length; i++) {
+      found = filterSeries[ i ].contains(item)
+      if (found) {
         break;
       }
     }
     return found
   }
-  get count(){
+
+  get count () {
     let filterSeries = _filterSeries.get(this)
     let sum = 0
-    for (let i = 0; i < filterSeries.length; i++){
-      sum += filterSeries[i].count
+    for (let i = 0; i < filterSeries.length; i++) {
+      sum += filterSeries[ i ].count
     }
     return sum
   }
 }
 
-function bloomBits(n, p){
+function bloomBits (n, p) {
   return Math.ceil((n * Math.log(p)) / Math.log(1.0 / (Math.pow(2.0, Math.log(2.0)))))
 }
 
-function bloomFunctions(n, m){
+function bloomFunctions (n, m) {
   return Math.round(Math.log(2.0) * m / n)
 }
-function maxSize(p){
+function maxSize (p) {
   return Math.floor((maxInt * Math.log(1.0 / (Math.pow(2.0, Math.log(2.0))))) / Math.log(p))
 }

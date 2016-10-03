@@ -1,9 +1,10 @@
 'use strict'
+const CuckooFilter = require('cuckoo-filter').ScalableCuckooFilter
 const blocker = require('block-stream2')
 const Writable = require('readable-stream').Writable;
 const BlockCache = require('./block-cache')
 const Descriptor = require('./descriptor')
-const config= require('../config')
+const config = require('../config')
 const Block = require('./block')
 const util = require('./utility')
 const bs58 = require('bs58')
@@ -12,7 +13,7 @@ const isStream = require('isstream')
 const streamifier = require('streamifier')
 const OffUrl = require('./off-url')
 const _tupleSize = config.tupleSize
-const _blockSize = config.blockSize
+const _blockSize = new WeakMap()
 let _path = new WeakMap()
 let _blockCache = new WeakMap()
 let _hasher = new WeakMap()
@@ -21,11 +22,14 @@ let _accumulator = new WeakMap()
 let _url = new WeakMap()
 let _size = new WeakMap()
 let _count = new WeakMap()
-let _usageSession= new WeakMap()
-
+let _usageFilter = new WeakMap()
+let _items = new WeakMap()
 
 module.exports = class WritableOffStream extends Writable {
-  constructor (opts) {
+  constructor (blockSize, opts) {
+    if(!Number.isInteger(blockSize)){
+      throw new Error('Block size must be an integer')
+    }
     if (!opts) {
       throw new Error('Invalid Options')
     }
@@ -35,17 +39,24 @@ module.exports = class WritableOffStream extends Writable {
     if (!opts.bc) {
       throw new Error('Invalid Block Cache')
     }
-    opts.highWaterMark = _blockSize
+    opts.highWaterMark = blockSize
     super(opts)
-    if (opts.url && (opts.url instanceof OffUrl)){
+    if (opts.url && (opts.url instanceof OffUrl)) {
       _url.set(this, opts.url)
     } else {
-      opts.url= new OffUrl
+      opts.url = new OffUrl
       _url.set(this, opts.url)
     }
 
+    if (opts.url.streamLength) {
+      let blocks = Math.ceil(opts.url.streamLength / blockSize)
+      _usageFilter.set(this, new CuckooFilter(blocks, config.bucketSize, config.fingerprintSize, config.scale))
+    } else {
+      _usageFilter.set(this, new CuckooFilter(200, config.bucketSize, config.fingerprintSize, config.scale))
+    }
+    _blockSize.set(this, blockSize)
     _blockCache.set(this, opts.bc)
-    _descriptor.set(this, new Descriptor())
+    _descriptor.set(this, new Descriptor(blockSize))
     _accumulator.set(this, new Buffer(0))
     _hasher.set(this, util.hasher())
     _size.set(this, 0)
@@ -69,18 +80,16 @@ module.exports = class WritableOffStream extends Writable {
             let block = dBlocks[ i ]
             bc.put(block, (err)=> {
               if (err) {
-                return process.nextTick(()=>{next(err)})
+                return process.nextTick(()=> {next(err)})
               }
-              return process.nextTick(()=>{next(err)})
+              return process.nextTick(()=> {next(err)})
             })
           } else {
-            let usageSession = _usageSession.get(this)
-            bc.endSession(usageSession)
             let hasher = _hasher.get(this)
             let url = _url.get(this)
             let size = _size.get(this)
             url.fileHash = bs58.encode(hasher.digest())
-            url.descriptorHash = dBlocks[0].key
+            url.descriptorHash = dBlocks[ 0 ].key
             url.streamLength = size
             url.streamOffsetLength = size
             url.streamOffset = 0
@@ -100,42 +109,48 @@ module.exports = class WritableOffStream extends Writable {
           this.emit('error', new Error('Invalid Input'))
           return
         }
-        let bc = _blockCache.get(this)
-        let usageSession = _usageSession.get(this)
 
         //Start Chunking and processing chunks into blocks
-        bufStream.pipe(blocker({ size: _blockSize, zeroPadding: false }))
+        bufStream.pipe(blocker({ size: blockSize, zeroPadding: false }))
           .pipe(through((buf, enc, nxt)=> {
             let bc = _blockCache.get(this)
-            bc.randomBlocks((_tupleSize - 1), usageSession, (err, usageSession, randoms)=> {
+            let items = _items.get(this)
+            let usageFilter = _usageFilter.get(this)
+
+            bc.randomBlocks((_tupleSize - 1), usageFilter, items, (err, items, randoms)=> {
               if (err) {
                 this.emit('error', err)
                 return
               }
-              _usageSession.set(this, usageSession)
-               //create off block from
+              _items.set(this, items)
+              //create off block from
               let count = _count.get(this)
-              let offBlock = new Block(buf)
-              if(count === 0){
+              let offBlock = new Block(buf, blockSize)
+              if (count === 0) {
                 let url = _url.get(this)
                 url.hash = offBlock.key
                 _url.set(this, url)
               }
               let descriptor = _descriptor.get(this)
               let tuple = []
-              randoms.forEach((random)=> {
-                offBlock = offBlock.parity(random)
-                tuple.push(random)
-              })
-              if(count < _tupleSize){
+              for (let i = 0; i < randoms.length; i++) {
+                offBlock = offBlock.parity(randoms[ i ])
+                tuple.push(randoms[ i ])
+              }
+              if (count < _tupleSize) {
                 let url = _url.get(this)
-                url['tupleBlock' + (count+1)] = offBlock.key
+                url[ 'tupleBlock' + (count + 1) ] = offBlock.key
                 _url.set(this, url)
               }
 
               count++
               _count.set(this, count)
               tuple.unshift(offBlock)
+
+              for (let i; i < tuple.length; i++) {
+                usageFilter.add(tuple[ i ].key)
+              }
+
               descriptor.tuple(tuple)
               _descriptor.set(this, descriptor)
 
@@ -144,7 +159,7 @@ module.exports = class WritableOffStream extends Writable {
                   this.emit('error', err)
                   return
                 }
-                return process.nextTick(()=>{nxt(null, buf)})
+                return process.nextTick(()=> {nxt(null, buf)})
               })
 
             })
@@ -153,7 +168,7 @@ module.exports = class WritableOffStream extends Writable {
             let hasher = _hasher.get(this)
             hasher.update(buf)
             _hasher.set(this, hasher)
-            return process.nextTick(()=>{nxt()})
+            return process.nextTick(()=> {nxt()})
           }))
           .on('finish', genURL)
       } else {
@@ -168,32 +183,34 @@ module.exports = class WritableOffStream extends Writable {
 
   _write (buf, enc, next) {
     // we need to accumulate when the bufs are tiny
+    let blockSize = _blockSize.get(this)
     let accumulator = _accumulator.get(this)
-    let size= _size.get(this)
+    let size = _size.get(this)
     size += buf.length
     _size.set(this, size)
     accumulator = Buffer.concat([ accumulator, buf ])
     _accumulator.set(this, accumulator)
-    if (accumulator.length < _blockSize) {
+    if (accumulator.length < blockSize) {
       return next()
     } else {
-      buf = accumulator.slice(0, _blockSize)
-      accumulator = accumulator.slice(_blockSize)
+      buf = accumulator.slice(0, blockSize)
+      accumulator = accumulator.slice(blockSize)
       _accumulator.set(this, accumulator)
       let hasher = _hasher.get(this)
       hasher.update(buf)
       _hasher.set(this, hasher)
       let bc = _blockCache.get(this)
-      let usageSession = _usageSession.get(this)
-      bc.randomBlocks((_tupleSize - 1), usageSession, (err, usageSession, randoms)=> {
+      let usageFilter = _usageFilter.get(this)
+      let items = _items.get(this)
+      bc.randomBlocks((_tupleSize - 1), usageFilter, items, (err, items, randoms)=> {
         if (err) {
           this.emit('error', err)
           return
         }
-        _usageSession.set(this, usageSession)
+        _items.set(this, items)
         //create off block from
         let count = _count.get(this)
-        let offBlock = new Block(buf)
+        let offBlock = new Block(buf, blockSize)
         if (count === 0) {
           let url = _url.get(this)
           url.hash = offBlock.key
@@ -202,10 +219,11 @@ module.exports = class WritableOffStream extends Writable {
 
         let descriptor = _descriptor.get(this)
         let tuple = []
-        randoms.forEach((random)=> {
-          offBlock = offBlock.parity(random)
-          tuple.push(random)
-        })
+        for (let i = 0; i < randoms.length; i++) {
+          offBlock = offBlock.parity(randoms[ i ])
+          tuple.push(randoms[ i ])
+        }
+
         if (count < 3) {
           let url = _url.get(this)
           url[ 'tupleBlock' + (count + 1) ] = offBlock.key
@@ -216,6 +234,11 @@ module.exports = class WritableOffStream extends Writable {
         _count.set(this, count)
 
         tuple.unshift(offBlock)
+
+        for (let i; i < tuple.length; i++) {
+          usageFilter.add(tuple[ i ].key)
+        }
+
         descriptor.tuple(tuple)
         _descriptor.set(this, descriptor)
 

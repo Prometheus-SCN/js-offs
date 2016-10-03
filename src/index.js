@@ -12,183 +12,221 @@ const mime = require('mime')
 const collect = require('collect-stream')
 //const Bloom = require('./scalable-bloom-filter')
 const bs58 = require('bs58')
-const crypto= require('crypto')
+const crypto = require('crypto')
 //const BloomSieve = require('./bloom-sieve')
 const CuckooSieve = require('./cuckoo-sieve')
 const Bucket = require('./fibonacci-bucket')
-const CuckooFilter= require('cuckoo-filter').CuckooFilter
-const Cache= require('./fibonacci-cache')
+const CuckooFilter = require('cuckoo-filter').CuckooFilter
+const Cache = require('./fibonacci-cache')
+const config= require('../config')
+const BlockRouter = require('./block-router')
 
-let cache =  new Cache('../.block-cache')
-let blocks = []
-let cuckoo= new CuckooFilter(1000,3,6)
-for (let i = 0; i < 20; i++) {
-  let block = Block.randomBlock()
-  blocks.push(block)
-}
-cache.on('promote', (block)=>{
-  console.log(`promoted ${block.key}`)
-})
-let i = -1
-let deleteStuff = (err)=>{
-  if(err){
+fs.readFile('test.pdf', (err, data)=> {
+  if (err) {
     throw err
   }
-  if( i != -1) {
-    console.log(`removed block ${blocks[ i ].key}`)
-  }
-  i++
-  if (i < blocks.length){
-    cache.remove(blocks[i].key, deleteStuff)
-  }else{
-    i= -1
-    return
-  }
-}
-let getStuff = (err, block)=>{
-  if(err){
-    throw err
-  }
-  if(block){
-    console.log(`got block ${block.key}`)
-  }
-  i++
-  if (i < blocks.length){
-    cache.get(blocks[i].key, getStuff)
-  }else{
-    i= -1
-    return deleteStuff()
-  }
-}
 
-let thenAgain = (err)=>{
-  if(err){
-    throw err
-  }
-  i++
-  if (i < blocks.length){
-    cache.put(blocks[i], thenAgain)
-  }else{
-    i= -1
-    return getStuff()
-  }
-}
+  let url = new OffUrl()
+  let br = new BlockRouter
+  let rs = fs.createReadStream('test.pdf')
+  url.fileName = 'test.pdf'
+  url.contentType = mime.lookup('test.pdf')
+  url.streamLength = data.length
+  let ws = br.createWriteStream(url)
+  ws.on('url', (url)=> {
+    console.log(url.toString())
 
-let then = (err)=>{
-  if(err){
-    throw err
-  }
-  i++
-  if (i < blocks.length){
-    cache.put(blocks[i], then)
-  }else{
-    i= -1
-    return thenAgain()
-  }
-}
-let next = (err)=>{
-  if(err){
-    throw err
-  }
-  i++
-  if (i < blocks.length){
-    cache.put(blocks[i], next)
-  }else{
-    i= -1
-    return then()
-  }
-}
-let getRandomBlocks= (err, items, blocks)=>{
-  if(err){
-    console.log(err)
-  }
-  console.log(`bucket: ${items.bucket}`)
-  console.log(items.items)
-  console.log(blocks)
-
-}
-cache.randomBlocks(3, cuckoo, getRandomBlocks)
-next()
-/*
-let fibBucket = new Bucket('../.block-cache')
-let blocks = []
-for (let i = 0; i < 20; i++) {
-  let block = Block.randomBlock()
-  blocks.push(block)
-}
-let i = -1
-let then = ()=>{
-  let cuckoo= new CuckooFilter(1000,3,6)
-  fibBucket.randomBlocks(2, cuckoo, (err, items, blocks)=>{
-    if(err){
-      throw err
-    }
-    console.log(items)
-    console.log(blocks)
+    let rs = br.createReadStream(url)
+    collect(rs, (err, data)=> {
+      if (err) {
+        throw err
+      }
+      console.log(data.toString('hex'))
+    })
   })
-}
-let next = (err)=>{
-  if(err){
-    throw err
-  }
-  i++
-  if (i < blocks.length){
-    fibBucket.tally(blocks[i].key)
-    fibBucket.put(blocks[i], next)
-  }else{
-    i= -1
-    return then()
-  }
-}
+  rs.pipe(ws)
 
-next(null, then)
-*/
+})
+/*
+ let cache =  new Cache('../.block-cache')
+ let blocks = []
+ let cuckoo= new CuckooFilter(1000,3,6)
+ for (let i = 0; i < 20; i++) {
+ let block = Block.randomBlock()
+ blocks.push(block)
+ }
+ cache.on('promote', (block)=>{
+ console.log(`promoted ${block.key}`)
+ })
+ let i = -1
+ let deleteStuff = (err)=>{
+ if(err){
+ throw err
+ }
+ if( i != -1) {
+ console.log(`removed block ${blocks[ i ].key}`)
+ }
+ i++
+ if (i < blocks.length){
+ cache.remove(blocks[i].key, deleteStuff)
+ }else{
+ i= -1
+ cache.save((err)=>{
+ if(err){
+ throw err
+ }
+ console.log('saved')
+ })
+ return
+ }
+ }
+ let getStuff = (err, block)=>{
+ if(err){
+ throw err
+ }
+ if(block){
+ console.log(`got block ${block.key}`)
+ }
+ i++
+ if (i < blocks.length){
+ cache.get(blocks[i].key, getStuff)
+ }else{
+ i= -1
+ return deleteStuff()
+ }
+ }
+
+ let thenAgain = (err)=>{
+ if(err){
+ throw err
+ }
+ i++
+ if (i < blocks.length){
+ cache.put(blocks[i], thenAgain)
+ }else{
+ i= -1
+ return getStuff()
+ }
+ }
+
+ let then = (err)=>{
+ if(err){
+ throw err
+ }
+ i++
+ if (i < blocks.length){
+ cache.put(blocks[i], then)
+ }else{
+ i= -1
+ return thenAgain()
+ }
+ }
+ let next = (err)=>{
+ if(err){
+ throw err
+ }
+ i++
+ if (i < blocks.length){
+ cache.put(blocks[i], next)
+ }else{
+ i= -1
+ return then()
+ }
+ }
+ let getRandomBlocks= (err, items, blocks)=>{
+ if(err){
+ console.log(err)
+ }
+
+ }
+ cache.randomBlocks(3, cuckoo, getRandomBlocks)
+ next()
+ */
 
 /*
-let keys = []
-for (let i = 0; i < 20; i++) {
-  let key = bs58.encode(util.hash(crypto.randomBytes(34)))
-  keys.push(key)
-}
-let sieve = new CuckooSieve(10, 3, 6, 2 )
-for (let i = 0; i < 20000; i++) {
-  let index= util.getRandomInt(0, keys.length-1)
-  sieve.tally(keys[index])
-}
-*/
-/*
-for (let i = 0; i < sieve.max; i++) {
-  console.log(`Rank ${(i+1)}:  ${sieve.countAtRank((i+1))}`)
-}*/
-/*
-console.log(`Key ${keys[2]} is ranked ${sieve.rank(keys[2])} `)
-let found
-let rank = getRandomInt (1, sieve.max)
-console.log(`Removing from ${rank} with ${sieve.countAtRank(rank)} hits`)
+ let fibBucket = new Bucket('../.block-cache')
+ let blocks = []
+ for (let i = 0; i < 20; i++) {
+ let block = Block.randomBlock()
+ blocks.push(block)
+ }
+ let i = -1
+ let then = ()=>{
+ let cuckoo= new CuckooFilter(1000,3,6)
+ fibBucket.randomBlocks(2, cuckoo, (err, items, blocks)=>{
+ if(err){
+ throw err
+ }
+ console.log(items)
+ console.log(blocks)
+ })
+ }
+ let next = (err)=>{
+ if(err){
+ throw err
+ }
+ i++
+ if (i < blocks.length){
+ fibBucket.tally(blocks[i].key)
+ fibBucket.put(blocks[i], next)
+ }else{
+ i= -1
+ return then()
+ }
+ }
 
-if(found){
-  console.log(`Key ${found} is ranked ${sieve.rank(found)} `)
-}
-console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
-*/
+ next(null, then)
+ */
+
 /*
-fs.readFile('test.pdf', (err, data)=>{
-  if(err){
+ let keys = []
+ for (let i = 0; i < 20; i++) {
+ let key = bs58.encode(util.hash(crypto.randomBytes(34)))
+ keys.push(key)
+ }
+ let sieve = new CuckooSieve(10, 3, 6, 2 )
+ for (let i = 0; i < 20000; i++) {
+ let index= util.getRandomInt(0, keys.length-1)
+ sieve.tally(keys[index])
+ }
+ */
+/*
+ for (let i = 0; i < sieve.max; i++) {
+ console.log(`Rank ${(i+1)}:  ${sieve.countAtRank((i+1))}`)
+ }*/
+/*
+ console.log(`Key ${keys[2]} is ranked ${sieve.rank(keys[2])} `)
+ let found
+ let rank = getRandomInt (1, sieve.max)
+ console.log(`Removing from ${rank} with ${sieve.countAtRank(rank)} hits`)
+
+ if(found){
+ console.log(`Key ${found} is ranked ${sieve.rank(found)} `)
+ }
+ console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
+ */
+/*
+fs.readFile('test.pdf', (err, data)=> {
+  if (err) {
     throw err
   }
   let slice = data.slice(288, 1000)
   console.log(slice)
   let url = new OffUrl()
-  let bc = new BlockCache('../.block-cache')
+  let bc = new BlockCache('../.block-cache', config.blockSize)
   let rs = fs.createReadStream('test.pdf')
-  url.fileName= 'test.pdf'
+  url.fileName = 'test.pdf'
   url.contentType = mime.lookup('test.pdf')
-  let ws = new ows({bc: bc, url: url})
-  ws.on('url', (url)=>{
+  let ws = new ows(config.blockSize,{ bc: bc, url: url })
+  ws.on('url', (url)=> {
+    console.log(url.toString())
     url.streamOffset = 288
     url.streamOffsetLength = 1000
-    let rs = new ors(url, bc)
+    let rs = new ors(url, config.blockSize, bc)
     collect(rs, (err, data)=> {
+      if (err) {
+        throw err
+      }
       console.log(data)
       console.log(slice.equals(data))
     })
@@ -197,91 +235,91 @@ fs.readFile('test.pdf', (err, data)=>{
 
 })*/
 /*
-let sequence = [0, 1]
-function fibSequence(num){
-  let output = 0
-  for (var i = 0; i < num; i++) {
-    sequence.push(sequence[0] + sequence[1])
-    sequence.splice(0, 1)
-    output = sequence[1]
-  }
-  return output
-}
-console.log(fibSequence(1))
-*/
+ let sequence = [0, 1]
+ function fibSequence(num){
+ let output = 0
+ for (var i = 0; i < num; i++) {
+ sequence.push(sequence[0] + sequence[1])
+ sequence.splice(0, 1)
+ output = sequence[1]
+ }
+ return output
+ }
+ console.log(fibSequence(1))
+ */
 /*
-function getRandomInt (min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
-}
+ function getRandomInt (min, max) {
+ return Math.floor(Math.random() * (max - min)) + min;
+ }
 
-let keys = []
-for (let i = 0; i < 20; i++) {
-  let key = bs58.encode(util.hash(crypto.randomBytes(34)))
-  keys.push(key)
-}
-let sieve = new BloomSieve()
-for (let i = 0; i < 20000; i++) {
-  let index= getRandomInt(0, keys.length-1)
-  sieve.tally(keys[index])
-}
-for (let i = 0; i < sieve.max; i++) {
-  console.log(`Rank ${(i+1)}:  ${sieve.countAtRank((i+1))}`)
-}
-console.log(`Key ${keys[2]} is ranked ${sieve.rank(keys[2])} `)
-let found
-let rank = getRandomInt (1, sieve.max)
-console.log(`Removing from ${rank} with ${sieve.countAtRank(rank)} hits`)
-sieve.rebuildAtRank(rank, (oldRank, newRank)=>{
-  console.log(`count in oldrank:${oldRank.count}`)
-  console.log(`new rank has ${newRank.count}`)
-  let outrank = keys.filter((key)=>{
-    return !oldRank.contains(key)
-  })
-  console.log(`outrank ${outrank.length}`)
-  let inrank = keys.filter((key)=>{
-    return !outrank.find((ky)=>{return key === ky})
-  })
-  console.log(`inrank ${inrank.length}`)
-  if(inrank.length > 0){
-    found = inrank.pop()
-    console.log(`inrank ${inrank.length}`)
-    inrank.forEach((key)=>{
-      newRank.add(key)
-    })
-  }
-  console.log(`new rank has ${newRank.count}`)
-})
-if(found){
-  console.log(`Key ${found} is ranked ${sieve.rank(found)} `)
-}
-console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
-*/
+ let keys = []
+ for (let i = 0; i < 20; i++) {
+ let key = bs58.encode(util.hash(crypto.randomBytes(34)))
+ keys.push(key)
+ }
+ let sieve = new BloomSieve()
+ for (let i = 0; i < 20000; i++) {
+ let index= getRandomInt(0, keys.length-1)
+ sieve.tally(keys[index])
+ }
+ for (let i = 0; i < sieve.max; i++) {
+ console.log(`Rank ${(i+1)}:  ${sieve.countAtRank((i+1))}`)
+ }
+ console.log(`Key ${keys[2]} is ranked ${sieve.rank(keys[2])} `)
+ let found
+ let rank = getRandomInt (1, sieve.max)
+ console.log(`Removing from ${rank} with ${sieve.countAtRank(rank)} hits`)
+ sieve.rebuildAtRank(rank, (oldRank, newRank)=>{
+ console.log(`count in oldrank:${oldRank.count}`)
+ console.log(`new rank has ${newRank.count}`)
+ let outrank = keys.filter((key)=>{
+ return !oldRank.contains(key)
+ })
+ console.log(`outrank ${outrank.length}`)
+ let inrank = keys.filter((key)=>{
+ return !outrank.find((ky)=>{return key === ky})
+ })
+ console.log(`inrank ${inrank.length}`)
+ if(inrank.length > 0){
+ found = inrank.pop()
+ console.log(`inrank ${inrank.length}`)
+ inrank.forEach((key)=>{
+ newRank.add(key)
+ })
+ }
+ console.log(`new rank has ${newRank.count}`)
+ })
+ if(found){
+ console.log(`Key ${found} is ranked ${sieve.rank(found)} `)
+ }
+ console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
+ */
 /*
-function maxSize(p){
+ function maxSize(p){
  return (2147483647 * Math.log(1.0 / (Math.pow(2.0, Math.log(2.0))))) / Math.log(p)
-}
-console.log(maxSize(.1789))
+ }
+ console.log(maxSize(.1789))
 
-/*
+ /*
 
-let bloom = new Bloom(1, .1789, 2)
-let keys = []
+ let bloom = new Bloom(1, .1789, 2)
+ let keys = []
 
-for (let i = 0; i < 32000; i++) {
-  let key = bs58.encode(util.hash(crypto.randomBytes(34)))
-  keys.push(key)
-  bloom.add(key)
-}
+ for (let i = 0; i < 32000; i++) {
+ let key = bs58.encode(util.hash(crypto.randomBytes(34)))
+ keys.push(key)
+ bloom.add(key)
+ }
 
-keys.forEach((key)=>{
-  console.log(`Key: ${key}, Contains: ${bloom.contains(key)}`)
-})
+ keys.forEach((key)=>{
+ console.log(`Key: ${key}, Contains: ${bloom.contains(key)}`)
+ })
 
-console.log(bloom.count)
-let key = bs58.encode(util.hash(crypto.randomBytes(256)))
-console.log(bloom.contains(key))
+ console.log(bloom.count)
+ let key = bs58.encode(util.hash(crypto.randomBytes(256)))
+ console.log(bloom.contains(key))
 
-*/
+ */
 
 
 /*

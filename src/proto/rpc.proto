@@ -1,0 +1,75 @@
+package RPCProto;
+
+message Peer{
+    required bytes id = 1;
+    required string ip = 2;
+    required int64 port= 3;
+}
+enum RPCType {
+    Ping = 1;
+    Find_Node = 2;
+    Find_Value= 3;
+    Store= 4;
+    Random = 5;
+    Promotion = 6;
+}
+enum Direction{
+    Response= 1;
+    Request = 2;
+}
+enum Status{
+    Success = 1;
+    Failure = 2;
+}
+enum ValueType{
+    Block = 1;
+    Mini = 2;
+    Nano = 3;
+}
+message RPC {
+  required RPCType type =1;
+  required Peer from = 2;
+  required Direction comType = 3;
+  required bytes id = 4;
+  optional bytes payload= 5;
+  optional Status status = 6;
+}
+
+message FindNodeRequest{
+    required bytes id = 1;
+    required int64 count= 2;
+}
+message FindNodeResponse{
+    repeated Peer nodes= 1;
+}
+message FindValueRequest{
+    required ValueType type = 1;
+    required bytes hash = 2;
+    required int64 count= 3;
+}
+message FindValueResponse{
+    required ValueType type = 1;
+    required bytes hash = 2;
+    optional bytes data = 3;
+    repeated Peer nodes= 4;
+}
+message StoreRequest{
+    required ValueType type = 1;
+    required bytes value= 2;
+}
+message RandomRequest{
+    required ValueType type = 1;
+    required int64 number= 2;
+    required bytes filter = 3;
+}
+message RandomResponse{
+    required ValueType type = 1;
+    required int64 number= 2;
+    required bytes value= 3;
+}
+message PromotionRequest{
+    required ValueType type = 1;
+    required bytes hash = 2;
+    required int64 oldnumber= 3;
+    required int64 newnumber= 4;
+}

@@ -20,6 +20,7 @@ module.exports = class OffUrl {
     _contentType.set(this, 'application/octet-stream')
     _streamOffset.set(this, 0)
     _streamOffsetLength.set(this, 0)
+    _streamLength.set(this, 0)
     _version.set(this, 'v3')
   }
 
@@ -65,8 +66,8 @@ module.exports = class OffUrl {
   }
 
   set streamLength (value) {
-    if (isNaN(value)) {
-      throw new Error("Stream length must be a number")
+    if (!Number.isInteger(value)) {
+      throw new Error("Stream length must be an integer")
     }
     _streamLength.set(this, value)
   }

@@ -1,0 +1,5 @@
+message Keypair{
+    required bytes publicKey = 1;
+    required bytes privateKey = 2;
+    required bytes certificate = 3;
+}

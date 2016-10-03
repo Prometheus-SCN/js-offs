@@ -3,16 +3,20 @@ const Block = require('./block')
 const config = require('../config.js')
 let _data = new WeakMap()
 const _descriptorPad = config.descriptorPad
-const _blockSize = config.blockSize
 let _blockArr = new WeakMap()
 let _max = new WeakMap()
 let _size = new WeakMap()
-let _tupleSize = config.tupleSize
+let _blockSize = new WeakMap()
+
 module.exports = class Descriptor {
-  constructor () {
+  constructor (blockSize) {
+    if(!Number.isInteger(blockSize)){
+      throw new Error('Block size must be an integer')
+    }
+    _blockSize.set(this, blockSize)
     _data.set(this, [ new Buffer(0) ])
     _blockArr.set(this, [])
-    _max.set(this, Math.floor(_blockSize / _descriptorPad) * _descriptorPad)
+    _max.set(this, Math.floor(blockSize / _descriptorPad) * _descriptorPad)
     _size.set(this, 0)
   }
 
@@ -75,11 +79,12 @@ module.exports = class Descriptor {
 
   blocks () {
     let blockArr = _blockArr.get(this)
+    let blockSize = _blockSize.get(this)
     if (blockArr.length == 0) {
       let dblocks = _data.get(this)
 
       if (dblocks.length === 1) {
-        blockArr = [ new Block(dblocks[ 0 ]) ]
+        blockArr = [ new Block(dblocks[ 0 ], blockSize) ]
         _blockArr.set(this, blockArr)
         return blockArr
       } else {
@@ -90,7 +95,7 @@ module.exports = class Descriptor {
             data = Buffer.concat([ data, last ])
             dblocks[ i ] = data
           }
-          let block = new Block(data)
+          let block = new Block(data, blockSize)
           blockArr.unshift(block)
           _blockArr.set(this, blockArr)
           last = block.hash

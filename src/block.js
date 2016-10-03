@@ -3,21 +3,24 @@ const util = require('./utility')
 const crypto = require('crypto')
 const xor = require('buffer-xor')
 const bs58 = require('bs58')
-const config= require('../config')
+const config = require('../config')
 
 let _data = new WeakMap()
 let _key = new WeakMap()
 let _hash = new WeakMap()
-const _blockSize = config.blockSize
+let _blockSize = new WeakMap()
 
 function randomPad (buf) {
   let random = crypto.randomBytes(_blockSize - buf.length)
   return Buffer.concat([ buf, random ])
 }
 module.exports = class Block {
-  constructor (data) {
+  constructor (data, blockSize) {
     if (!data) {
       throw new Error('Block must be constructed with data')
+    }
+    if(!Number.isInteger(blockSize)){
+      throw new Error('Block size must be an integer')
     }
 
     if (Buffer.isBuffer(data)) {
@@ -25,24 +28,27 @@ module.exports = class Block {
     } else {
       data = new Buffer(data)
     }
-    if (data.length > _blockSize) { //TODO: make test cases for all exceptions
-      throw new Error('Invalid Block Size: Block exceeds 128kb')
+    if (data.length > blockSize) { //TODO: make test cases for all exceptions
+      console.log(blockSize)
+      throw new Error('Invalid Block Size')
     }
     if (data.length < _blockSize) {
       data = randomPad(data)
     }
     _data.set(this, data)
+    _blockSize.set(this, blockSize)
 
   }
 
   get data () {
     return _data.get(this).slice(0)
   }
-  get hash(){
-    let hash= _hash.get(this)
-    if(hash){
+
+  get hash () {
+    let hash = _hash.get(this)
+    if (hash) {
       return hash.slice(0)
-    } else{
+    } else {
       hash = util.hash(this.data)
       _hash.set(this, hash)
       return hash.slice(0)
@@ -62,20 +68,21 @@ module.exports = class Block {
   }
 
   parity (block) {
-    return Block.parityBlock(this, block)
+    let blockSize = _blockSize.get(this)
+    return Block.parityBlock(this, block, blockSize)
   }
 
-  static parityBlock (blockA, blockB) {
+  static parityBlock (blockA, blockB, blockSize) {
     if ((!blockA instanceof Block) || (!blockB instanceof Block)) {
       throw new Error('Invalid Blocks')
     }
     let data = xor(blockA.data, blockB.data)
-    return new Block(data)
+    return new Block(data, blockSize)
   }
 
-  static randomBlock () {
-    let data = crypto.randomBytes(_blockSize)
-    return new Block(data)
+  static randomBlock (blockSize) {
+    let data = crypto.randomBytes(blockSize)
+    return new Block(data, blockSize)
   }
 }
 

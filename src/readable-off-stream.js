@@ -8,15 +8,18 @@ let _descriptor = new WeakMap()
 let _url = new WeakMap()
 let _size = new WeakMap()
 let _detupler = new WeakMap()
-let _offsetStart= new WeakMap()
-const _blockSize = config.blockSize
+let _offsetStart = new WeakMap()
+let _blockSize = new WeakMap()
 const _descriptorPad = config.descriptorPad
 const _tupleSize = config.tupleSize
 
 module.exports = class ReadableOffStream extends Readable {
-  constructor (url, opts) {
+  constructor (url, blockSize, opts) {
     if (!(url instanceof OffUrl)) {
       throw new Error('Invalid url')
+    }
+    if(!Number.isInteger(blockSize)){
+      throw new Error('Block size must be an integer')
     }
     if (!opts) {
       throw new Error('Invalid options')
@@ -31,6 +34,7 @@ module.exports = class ReadableOffStream extends Readable {
     _size.set(this, 0)
     _blockCache.set(this, opts.bc)
     _detupler.set(this, ()=> {})
+    _blockSize.set(this, blockSize)
   }
 
   _read () {
@@ -38,7 +42,7 @@ module.exports = class ReadableOffStream extends Readable {
     let size = _size.get(this)
     let descriptor = _descriptor.get(this)
     let bc = _blockCache.get(this)
-    console.log(size)
+
     let getBlock = ()=> {
       let tuple = []
       let key
@@ -55,10 +59,10 @@ module.exports = class ReadableOffStream extends Readable {
           size = size + diff
 
           _size.set(this, size)
-          if(offsetStart) {
+          if (offsetStart) {
             this.push(sblock.data.slice(offsetStart, diff))
             _offsetStart.set(this, null)
-          } else{
+          } else {
             this.push(sblock.data.slice(0, diff))
           }
           this.push(null)
@@ -66,16 +70,16 @@ module.exports = class ReadableOffStream extends Readable {
           size = size + sblock.data.length
 
           _size.set(this, size)
-          if(offsetStart) {
+          if (offsetStart) {
             this.push(sblock.data.slice(offsetStart, sblock.data.length))
             _offsetStart.set(null)
-          } else{
+          } else {
             this.push(sblock.data)
           }
         }
       }
 
-      let i = - 1
+      let i = -1
       let next = (err, block)=> {
         if (err) {
           this.emit('error', err)
@@ -102,16 +106,15 @@ module.exports = class ReadableOffStream extends Readable {
           this.emit('error', err)
           return
         }
-
-        let blocks = Math.ceil(url.streamLength / _blockSize) //total number of source blocks
-        let cutPoint = ((Math.floor(_blockSize / _descriptorPad) ) * _descriptorPad)// maximum length of a descriptor in bytes
+        let blockSize = _blockSize.get(this)
+        let blocks = Math.ceil(url.streamLength / blockSize) //total number of source blocks
+        let cutPoint = ((Math.floor(blockSize / _descriptorPad) ) * _descriptorPad)// maximum length of a descriptor in bytes
 
         let tuppleBytes = blocks * _descriptorPad * _tupleSize // total size of all tupple descriptions
 
-        let descKeySize = ((Math.ceil(tuppleBytes / _blockSize)) * _descriptorPad) - _descriptorPad//total number of bytes for descriptor keys minus first desc block
+        let descKeySize = ((Math.ceil(tuppleBytes / blockSize)) * _descriptorPad) - _descriptorPad//total number of bytes for descriptor keys minus first desc block
 
         let ttlDescSize = tuppleBytes + descKeySize
-
 
         let keybuf
         let nextDesc
@@ -170,9 +173,9 @@ module.exports = class ReadableOffStream extends Readable {
           bc.get(nextDesc, getNext)
 
         } else {
-          if(url.streamOffset){
-            let offset = Math.floor(url.streamOffset/config.blockSize)
-            for(let i = 0 ; i < (offset * _tupleSize); i++){
+          if (url.streamOffset) {
+            let offset = Math.floor(url.streamOffset / config.blockSize)
+            for (let i = 0; i < (offset * _tupleSize); i++) {
               size = size + config.blockSize
               descriptor.shift()
             }
@@ -184,7 +187,7 @@ module.exports = class ReadableOffStream extends Readable {
         }
       })
     } else {
-      if (descriptor.length === 0 ) {
+      if (descriptor.length === 0) {
         return this.push(null)
       }
       process.nextTick(getBlock)
