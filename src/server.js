@@ -4,7 +4,7 @@ const OffUrl = require('./off-url')
 const ors = require('./readable-off-stream')
 const ows = require('./writable-off-stream')
 const collect = require('collect-stream')
-const BlockCache = require('./block-cache')
+const BlockRouter= require('./block-router')
 const config = require('../config')
 const pth = require('path')
 let basename
@@ -14,7 +14,7 @@ if (/^win/.test(process.platform)) {
 } else {
   basename = pth.posix.basename
 }
-let bc = new BlockCache(config.path)
+let br = new BlockRouter()
 let off = express()
 
 off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{46})\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
@@ -30,12 +30,12 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
     let url = new OffUrl()
     url.contentType = req.params[ 0 ]
     url.streamOffset = start
-    url.streamLength = req.params[ 1 ]
+    url.streamLength = parseInt(req.params[ 1 ])
     url.streamOffsetLength = parseInt(end)
     url.fileHash = req.params[ 2 ]
     url.descriptorHash = req.params[ 3 ]
     url.fileName = req.params[ 4 ]
-    let rs = new ors(url, bc)
+    let rs = br.createReadStream(url)
     if (url.contentType === 'offsystem/directory') {
       collect(rs, (err, data)=> {
         if (!data) {
@@ -68,11 +68,11 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 let matches = path.match(reg)
                 let url = new OffUrl()
                 url.contentType = matches[ 1 ]
-                url.streamLength = matches[ 2 ]
+                url.streamLength = parseInt(matches[ 2 ])
                 url.fileHash = matches[ 3 ]
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = file
-                let rs = new ors(url, bc)
+                let rs = br.createReadStream(url)
                 rs.on('eror', (err)=> {
                   res.status(500).send(err)
                 })
@@ -91,11 +91,11 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                 let matches = path.match(reg)
                 let url = new OffUrl()
                 url.contentType = matches[ 1 ]
-                url.streamLength = matches[ 2 ]
+                url.streamLength = parseInt(matches[ 2 ])
                 url.fileHash = matches[ 3 ]
                 url.descriptorHash = matches[ 4 ]
                 url.fileName = stats.base
-                let rs = new ors(url, bc)
+                let rs = br.createReadStream(url)
                 rs.on('eror', (err)=> {
                   res.status(500).send(err)
                 })
@@ -110,11 +110,11 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
                       let url = new OffUrl()
                       let matches = index.match(reg)
                       url.contentType = matches[ 1 ]
-                      url.streamLength = matches[ 2 ]
+                      url.streamLength = parseInt(matches[ 2 ])
                       url.fileHash = matches[ 3 ]
                       url.descriptorHash = matches[ 4 ]
                       url.fileName = "index.html"
-                      let rs = new ors(url, bc)
+                      let rs = br.createReadStream(url)
                       res.type(url.contentType)
                       return rs.pipe(res)
                     } else {
@@ -142,11 +142,11 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
             let url = new OffUrl()
             let matches = index.match(reg)
             url.contentType = matches[ 1 ]
-            url.streamLength = matches[ 2 ]
+            url.streamLength = parseInt(matches[ 2 ])
             url.fileHash = matches[ 3 ]
             url.descriptorHash = matches[ 4 ]
             url.fileName = "index.html"
-            let rs = new ors(url, bc)
+            let rs = br.createReadStream(url)
             rs.on('eror', (err)=> {
               res.status(500).send(err)
             })
@@ -183,9 +183,10 @@ off.put('/offsystem/', (req, res)=> {
   url.serverAddress = req.get('server-address') || url.serverAddress
   url.contentType = req.get('content-type')
   url.fileName = req.get('file-name')
-  url.streamLength = req.get('stream-length')
+  url.streamLength = parseInt(req.get('stream-length'))
+  console.log(url.streamLength)
 
-  let ws = new ows({ bc: bc, url: url })
+  let ws = br.createWriteStream(url)
   ws.on('url', (url)=> {
     res.write(url.toString())
     res.end()
