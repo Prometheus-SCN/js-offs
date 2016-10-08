@@ -10,8 +10,8 @@ let _key = new WeakMap()
 let _hash = new WeakMap()
 let _blockSize = new WeakMap()
 
-function randomPad (buf) {
-  let random = crypto.randomBytes(_blockSize - buf.length)
+function randomPad (buf, blockSize) {
+  let random = crypto.randomBytes(blockSize - buf.length)
   return Buffer.concat([ buf, random ])
 }
 module.exports = class Block {
@@ -29,11 +29,10 @@ module.exports = class Block {
       data = new Buffer(data)
     }
     if (data.length > blockSize) { //TODO: make test cases for all exceptions
-      console.log(blockSize)
       throw new Error('Invalid Block Size')
     }
-    if (data.length < _blockSize) {
-      data = randomPad(data)
+    if (data.length < blockSize) {
+      data = randomPad(data, blockSize)
     }
     _data.set(this, data)
     _blockSize.set(this, blockSize)

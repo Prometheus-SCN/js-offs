@@ -20,7 +20,7 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Cache = require('./fibonacci-cache')
 const config= require('../config')
 const BlockRouter = require('./block-router')
-
+/*
 fs.readFile('test.pdf', (err, data)=> {
   if (err) {
     throw err
@@ -46,7 +46,7 @@ fs.readFile('test.pdf', (err, data)=> {
   })
   rs.pipe(ws)
 
-})
+})*/
 /*
  let cache =  new Cache('../.block-cache')
  let blocks = []
@@ -205,7 +205,7 @@ fs.readFile('test.pdf', (err, data)=> {
  }
  console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
  */
-/*
+
 fs.readFile('test.pdf', (err, data)=> {
   if (err) {
     throw err
@@ -233,7 +233,7 @@ fs.readFile('test.pdf', (err, data)=> {
   })
   rs.pipe(ws)
 
-})*/
+})
 /*
  let sequence = [0, 1]
  function fibSequence(num){

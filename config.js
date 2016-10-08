@@ -7,7 +7,6 @@ module.exports = {
   miniBlockSize: 1000,
   nanoBlockSize: 134,
   descriptorPad: 34,
-  failureRate: .1789,
   scale: 2,
   filterSize: 20000,
   fingerprintSize: 8,
@@ -15,10 +14,10 @@ module.exports = {
   bucketSize: 4,
   startPort: 7200,
   numPortTries : 2,
-  timeout: 20000,
-  packetSize: 512,
-  nodeCount: 10,
-  concurrency:3,
-  kbucketSize: 20,
-  storeCount: 1
+  timeout: 20000, // how long to wait on a rpc response
+  packetSize: 512, // message size in bytes
+  nodeCount: 10, // how many nodes to find in or query in total
+  concurrency:3, // how many nodes to query simultaneously
+  kbucketSize: 20, // size of each k bucket
+  storeCount: 1 // how many nodes to store new data at
 }

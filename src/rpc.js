@@ -3,6 +3,7 @@ const Peer = require('./peer')
 const Bucket = require('./bucket')
 const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
 const Messenger = require('udp-messenger')
+const config = require('../config')
 const protobuf = require('protobufjs')
 const crypto = require('crypto')
 const increment = require('increment-buffer')
@@ -419,7 +420,7 @@ module.exports = class RPC {
 
 
       let nodes = request.nodes
-      let peers = []
+
       if (pb.Status == Status.Success && request.resCount >= config.storeCount) {
         requests.delete(key)
         _requests.set(this, requests)
@@ -479,7 +480,7 @@ module.exports = class RPC {
       let nodes = request.nodes
       //TODO: Flesh out behavior
       if (pb.Status == Status.Success && randompb.value) {
-        putValue(value, (err)=> {
+        putValue(randompb.value, (err)=> {
 
         })
       } else {
@@ -487,7 +488,7 @@ module.exports = class RPC {
       }
 
 
-      if (request.resCount >= request.count) {
+      if (request.resCount >= config.nodeCount) {
         requests.delete(key)
         _requests.set(this, requests)
         return process.nextTick(()=>{
@@ -497,7 +498,8 @@ module.exports = class RPC {
         let queried = request.queried
         let isSending = (nodes.length > 0) && (queried.length < config.nodeCount)
         for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
-          let node = nodes.shift()
+          let index = config.getRandomInt(0, nodes.length)// random selection of nodes to ask
+          let node = nodes.splice(index,1)
           while (queried.find((peer)=> {return peer.id === node.id})) {
             node = nodes.shift()
           }
@@ -740,10 +742,11 @@ if a number is passed then look in the bucket requested
     let payload = new RandomRequest(randompb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    let nodes = bucket.closest(peer.id, config.nodeCount)
+    let nodes = bucket.toArray()
     let queried = []
     for (let i = 0; i < config.concurrency && i < nodes.length && i < count && queried.length < count; i++) {
-      let node = nodes.shift()
+      let index = config.getRandomInt(0, nodes.length)// random selection of nodes to ask
+      let node = nodes.splice(index,1)
       queried.push(node)
       messenger.send(request, node.ip, node.port)
     }

@@ -1,8 +1,6 @@
 'use strict'
 const express = require('express')
 const OffUrl = require('./off-url')
-const ors = require('./readable-off-stream')
-const ows = require('./writable-off-stream')
 const collect = require('collect-stream')
 const BlockRouter= require('./block-router')
 const config = require('../config')
@@ -162,14 +160,14 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
       })
     } else {
       if (req.headers.range) {
-        res.writeHead(206, {
+        let length = end-start
+        let code = (length === url.streamLength ? 200 : 206)
+        res.writeHead(code, {
           "Content-Range": "bytes " + start + "-" + end + "/" + req.params[ 1 ],
           "Accept-Ranges": "bytes",
-          "Content-Length": req.params[ 1 ],
           "Content-Type": url.contentType
         })
       } else {
-        console.log('happened')
         res.writeHead(200, {
           "Content-Type": url.contentType
         })
@@ -184,7 +182,6 @@ off.put('/offsystem/', (req, res)=> {
   url.contentType = req.get('content-type')
   url.fileName = req.get('file-name')
   url.streamLength = parseInt(req.get('stream-length'))
-  console.log(url.streamLength)
 
   let ws = br.createWriteStream(url)
   ws.on('url', (url)=> {

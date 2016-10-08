@@ -12,6 +12,7 @@ enum RPCType {
     Store= 4;
     Random = 5;
     Promotion = 6;
+    Ping_Value = 7;
 }
 enum Direction{
     Response= 1;
@@ -52,6 +53,10 @@ message FindValueResponse{
     required bytes hash = 2;
     optional bytes data = 3;
     repeated Peer nodes= 4;
+}
+message PingValueRequest{
+    required ValueType type = 1;
+    required bytes hash = 2;
 }
 message StoreRequest{
     required ValueType type = 1;

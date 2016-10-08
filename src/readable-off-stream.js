@@ -28,7 +28,7 @@ module.exports = class ReadableOffStream extends Readable {
       opts = { bc: opts }
     }
 
-    opts.highWaterMark = _blockSize
+    opts.highWaterMark = blockSize
     super(opts)
     _url.set(this, url)
     _size.set(this, 0)
@@ -55,9 +55,8 @@ module.exports = class ReadableOffStream extends Readable {
         })
 
         if ((size + sblock.data.length) > url.streamOffsetLength) {
-          let diff = url.streamOffsetLength - (size + sblock.data.length)
+          let diff = (url.streamOffsetLength - (size + sblock.data.length)) + sblock.data.length
           size = size + diff
-
           _size.set(this, size)
           if (offsetStart) {
             this.push(sblock.data.slice(offsetStart, diff))
@@ -65,6 +64,7 @@ module.exports = class ReadableOffStream extends Readable {
           } else {
             this.push(sblock.data.slice(0, diff))
           }
+
           this.push(null)
         } else {
           size = size + sblock.data.length
@@ -72,7 +72,7 @@ module.exports = class ReadableOffStream extends Readable {
           _size.set(this, size)
           if (offsetStart) {
             this.push(sblock.data.slice(offsetStart, sblock.data.length))
-            _offsetStart.set(null)
+            _offsetStart.set(this, null)
           } else {
             this.push(sblock.data)
           }
@@ -187,7 +187,7 @@ module.exports = class ReadableOffStream extends Readable {
         }
       })
     } else {
-      if (descriptor.length === 0) {
+      if (descriptor.length === 0 || size === url.streamLength) {
         return this.push(null)
       }
       process.nextTick(getBlock)
