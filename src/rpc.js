@@ -281,15 +281,14 @@ module.exports = class RPC {
       let bucket = _bucket.get(this)
       request.resCount++
       let nodespb = FindNodeResponse.decode(pb.payload)
-      let nodes = request.nodes
-      let peers = []
+      let nodeBucket = request.nodeBucket
+
       nodespb.nodes.forEach((peer)=> {
         sanitizePeer(peer)
         peer = new Peer(peer.id, peer.ip, peer.port)
-        peers.push(peer)
+        nodeBucket.push(peer)
         bucket.add(peer)
       })
-      nodes = peers.concat(nodes)
       if (request.resCount >= config.nodeCount) {
         requests.delete(key)
         _requests.set(this, requests)
@@ -297,6 +296,7 @@ module.exports = class RPC {
       } else {
         let queried = request.queried
         let isSending = (nodes.length > 0) && (queried.length < config.nodeCount)
+        let nodes = nodeBucket.closest(request.id, config.nodeCount)
         for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
           let node = nodes.shift()
           while (queried.find((peer)=> {return peer.id === node.id})) {
@@ -304,6 +304,9 @@ module.exports = class RPC {
           }
           queried.push(node)
           messenger.send(request.req, node.ip, node.port)
+        }
+        for(let i = 0 ; i < queried.length; i++){
+          nodeBucket.remove(queried[i])
         }
 
         if (isSending) {
@@ -353,8 +356,7 @@ module.exports = class RPC {
       let valuespb = FindValueResponse.decode(pb.payload)
 
       sanitizeValueResponse(valuespb)
-      let nodes = request.nodes
-      let peers = []
+      let nodeBucket = request.nodeBucket
       if (valuespb.data) {
         requests.delete(key)
         _requests.set(this, requests)
@@ -365,10 +367,10 @@ module.exports = class RPC {
       valuespb.nodes.forEach((peer)=> {
         sanitizePeer(peer)
         peer = new Peer(peer.id, peer.ip, peer.port)
-        peers.push(peer)
+        nodeBucket.add(peer)
         bucket.add(peer)
       })
-      nodes = peers.concat(nodes)
+      //nodes = peers.concat(nodes)
       if (request.resCount >= nodes.length) {
         requests.delete(key)
         _requests.set(this, requests)
@@ -378,6 +380,7 @@ module.exports = class RPC {
       } else {
         let queried = request.queried
         let isSending = (nodes.length > 0) && (queried.length < config.nodeCount)
+        let nodes = nodeBucket.closest(valuespb.hash, config.nodeCount)
         for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
           let node = nodes.shift()
           while (queried.find((peer)=> {return peer.id === node.id})) {
@@ -385,6 +388,10 @@ module.exports = class RPC {
           }
           queried.push(node)
           messenger.send(request.req, node.ip, node.port)
+        }
+
+        for(let i= 0; i < queried.length; i++){
+          nodeBucket.remove(queried[i])
         }
         if (isSending) {
           let timer = setTimeout(()=> {
@@ -589,6 +596,12 @@ module.exports = class RPC {
       queried.push(node)
       messenger.send(request, node.ip, node.port)
     }
+
+    let nodeBucket = new Bucket(null, 20)
+    for (let i = 0; i < nodes.length; i++){
+      nodeBucket.add(nodes[i])
+    }
+
     let key = requestpb.id.toString('hex')
     let timer = setTimeout(()=> {
       let requests = _requests.get(this)
@@ -601,7 +614,7 @@ module.exports = class RPC {
         })
       }
     }, config.timeout)
-    requests.set(key, { req: request, resCount: 0, cb: cb, nodes: nodes, queried: queried, timer: timer })
+    requests.set(key, { req: request, resCount: 0, cb: cb, nodeBucket: nodeBucket, queried: queried, timer: timer })
     _requests.set(this, requests)
     rpcid = increment(rpcid)
     _rpcid.set(this, rpcid)
@@ -632,6 +645,10 @@ module.exports = class RPC {
       queried.push(node)
       messenger.send(request, node.ip, node.port)
     }
+    let nodeBucket = new Bucket(null, 20)
+    for (let i = 0; i < nodes.length; i++){
+      nodeBucket.add(nodes[i])
+    }
     let key = requestpb.id.toString('hex')
     let timer = setTimeout(()=> {
       let requests = _requests.get(this)
@@ -644,7 +661,7 @@ module.exports = class RPC {
         })
       }
     }, config.timeout)
-    requests.set(key, { req: request, resCount: 0, cb: cb, nodes: nodes, queried: queried, timer: timer })
+    requests.set(key, { req: request, resCount: 0, cb: cb, nodesBucket: nodeBucket, queried: queried, timer: timer })
     _requests.set(this, requests)
     rpcid = increment(rpcid)
     _rpcid.set(this, rpcid)
@@ -742,7 +759,7 @@ if a number is passed then look in the bucket requested
     let payload = new RandomRequest(randompb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    let nodes = bucket.toArray()
+    let nodes = bucket.closest(peer.id, 250)
     let queried = []
     for (let i = 0; i < config.concurrency && i < nodes.length && i < count && queried.length < count; i++) {
       let index = config.getRandomInt(0, nodes.length)// random selection of nodes to ask
