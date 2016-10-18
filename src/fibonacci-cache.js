@@ -134,15 +134,15 @@ module.exports = class FibonacciCache extends EventEmitter {
         if (buckets[ i ].tally(block.key)) {
           return this.promote(block, i, (err)=> {
             if (err) {
-              return process.nextTick(()=> {return cb(err, block)})
+              return process.nextTick(()=> {return cb(err, block , (i+1))})
             }
             return process.nextTick(()=> {
-              return cb(null, block)
+              return cb(null, block, (i+1))
             })
           })
         } else {
           return process.nextTick(()=> {
-            return cb(null, block)
+            return cb(null, block, (i+1))
           })
         }
       }
@@ -257,6 +257,50 @@ module.exports = class FibonacciCache extends EventEmitter {
     }
     next(null, items, null)
   }
+  storeBlockAt(block, number, cb){
+    let index = number-1
+    if( 0 > index){
+      return process.nextTick(()=>{return cb(new TypeError("Invalid Fibonacci Number"))})
+    }
+    let buckets = _buckets.get(this)
+    let blockSize = _blockSize.get(this)
+    let current = -1
+    let saveBlock = (err)=>{
+      if(err){
+        return process.nextTick(()=>{return cb(err)})
+      }
+      if (!buckets[index]) {
+        let path = _path.get(this)
+        for (let i= buckets.length; i <= index; i++){
+          buckets[ i ] = new FibonacciBucket(path, blockSize, i + 2)
+        }
+      }
+      buckets[ index ].put(block, (err)=> {
+        if (err) {
+          return process.nextTick(()=> {
+            return cb(new Error("Store Failed"))
+          })
+        }
+        return process.nextTick(cb)
+      })
+
+    }
+    for (let i = buckets.length - 1; i >= 0; i--) {
+      if (buckets[ i ].contains(key)) {
+        current = i
+        break
+      }
+    }
+    if (current > -1) {
+      if(current >= index){
+        return process.nextTick(cb)
+      }
+      buckets[ current ].unTally(block.key)
+      buckets[ current ].remove(block.key, saveBlock)
+    } else{
+      saveBlock()
+    }
+  }
 
   randomBlockAt (number, usageFilter, cb) {
     let buckets = _buckets.get(this)
@@ -275,29 +319,19 @@ module.exports = class FibonacciCache extends EventEmitter {
     if (number > buckets.length) {
       return process.nextTick(()=> {return cb(new Error("Bucket number exceeds number of buckets"))})
     }
-    if (number < 1) {
-      this.randomBlocks(1, usageFilter, (err, items, blocks)=> {
-        if (err) {
-          return process.nextTick(()=> {cb(err)})
-        }
-        let block
-        if (blocks.length > 0) {
-          block = blocks[ 0 ]
-        }
-        return process.nextTick(()=> {cb(err, items.bucket, block)})
-      })
-    } else {
-      let bucket = buckets[ (number - 1) ]
-      bucket.randomBlocks(1, usageFilter, (err, items, blocks)=> {
-        if (err) {
-          return process.nextTick(()=> {cb(err)})
-        }
-        let block
-        if (blocks.length > 0) {
-          block = blocks[ 0 ]
-        }
-        return process.nextTick(()=> {cb(err, number, block)})
-      })
+    if (number < 1) { // if it is zero then pull from the largest bucket since 0 is not a valid number
+      number = buckets.length
     }
+    let bucket = buckets[ (number - 1) ]
+    bucket.randomBlocks(1, usageFilter, (err, items, blocks)=> {
+      if (err) {
+        return process.nextTick(()=> {cb(err)})
+      }
+      let block
+      if (blocks.length > 0) {
+        block = blocks[ 0 ]
+      }
+      return process.nextTick(()=> {cb(err, number, block)})
+    })
   }
 }

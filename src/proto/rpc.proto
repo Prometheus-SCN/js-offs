@@ -50,9 +50,10 @@ message FindValueRequest{
 }
 message FindValueResponse{
     required ValueType type = 1;
-    required bytes hash = 2;
-    optional bytes data = 3;
-    repeated Peer nodes= 4;
+    required int64 number= 2;
+    required bytes hash = 3;
+    optional bytes data = 4;
+    repeated Peer nodes= 5;
 }
 message PingValueRequest{
     required ValueType type = 1;
@@ -61,6 +62,7 @@ message PingValueRequest{
 message StoreRequest{
     required ValueType type = 1;
     required bytes value= 2;
+    required int64 number= 3;
 }
 message RandomRequest{
     required ValueType type = 1;

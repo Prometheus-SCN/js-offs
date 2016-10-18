@@ -88,5 +88,12 @@ module.exports =
         }
       })
     }
-
+    storeBlocksAt(block, number, cb){
+      let cache = _cache.get(this)
+      cache.storeBlocksAt(block, number, cb)
+    }
+    randomBlockAt (number, usageFilter, cb) {
+      let cache = _cache.get(this)
+      cache.randomBlockAt(number, usageFilter, cb)
+    }
   }

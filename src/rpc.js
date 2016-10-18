@@ -28,25 +28,8 @@ let _requests = new WeakMap()
 let _peer = new WeakMap()
 let _rpcid = new WeakMap()
 let _bucket = new WeakMap()
-let _putValue = new WeakMap()
-let _getValue = new WeakMap()
-let _randomValue = new WeakMap()
+let _rpcInterface = new WeakMap()
 
-function noPut (val, cb) {
-  process.nextTick(()=> {
-    return cb(new Error("No put method defined"))
-  })
-}
-function noGet (hash, cb) {
-  process.nextTick(()=> {
-    return cb(new Error("No put method defined"))
-  })
-}
-function noRandom(hash, cb) {
-  process.nextTick(()=> {
-    return cb(new Error("No random method defined"))
-  })
-}
 function sanitizeRPC (rpc) {
   try {
     rpc.id = rpc.id.toBuffer()
@@ -102,7 +85,7 @@ function sanitizeStoreRequest (value){
 function sanitizeRandomRequest (value){
   try{
     value.number = value.number.toNumber()
-    value.value = value.value.toBuffer()
+    value.filter = value.filter.toBuffer()
   } catch(ex){
 
   }
@@ -116,7 +99,7 @@ function sanitizeRandomResponse (value){
   }
 }
 module.exports = class RPC {
-  constructor (peer, messenger, bucket, getValue, putValue, randomValue) {
+  constructor (peer, messenger, bucket, rpcInterface) {
     if(!(peer instanceof Peer)){
       throw new TypeError('Invalid Peer')
     }
@@ -126,31 +109,15 @@ module.exports = class RPC {
     if(!(bucket instanceof Bucket)){
       throw new TypeError('Invalid Bucket')
     }
-    if (!getValue) {
-      getValue = noGet
+    if(!rpcInterface){
+      throw new TypeError('Invalid RPC Interface')
     }
-    if (!putValue) {
-      putValue = noPut
-    }
-    if (!randomValue) {
-      randomValue = noRandom
-    }
-    if(typeof getValue !== 'function'){
-      throw new TypeError('Invalid Get Function')
-    }
-    if(typeof putValue !== 'function'){
-      throw new TypeError('Invalid Put Function')
-    }
-    if(typeof randomValue !== 'function'){
-      throw new TypeError('Invalid Random Function')
-    }
+
     _requests.set(this, new Map())
     _bucket.set(this, bucket)
     _peer.set(this, peer)
     _messenger.set(this, messenger)
-    _putValue.set(this, putValue)
-    _getValue.set(this, getValue)
-    _randomValue.set(this, randomValue)
+    _rpcInterface.set(this, rpcInterface)
     _rpcid.set(this, crypto.randomBytes(2))
     let pingResponse = (pb)=> {
       let responsepb = {}
@@ -185,7 +152,7 @@ module.exports = class RPC {
       responsepb.type = pb.type
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
-      getValue(valuepb.hash, (err, value)=> {
+      rpcInterface.getValue(valuepb.hash, (err, value, number)=> {
         if (err) {
           let peers = bucket.closest(valuepb.hash, valuepb.count)
           let valueRespb = { hash: valuepb.hash, nodes: peers }
@@ -194,7 +161,7 @@ module.exports = class RPC {
           responsepb.status = Status.Failure
           messenger.send(response, pb.from.ip, pb.from.port)
         } else {
-          let valueRespb = { hash: valuepb.hash, data: value, nodes: [] }
+          let valueRespb = { hash: valuepb.hash, data: value.data, number: number, nodes: [] }
           let payload = new FindValueResponse(valueRespb).encode().toBuffer()
           responsepb.payload = payload
           responsepb.status = Status.Success
@@ -207,13 +174,12 @@ module.exports = class RPC {
     let storeResponse = (pb)=> {
       let storepb = StoreRequest.decode(pb.payload)
       sanitizeStoreRequest(storepb)
-      let value = storepb.value
       let responsepb = {}
       responsepb.id = pb.id
       responsepb.type = pb.type
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
-      putValue(value, (err)=> {
+      rpcInterface.storeValueAt(storepb.value, storepb.number, storepb.type, (err)=> {
         if (err) {
           responsepb.status = Status.Failure
         } else {
@@ -222,7 +188,6 @@ module.exports = class RPC {
         let response = new RPCProto.RPC(responsepb).encode().toBuffer()
         messenger.send(response, pb.from.ip, pb.from.port)
       })
-
     }
     let randomResponse = (pb)=> {
       let randompb = RandomRequest.decode(pb.payload)
@@ -232,7 +197,7 @@ module.exports = class RPC {
       responsepb.type = pb.type
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
-      randomValue(randompb.number, Cuckoo.fromCBOR(randompb.filter),  (err, number, block)=> {
+      rpcInterface.randomBlockAt(randompb.number, Cuckoo.fromCBOR(randompb.filter), randompb.type,  (err, number, block)=> {
         if (err) {
           responsepb.status = Status.Failure
           messenger.send(response, pb.from.ip, pb.from.port)
@@ -360,8 +325,10 @@ module.exports = class RPC {
       if (valuespb.data) {
         requests.delete(key)
         _requests.set(this, requests)
-        return process.nextTick(()=> {
-          return request.cb(null, valuespb.data)
+        return rpcInterface.storeBlockAt(valuespb.data, valuespb.number, valuespb.type, (err)=>{
+          return process.nextTick(()=> {
+            return request.cb(err)
+          })
         })
       }
       valuespb.nodes.forEach((peer)=> {
@@ -370,7 +337,6 @@ module.exports = class RPC {
         nodeBucket.add(peer)
         bucket.add(peer)
       })
-      //nodes = peers.concat(nodes)
       if (request.resCount >= nodes.length) {
         requests.delete(key)
         _requests.set(this, requests)
