@@ -11,7 +11,7 @@ module.exports =
       if (!path || typeof path !== 'string') {
         throw new Error('Invalid path')
       }
-      if(!Number.isInteger(blockSize)){
+      if (!Number.isInteger(blockSize)) {
         throw new Error('Block size must be an integer')
       }
       _cache.set(this, new FibonacciCache(path, blockSize))
@@ -21,6 +21,11 @@ module.exports =
     get path () {
       let cache = _cache.get(this)
       return cache.path
+    }
+
+    get number () {
+      let cache = _cache.get(this)
+      return cache.number
     }
 
     put (block, cb) {
@@ -88,12 +93,24 @@ module.exports =
         }
       })
     }
-    storeBlocksAt(block, number, cb){
+
+    storeBlocksAt (block, number, cb) {
       let cache = _cache.get(this)
-      cache.storeBlocksAt(block, number, cb)
+      cache.storeBlockAt(block, number, cb)
     }
+
     randomBlockAt (number, usageFilter, cb) {
       let cache = _cache.get(this)
       cache.randomBlockAt(number, usageFilter, cb)
+    }
+
+    closestBlockAt (number, key, usageFilter, cb) {
+      let cache = _cache.get(this)
+      cache.closestBlockAt(number, key, usageFilter, cb)
+    }
+
+    contains (key) {
+      let cache = _cache.get(this)
+      return cache.contains(key)
     }
   }

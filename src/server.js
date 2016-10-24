@@ -2,7 +2,7 @@
 const express = require('express')
 const OffUrl = require('./off-url')
 const collect = require('collect-stream')
-const BlockRouter= require('./block-router')
+const BlockRouter = require('./block-router')
 const config = require('../config')
 const pth = require('path')
 let basename
@@ -160,7 +160,7 @@ off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNP
       })
     } else {
       if (req.headers.range) {
-        let length = end-start
+        let length = end - start
         let code = (length === url.streamLength ? 200 : 206)
         res.writeHead(code, {
           "Content-Range": "bytes " + start + "-" + end + "/" + req.params[ 1 ],

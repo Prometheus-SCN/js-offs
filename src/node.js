@@ -17,7 +17,7 @@ let _applicationName = new WeakMap()
 let _keyPair = new WeakMap()
 let _peerInfo = new WeakMap()
 let _client = new WeakMap()
-let _messenger= new WeakMap()
+let _messenger = new WeakMap()
 const fileName = 'node.hhh'
 module.exports = class Node extends EventEmitter {
   constructor (applicationName, putValue, getValue, pth) {
@@ -26,9 +26,9 @@ module.exports = class Node extends EventEmitter {
       throw new Error('Application name must be a string')
     }
     _applicationName.set(this, applicationName)
-    if(pth){
+    if (pth) {
       _platformPath.set(this, pth)
-    }else {
+    } else {
       if (/^win/.test(process.platform)) {
         _platformPath.set(this, path.join(process.env[ 'SystemDrive' ], '/ProgramData/'))
       } else if (/^darwin/.test(process.platform)) {
@@ -55,7 +55,7 @@ module.exports = class Node extends EventEmitter {
             let getPeer = (err, ip)=> {
               let pk = keyPair.publicKey
               let id = multihashing(pk, 'sha2-256')
-              let peerInfo=  new Peer(id, ip, port)
+              let peerInfo = new Peer(id, ip, port)
               _peerInfo.set(this, peerInfo)
               let messenger = new Messenger(config.timeout, port, config.packetSize)
               _messenger.set(this, messenger)
@@ -63,24 +63,24 @@ module.exports = class Node extends EventEmitter {
               let rpc = new RPC(peerInfo, messenger, bucket, getValue, putValue)
               messenger.listen()
               //this.emit('ready',  peerInfo)
-              process.on('exit', ()=>{
+              process.on('exit', ()=> {
                 let messenger = _messenger.get(this)
-                messenger.close(()=>{
+                messenger.close(()=> {
                   let client = _client.get(this)
                   let peerInfo = _peerInfo.get(this)
-                  client.client.portUnmapping({ public: peerInfo.port})
+                  client.client.portUnmapping({ public: peerInfo.port })
                 })
               })
             }
 
-            let port = config.startPort -1
+            let port = config.startPort - 1
             let tries = -1
-            let getIp = (err, ip)=>{
-              if(err){
+            let getIp = (err, ip)=> {
+              if (err) {
                 this.emit('error', err)
                 network.get_private_ip(getPeer)
               }
-              getPeer(err,'127.0.0.1')
+              getPeer(err, '127.0.0.1')
 
             }
             let findPort = (err)=> {
@@ -89,7 +89,7 @@ module.exports = class Node extends EventEmitter {
                 if (tries < config.numPortTries) {
                   port++
                   client.portMapping({
-                    protocol:'udp',
+                    protocol: 'udp',
                     public: port,
                     private: port,
                     ttl: 10
@@ -99,7 +99,7 @@ module.exports = class Node extends EventEmitter {
                   port = config.startPort
                   client.externalIp(getIp)
                 }
-              } else{
+              } else {
                 client.externalIp(getIp)
               }
 
@@ -108,15 +108,15 @@ module.exports = class Node extends EventEmitter {
           })
         }
         if (err) {
-           keypair.createKeypair((err, pair)=>{
-             if(err){
-               this.emit('error', err)
-             }
-             keyPair= pair
-             _keyPair.set(this, keyPair)
-             let node = pair.marshal()
-             fs.writeFile(path.join(appFolder, 'node'), node, getNetwork)
-           })
+          keypair.createKeypair((err, pair)=> {
+            if (err) {
+              this.emit('error', err)
+            }
+            keyPair = pair
+            _keyPair.set(this, keyPair)
+            let node = pair.marshal()
+            fs.writeFile(path.join(appFolder, 'node'), node, getNetwork)
+          })
 
         } else {
           keyPair = keypair.unmarshal(node)

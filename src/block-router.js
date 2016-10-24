@@ -1,22 +1,23 @@
 'use strict'
 const config = require('../config')
 const BlockCache = require('./block-cache')
-const BlockCache = require('./block')
+const Block = require('./block')
 const ReadableOffStream = require('./readable-off-stream')
 const WritableOffStream = require('./writable-off-stream')
 const URL = require('./off-url')
+const bs58 = require('bs58')
 let _bc = new WeakMap()
 let _mc = new WeakMap()
 let _nc = new WeakMap()
 
 module.exports = class BlockRouter {
-  constructor () {
-    let bc = new BlockCache(config.blockPath, config.blockSize)
-    let mc = new BlockCache(config.miniPath, config.miniBlockSize)
-    let nc = new BlockCache(config.nanoPath, config.nanoBlockSize)
+  constructor (path) {
+    let bc = new BlockCache(path + config.blockPath, config.blockSize)
+    let mc = new BlockCache(path + config.miniPath, config.miniBlockSize)
+    let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize)
     _bc.set(this, bc),
       _mc.set(this, mc)
-    _nc.set(this, mc)
+    _nc.set(this, nc)
   }
 
   createReadStream (url) {
@@ -76,27 +77,34 @@ module.exports = class BlockRouter {
           block = new Block(value, config.nanoBlockSize)
           break;
       }
-      bc.storeValueAt(block, number, cb)
+      bc.storeBlocksAt(block, number, cb)
     }
     rpc.getValue = (hash, type, cb)=> {
       let bc
       switch (type) {
         case 1:
           bc = _bc.get(this)
-          block = new Block(value, config.blockSize)
           break;
         case 2:
           bc = _mc.get(this)
-          block = new Block(value, config.miniBlockSize)
           break;
         case 3:
           bc = _nc.get(this)
-          block = new Block(value, config.nanoBlockSize)
           break;
       }
-      bc.get(hash, cb)
+      let key = bs58.encode(hash)
+      bc.get(key, (err, block, number)=> {
+        if (err) {
+          return process.nextTick(()=> {
+            return cb(err)
+          })
+        }
+        return process.nextTick(()=> {
+          return cb(err, block.data, number)
+        })
+      })
     }
-    rpc.getRandomAt =(number, filter, type, cb) =>{
+    rpc.getRandomAt = (number, filter, hash, type, cb) => {
       let bc
       switch (type) {
         case 1:
@@ -109,7 +117,71 @@ module.exports = class BlockRouter {
           bc = _nc.get(this)
           break;
       }
-      bc.getRandomAt(number, filter, cb)
+      let key = bs58.encode(hash)
+      bc.closestBlockAt(number, key, filter, cb)
+    }
+    rpc.containsValue = (hash, type)=> {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      let key = bs58.encode(hash)
+      return bc.contains(key)
+    }
+    rpc.promoteValue = (hash, number, type, cb)=> {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      let key = bs58.encode(hash)
+      if (bc.contains(key)) {
+        bc.get(key, (err, block)=> {
+          if (err) {
+            return process.nextTick(()=> {
+              return cb(err)
+            })
+          }
+          bc.storeBlockAt(block, number, cb)
+        })
+      } else {
+        if (bc.number < number) {
+          return process.nextTick(()=> {
+            return cb("Find this block")
+          })
+        }
+        process.nextTick(cb)
+      }
+    }
+    rpc.closestValueAt = (number, key, filter, type, cb) => {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      bc.closestBlockAt(number, key, filter, cb)
     }
     return rpc
   }

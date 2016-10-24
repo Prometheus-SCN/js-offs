@@ -10,7 +10,7 @@ let _blockSize = new WeakMap()
 
 module.exports = class Descriptor {
   constructor (blockSize) {
-    if(!Number.isInteger(blockSize)){
+    if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
     _blockSize.set(this, blockSize)

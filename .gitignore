@@ -5,3 +5,5 @@
 /.block-cache
 /.mini-cache
 /.nano-cache
+/node1
+/node2

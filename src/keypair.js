@@ -72,7 +72,7 @@ let createKeypair = (cb)=> {
     process.nextTick(()=> {
       return cb(null, new Keypair(privateKey, publicKey, certificate))
     })
-  } catch(ex){
+  } catch (ex) {
     process.nextTick(()=> {
       return cb(ex)
     })

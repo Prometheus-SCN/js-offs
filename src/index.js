@@ -18,35 +18,35 @@ const CuckooSieve = require('./cuckoo-sieve')
 const Bucket = require('./fibonacci-bucket')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Cache = require('./fibonacci-cache')
-const config= require('../config')
+const config = require('../config')
 const BlockRouter = require('./block-router')
 /*
-fs.readFile('test.pdf', (err, data)=> {
-  if (err) {
-    throw err
-  }
+ fs.readFile('test.pdf', (err, data)=> {
+ if (err) {
+ throw err
+ }
 
-  let url = new OffUrl()
-  let br = new BlockRouter
-  let rs = fs.createReadStream('test.pdf')
-  url.fileName = 'test.pdf'
-  url.contentType = mime.lookup('test.pdf')
-  url.streamLength = data.length
-  let ws = br.createWriteStream(url)
-  ws.on('url', (url)=> {
-    console.log(url.toString())
+ let url = new OffUrl()
+ let br = new BlockRouter
+ let rs = fs.createReadStream('test.pdf')
+ url.fileName = 'test.pdf'
+ url.contentType = mime.lookup('test.pdf')
+ url.streamLength = data.length
+ let ws = br.createWriteStream(url)
+ ws.on('url', (url)=> {
+ console.log(url.toString())
 
-    let rs = br.createReadStream(url)
-    collect(rs, (err, data)=> {
-      if (err) {
-        throw err
-      }
-      console.log(data.toString('hex'))
-    })
-  })
-  rs.pipe(ws)
+ let rs = br.createReadStream(url)
+ collect(rs, (err, data)=> {
+ if (err) {
+ throw err
+ }
+ console.log(data.toString('hex'))
+ })
+ })
+ rs.pipe(ws)
 
-})*/
+ })*/
 /*
  let cache =  new Cache('../.block-cache')
  let blocks = []
@@ -217,7 +217,7 @@ fs.readFile('test.pdf', (err, data)=> {
   let rs = fs.createReadStream('test.pdf')
   url.fileName = 'test.pdf'
   url.contentType = mime.lookup('test.pdf')
-  let ws = new ows(config.blockSize,{ bc: bc, url: url })
+  let ws = new ows(config.blockSize, { bc: bc, url: url })
   ws.on('url', (url)=> {
     console.log(url.toString())
     url.streamOffset = 288

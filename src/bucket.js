@@ -11,6 +11,12 @@ let _capped = new WeakMap()
 let Peer = require('./peer.js')
 module.exports = class Bucket extends EventEmitter {
   constructor (nodeId, size, root) {
+    if (!Buffer.isBuffer(nodeId)) {
+      throw new TypeError('Invalid Node ID')
+    }
+    if (!Number.isInteger(size)) {
+      throw new TypeError('Invalid Size')
+    }
     super()
     _bucket.set(this, [])
     _nodeId.set(this, nodeId)
@@ -35,6 +41,17 @@ module.exports = class Bucket extends EventEmitter {
     return _capped.get(this)
   }
 
+  get count () {
+    let bucket = _bucket.get(this)
+    if (bucket) {
+      return bucket.length
+    } else {
+      let zero = _zero.get(this)
+      let one = _one.get(this)
+      return zero.count + one.count
+    }
+  }
+
   toArray () {
     let bucket = _bucket.get(this)
     if (bucket) {
@@ -45,25 +62,24 @@ module.exports = class Bucket extends EventEmitter {
       return zero.toArray().concat(one.toArray())
     }
   }
-  toString(){
-    let bucket =_bucket.get(this)
 
-
-    if(bucket && bucket.length){
-      let bucketStr =""
-      return bucket.reduce(( pre, peer, i)=>{
-        let str =''
-        if(i != 0 ){
+  toString () {
+    let bucket = _bucket.get(this)
+    if (bucket && bucket.length) {
+      let bucketStr = ""
+      return bucket.reduce((pre, peer, i)=> {
+        let str = ''
+        if (i != 0) {
           str += '\n'
         }
         str += peer.toString()
         return pre + str
       })
     }
-    else{
+    else {
       let zero = _zero.get(this)
-      let one= _one.get(this)
-      if(zero && one) {
+      let one = _one.get(this)
+      if (zero && one) {
         return zero.toString() + '\n' + one.toString()
       } else {
         return ""
@@ -158,17 +174,18 @@ module.exports = class Bucket extends EventEmitter {
       }
     }
   }
-  get(peerId, index){
+
+  get (peerId, index) {
     if (!index) {
       index = 0
     }
     let bucket = _bucket.get(this)
-    if(bucket){
-      let found = bucket.find((peer)=>{
+    if (bucket) {
+      let found = bucket.find((peer)=> {
         return peer.id.compare(peerId) === 0
       })
       return found
-    } else{
+    } else {
       if (this.getBit(peerId, index++)) {
         let one = _one.get(this)
         return one.get(peerId, index)
@@ -222,12 +239,13 @@ module.exports = class Bucket extends EventEmitter {
     }
     let bucket = _bucket.get(this)
     if (bucket) {
+      let distance = new WeakMap()
       return bucket.map((peer)=> {
-          peer.distance = Bucket.distance(peer.id, id)
-          return peer
-        })
+        distance.set(peer, Bucket.distance(peer.id, id))
+        return peer
+      })
         .sort((a, b)=> {
-          return a.distance - b.distance
+          return distance.get(a) - distance.get(b)
         })
         .slice(0, count)
     } else {

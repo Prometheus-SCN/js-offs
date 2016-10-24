@@ -3,6 +3,7 @@ const util = require('./utility')
 const mkdirp = require('mkdirp')
 const pth = require('path')
 const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
+const hamming = require('hamming-distance')
 const Sieve = require('./cuckoo-sieve')
 const config = require('../config')
 const Block = require('./block')
@@ -35,7 +36,7 @@ module.exports = class FibonacciBucket {
     if (typeof path !== 'string') {
       throw TypeError('Invalid Path')
     }
-    if(!Number.isInteger(blockSize)){
+    if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
     path = pth.join(path, `.f${number}`)
@@ -120,7 +121,7 @@ module.exports = class FibonacciBucket {
   }
 
   get (key, cb) {
-    let blockSize= _blockSize.get(this)
+    let blockSize = _blockSize.get(this)
     let fd = util.sanitize(key, this.path)
     fs.readFile(fd, (err, buf) => {
       if (err) {
@@ -225,5 +226,41 @@ module.exports = class FibonacciBucket {
     } else {
       fs.readdir(this.path, getRandoms)
     }
+  }
+
+  closestBlockAt (key, usageFilter, cb) {
+    if (!(usageFilter instanceof Cuckoo)) {
+      throw TypeError('Invalid Usage Filter')
+    }
+
+    let getItems = (err, items)=> {
+      if (err) {
+        return process.nextTick(()=> {cb(err)})
+      }
+      let contents = _contents.get(this)
+      items = items.filter((item)=> {
+        if (item === `f${this.number}.content` || item === `f${this.number}.hitbox`) {
+          return false
+        }
+        contents.add(item)
+        return !usageFilter.contains(item)
+      })
+      items.sort((a, b)=> {
+        return hamming(a, key) - hamming(b, key)
+      })
+      if (items.length > 0) {
+        let visit = items.shift()
+        this.get(visit, (err, block)=> {
+          if (err) {
+            return process.nextTick(()=> {cb(err)})
+          }
+          usageFilter.add(visit)
+          return process.nextTick(()=> {cb(null, block)})
+        })
+      } else {
+        return process.nextTick(cb)
+      }
+    }
+    fs.readdir(this.path, getItems)
   }
 }

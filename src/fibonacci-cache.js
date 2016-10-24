@@ -14,7 +14,7 @@ module.exports = class FibonacciCache extends EventEmitter {
     if (!path || typeof path !== 'string') {
       throw new TypeError('Invalid path')
     }
-    if(!Number.isInteger(blockSize)){
+    if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
     _blockSize.set(this, blockSize)
@@ -34,6 +34,11 @@ module.exports = class FibonacciCache extends EventEmitter {
 
   get path () {
     return _path.get(this).slice(0)
+  }
+
+  get number () {
+    let buckets = _buckets.get(this)
+    return buckets.length
   }
 
   get dirty () {
@@ -81,7 +86,7 @@ module.exports = class FibonacciCache extends EventEmitter {
 
   put (block, cb) {
     let buckets = _buckets.get(this)
-    let blockSize= _blockSize.get(this)
+    let blockSize = _blockSize.get(this)
 
     let index = buckets.findIndex((bucket)=> {return bucket.contains(block.key)})
     let found = buckets[ index ]
@@ -134,15 +139,15 @@ module.exports = class FibonacciCache extends EventEmitter {
         if (buckets[ i ].tally(block.key)) {
           return this.promote(block, i, (err)=> {
             if (err) {
-              return process.nextTick(()=> {return cb(err, block , (i+1))})
+              return process.nextTick(()=> {return cb(err, block, (i + 1))})
             }
             return process.nextTick(()=> {
-              return cb(null, block, (i+1))
+              return cb(null, block, (i + 1))
             })
           })
         } else {
           return process.nextTick(()=> {
-            return cb(null, block, (i+1))
+            return cb(null, block, (i + 1))
           })
         }
       }
@@ -257,21 +262,22 @@ module.exports = class FibonacciCache extends EventEmitter {
     }
     next(null, items, null)
   }
-  storeBlockAt(block, number, cb){
-    let index = number-1
-    if( 0 > index){
-      return process.nextTick(()=>{return cb(new TypeError("Invalid Fibonacci Number"))})
+
+  storeBlockAt (block, number, cb) {
+    let index = number - 1
+    if (0 > index) {
+      return process.nextTick(()=> {return cb(new TypeError("Invalid Fibonacci Number"))})
     }
     let buckets = _buckets.get(this)
     let blockSize = _blockSize.get(this)
     let current = -1
-    let saveBlock = (err)=>{
-      if(err){
-        return process.nextTick(()=>{return cb(err)})
+    let saveBlock = (err)=> {
+      if (err) {
+        return process.nextTick(()=> {return cb(err)})
       }
-      if (!buckets[index]) {
+      if (!buckets[ index ]) {
         let path = _path.get(this)
-        for (let i= buckets.length; i <= index; i++){
+        for (let i = buckets.length; i <= index; i++) {
           buckets[ i ] = new FibonacciBucket(path, blockSize, i + 2)
         }
       }
@@ -286,18 +292,18 @@ module.exports = class FibonacciCache extends EventEmitter {
 
     }
     for (let i = buckets.length - 1; i >= 0; i--) {
-      if (buckets[ i ].contains(key)) {
+      if (buckets[ i ].contains(block.key)) {
         current = i
         break
       }
     }
     if (current > -1) {
-      if(current >= index){
+      if (current >= index) {
         return process.nextTick(cb)
       }
       buckets[ current ].unTally(block.key)
       buckets[ current ].remove(block.key, saveBlock)
-    } else{
+    } else {
       saveBlock()
     }
   }
@@ -334,4 +340,26 @@ module.exports = class FibonacciCache extends EventEmitter {
       return process.nextTick(()=> {cb(err, number, block)})
     })
   }
+
+  closestBlockAt (number, key, usageFilter, cb) {
+    if (!usageFilter) {
+      return process.nextTick(()=> {return cb(new Error("Invalid usage filter"))})
+    }
+    let buckets = _buckets.get(this)
+
+    if (number > buckets.length) {
+      return process.nextTick(()=> {return cb(new Error("Bucket number exceeds number of buckets"))})
+    }
+    if (number < 1) { // if it is zero then pull from the largest bucket since 0 is not a valid number
+      number = buckets.length
+    }
+    let bucket = buckets[ (number - 1) ]
+    bucket.closestBlockAt(key, usageFilter, (err, block)=> {
+      if (err) {
+        return process.nextTick(()=> {cb(err)})
+      }
+      return process.nextTick(()=> {cb(err, number, block)})
+    })
+  }
+
 }

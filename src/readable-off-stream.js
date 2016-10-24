@@ -18,7 +18,7 @@ module.exports = class ReadableOffStream extends Readable {
     if (!(url instanceof OffUrl)) {
       throw new Error('Invalid url')
     }
-    if(!Number.isInteger(blockSize)){
+    if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
     if (!opts) {

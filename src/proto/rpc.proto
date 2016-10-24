@@ -13,6 +13,7 @@ enum RPCType {
     Random = 5;
     Promotion = 6;
     Ping_Value = 7;
+    Ping_Storage = 8;
 }
 enum Direction{
     Response= 1;
@@ -77,6 +78,6 @@ message RandomResponse{
 message PromotionRequest{
     required ValueType type = 1;
     required bytes hash = 2;
-    required int64 oldnumber= 3;
-    required int64 newnumber= 4;
+    required int64 number= 3;
+    required bytes filter = 4;
 }

@@ -19,7 +19,7 @@ module.exports = class Block {
     if (!data) {
       throw new Error('Block must be constructed with data')
     }
-    if(!Number.isInteger(blockSize)){
+    if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
 

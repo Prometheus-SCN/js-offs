@@ -1,7 +1,7 @@
 module.exports = {
-  blockPath:'../.block-cache',
-  miniPath: '../.mini-cache',
-  nanoPath: '../.nano-cache',
+  blockPath:'.block-cache',
+  miniPath: '.mini-cache',
+  nanoPath: '.nano-cache',
   tupleSize: 3,
   blockSize: 128000,
   miniBlockSize: 1000,
@@ -14,7 +14,7 @@ module.exports = {
   bucketSize: 4,
   startPort: 7200,
   numPortTries : 2,
-  timeout: 20000, // how long to wait on a rpc response
+  timeout: 60000, // how long to wait on a rpc response
   packetSize: 512, // message size in bytes
   nodeCount: 10, // how many nodes to find in or query in total
   concurrency:3, // how many nodes to query simultaneously

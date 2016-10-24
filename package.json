@@ -36,7 +36,9 @@
     "node-forge": "^0.6.42",
     "protobufjs": "^5.0.1",
     "protocol-buffers": "^3.1.6",
-    "udp-messenger": "^0.1.0"
+    "udp-messenger": "^0.1.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "random-ipv4": "^1.0.2"
+  }
 }

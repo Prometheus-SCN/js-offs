@@ -27,7 +27,7 @@ let _items = new WeakMap()
 
 module.exports = class WritableOffStream extends Writable {
   constructor (blockSize, opts) {
-    if(!Number.isInteger(blockSize)){
+    if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
     if (!opts) {
