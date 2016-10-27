@@ -137,14 +137,14 @@ module.exports = class CuckooSieve {
     let bSize = _bSize.get(this)
     let scale = _scale.get(this)
     let sieve = _sieve.get(this)
-
-    return {
+    let obj = {
       cfSize: cfSize,
       fpSize: fpSize,
       bSize: bSize,
       scale: scale,
       sieve: sieve.map((filter)=> {return filter.toJSON()})
     }
+    return obj
   }
 
   static fromJSON (obj) {
@@ -152,7 +152,8 @@ module.exports = class CuckooSieve {
   }
 
   toCBOR () {
-    return abToB(cbor.encode(this.toJSON()))
+    let buf = abToB(cbor.encode(this.toJSON()))
+    return buf
   }
 
   static fromCBOR (buf) {

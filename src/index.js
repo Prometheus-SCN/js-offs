@@ -20,6 +20,12 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Cache = require('./fibonacci-cache')
 const config = require('../config')
 const BlockRouter = require('./block-router')
+
+let sieve = new CuckooSieve(20000, 8, 4, 2)
+console.log(sieve.toJSON())
+let cbor = sieve.toCBOR()
+let fromCbor = CuckooSieve.fromCBOR(cbor)
+
 /*
  fs.readFile('test.pdf', (err, data)=> {
  if (err) {
@@ -205,35 +211,36 @@ const BlockRouter = require('./block-router')
  }
  console.log(`Rank ${rank} now has ${sieve.countAtRank(rank)} hits`)
  */
+/*
+ fs.readFile('test.pdf', (err, data)=> {
+ if (err) {
+ throw err
+ }
+ let slice = data.slice(288, 1000)
+ console.log(slice)
+ let url = new OffUrl()
+ let bc = new BlockCache('../.block-cache', config.blockSize)
+ let rs = fs.createReadStream('test.pdf')
+ url.fileName = 'test.pdf'
+ url.contentType = mime.lookup('test.pdf')
+ let ws = new ows(config.blockSize, { bc: bc, url: url })
+ ws.on('url', (url)=> {
+ console.log(url.toString())
+ url.streamOffset = 288
+ url.streamOffsetLength = 1000
+ let rs = new ors(url, config.blockSize, bc)
+ collect(rs, (err, data)=> {
+ if (err) {
+ throw err
+ }
+ console.log(data)
+ console.log(slice.equals(data))
+ })
+ })
+ rs.pipe(ws)
 
-fs.readFile('test.pdf', (err, data)=> {
-  if (err) {
-    throw err
-  }
-  let slice = data.slice(288, 1000)
-  console.log(slice)
-  let url = new OffUrl()
-  let bc = new BlockCache('../.block-cache', config.blockSize)
-  let rs = fs.createReadStream('test.pdf')
-  url.fileName = 'test.pdf'
-  url.contentType = mime.lookup('test.pdf')
-  let ws = new ows(config.blockSize, { bc: bc, url: url })
-  ws.on('url', (url)=> {
-    console.log(url.toString())
-    url.streamOffset = 288
-    url.streamOffsetLength = 1000
-    let rs = new ors(url, config.blockSize, bc)
-    collect(rs, (err, data)=> {
-      if (err) {
-        throw err
-      }
-      console.log(data)
-      console.log(slice.equals(data))
-    })
-  })
-  rs.pipe(ws)
-
-})
+ })
+ */
 /*
  let sequence = [0, 1]
  function fibSequence(num){

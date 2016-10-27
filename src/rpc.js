@@ -31,74 +31,6 @@ let _rpcid = new WeakMap()
 let _bucket = new WeakMap()
 let _rpcInterface = new WeakMap()
 
-function sanitizeRPC (rpc) {
-  try {
-    rpc.id = rpc.id.toBuffer()
-    rpc.from.id = rpc.from.id.toBuffer()
-    rpc.from.port = rpc.from.port.toNumber()
-    if (rpc.payload) {
-      rpc.payload = rpc.payload.toBuffer()
-    }
-  } catch (ex) {
-
-  }
-}
-function sanitizeFindNodeRequest (req) {
-  try {
-    req.id = req.id.toBuffer()
-    req.count = req.count.toNumber()
-  } catch (ex) {
-
-  }
-}
-function sanitizePeer (peer) {
-  try {
-    peer.id = peer.id.toBuffer()
-    peer.port = peer.port.toNumber()
-  } catch (ex) {
-
-  }
-}
-function sanitizeValueResponse (value) {
-  try {
-    value.hash = value.hash.toBuffer()
-    value.data = value.data.toBuffer()
-  } catch (ex) {
-
-  }
-}
-function sanitizeValueRequest (value) {
-  try {
-    value.hash = value.hash.toBuffer()
-    value.count = value.count.toNumber()
-  } catch (ex) {
-
-  }
-}
-function sanitizeStoreRequest (value) {
-  try {
-    value.number = value.number.toNumber()
-    value.value = value.value.toBuffer()
-  } catch (ex) {
-
-  }
-}
-function sanitizeRandomRequest (value) {
-  try {
-    value.number = value.number.toNumber()
-    value.filter = value.filter.toBuffer()
-  } catch (ex) {
-
-  }
-}
-function sanitizeRandomResponse (value) {
-  try {
-    value.number = value.number.toNumber()
-    value.value = value.value.toBuffer()
-  } catch (ex) {
-
-  }
-}
 module.exports = class RPC {
   constructor (peer, messenger, bucket, rpcInterface) {
     if (!(peer instanceof Peer)) {
@@ -156,7 +88,8 @@ module.exports = class RPC {
       rpcInterface.getValue(valuepb.hash, valuepb.type, (err, value, number)=> {
         if (err) {
           let peers = bucket.closest(valuepb.hash, valuepb.count)
-          let valueRespb = { hash: valuepb.hash, type: valuepb.type, nodes: peers }
+          peers = peers.map((peer)=> { return peer.toJSON()})
+          let valueRespb = { hash: valuepb.hash, type: valuepb.type, number: 0, nodes: peers }
           let payload = new FindValueResponse(valueRespb).encode().toBuffer()
           responsepb.payload = payload
           responsepb.status = Status.Failure
@@ -215,6 +148,45 @@ module.exports = class RPC {
         }
       })
     }
+    let promotionResponse = (pb)=> {
+      let promotionpb = PromotionRequest.decode(pb.payload)
+      sanitizePromotionRequest(promotionpb)
+      let requests = _requests.get(this)
+      let key = pb.id.toString('hex')
+      if (!requests.has(key) && !rpcInterface.containsValueAt(promotionpb.number, promotionpb.hash, promotionpb.type)) {
+        rpcInterface.promoteValue(promotionpb.hash, promotionpb.number, promotionpb.type, (err)=> {
+          if (err) {
+            if (err === 'Find this block') {
+              this.findValue(promotionpb.hash, promotionpb.type, (err)=> {
+                if (err) {
+                  return console.log(err)
+                }
+                console.log('block found')
+              })
+            }
+          }
+        })
+        let bucket = _bucket.get(this)
+        let nodes = bucket.toArray()
+        let filter = Cuckoo.fromCBOR(promotionpb.filter)
+
+        nodes = nodes.filter((node)=> {
+          return !filter.contains(node.id)
+        })
+        for (let i = 0; i < nodes.length; i++) {
+          let node = nodes[ i ]
+          filter.add(node.id)
+        }
+        promotionpb.filter = filter.toCBOR()
+        let payload = new PromotionRequest(promotionpb).encode().toBuffer()
+        pb.payload = payload
+        let request = new RPCProto.RPC(pb).encode().toBuffer()
+        for (let i = 0; i < nodes.length; i++) {
+          let node = nodes[ i ]
+          messenger.send(request, node.ip, node.port)
+        }
+      }
+    }
     // This takes a request and creates an appropriate response for its type
     let handleRequest = (pb)=> {
       let bucket = _bucket.get(this)
@@ -235,6 +207,9 @@ module.exports = class RPC {
           break;
         case RPCType.Random :
           randomResponse(pb)
+          break;
+        case RPCType.Promotion :
+          promotionResponse(pb)
           break;
       }
     }
@@ -362,10 +337,10 @@ module.exports = class RPC {
           return request.cb(new Error("Value Not Found"))
         })
       } else {
-        let queried = request.queried
-        let isSending = (nodes.length > 0) && (queried.length < config.nodeCount)
         let query = ()=> {
+          let queried = request.queried
           let nodes = nodeBucket.closest(valuespb.hash, config.nodeCount)
+          let isSending = (nodes.length > 0) && (queried.length < config.nodeCount)
           for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
             let node = nodes.shift()
             while (queried.find((peer)=> {return peer.id === node.id})) {
@@ -478,6 +453,7 @@ module.exports = class RPC {
 
       if (pb.status == Status.Success && randompb.value) {
         rpcInterface.storeValueAt(randompb.value, randompb.number, randompb.type, (err)=> {
+          requests.delete(key)
           return process.nextTick(()=> {
             return request.cb(err)
           })
@@ -672,7 +648,7 @@ module.exports = class RPC {
           }
         }
       }, config.timeout)
-      requests.set(key, { req: request, resCount: 0, cb: cb, nodesBucket: nodeBucket, queried: queried, timer: timer })
+      requests.set(key, { req: request, resCount: 0, cb: cb, nodeBucket: nodeBucket, queried: queried, timer: timer })
       _requests.set(this, requests)
     }
     query()
@@ -747,15 +723,6 @@ module.exports = class RPC {
     _rpcid.set(this, rpcid)
   }
 
-  /*
-   I want you most popular random block not on my list
-   or
-   I want your most popular random block in a particular bucket
-
-   if no number is passed then it is looks for the most popular bucket
-   if a number is passed then look in the bucket requested
-   when request is received check your highest bucket
-   * */
   random (number, count, type, filter, cb) {
     let messenger = _messenger.get(this)
     let peer = _peer.get(this)
@@ -802,7 +769,7 @@ module.exports = class RPC {
 
   }
 
-  promote(hash, number, type, cb) {
+  promote (hash, number, type, cb) {
     let messenger = _messenger.get(this)
     let peer = _peer.get(this)
     let rpcid = _rpcid.get(this)
@@ -810,38 +777,39 @@ module.exports = class RPC {
     let requests = _requests.get(this)
     let requestpb = {}
     requestpb.id = rpcid.slice(0)
-    requestpb.type = RPCType.Find_Value
+    requestpb.type = RPCType.Promotion
     requestpb.comType = Direction.Request
     requestpb.from = peer.toJSON()
-    let promotionpb= {}
+    let promotionpb = {}
     promotionpb.hash = hash
     promotionpb.number = number
     promotionpb.type = type
-    let payload = new PromotionRequest(promotionpb).encode().toBuffer()
-    requestpb.payload = payload
-    let request = new RPCProto.RPC(requestpb).encode().toBuffer()
 
-    let nodes = bucket.closest(hash, bucket.count)
+    let nodes = bucket.toArray()
     let filter = new Cuckoo(bucket.count + Math.ceil(bucket.count * .95), config.bucketSize, config.fingerprintSize)
 
     for (let i = 0; i < nodes.length; i++) {
-      filter.add(nodes[i].id)
+      filter.add(nodes[ i ].id)
     }
     filter.add(peer.id)
-    promotionpb.filter =filter
+    promotionpb.filter = filter.toCBOR()
+    let payload = new PromotionRequest(promotionpb).encode().toBuffer()
+    requestpb.payload = payload
+    let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     for (let i = 0; i < nodes.length; i++) {
-      let node = nodes.shift()
+      let node = nodes[ i ]
       messenger.send(request, node.ip, node.port)
     }
 
     let key = requestpb.id.toString('hex')
-    let requests = _requests.get(this)
-
-    requests.set(key, { req: request, resCount: 0, cb: cb, queried: queried, timer: timer })
-    _requests.set(this, requests)
+    requests.set(key, { req: request })
+    setTimeout(()=> {
+      requests.delete(key)
+    }, config.timeout)
 
     rpcid = increment(rpcid)
     _rpcid.set(this, rpcid)
+    process.nextTick(cb)
 
   }
 
@@ -856,5 +824,84 @@ module.exports = class RPC {
       }
       return process.nextTick(cb)
     })
+  }
+}
+
+function sanitizeRPC (rpc) {
+  try {
+    rpc.id = rpc.id.toBuffer()
+    rpc.from.id = rpc.from.id.toBuffer()
+    rpc.from.port = rpc.from.port.toNumber()
+    if (rpc.payload) {
+      rpc.payload = rpc.payload.toBuffer()
+    }
+  } catch (ex) {
+
+  }
+}
+function sanitizeFindNodeRequest (req) {
+  try {
+    req.id = req.id.toBuffer()
+    req.count = req.count.toNumber()
+  } catch (ex) {
+
+  }
+}
+function sanitizePeer (peer) {
+  try {
+    peer.id = peer.id.toBuffer()
+    peer.port = peer.port.toNumber()
+  } catch (ex) {
+
+  }
+}
+function sanitizeValueResponse (value) {
+  try {
+    value.hash = value.hash.toBuffer()
+    value.data = value.data.toBuffer()
+  } catch (ex) {
+
+  }
+}
+function sanitizeValueRequest (value) {
+  try {
+    value.hash = value.hash.toBuffer()
+    value.count = value.count.toNumber()
+  } catch (ex) {
+
+  }
+}
+function sanitizeStoreRequest (value) {
+  try {
+    value.number = value.number.toNumber()
+    value.value = value.value.toBuffer()
+  } catch (ex) {
+
+  }
+}
+function sanitizeRandomRequest (value) {
+  try {
+    value.number = value.number.toNumber()
+    value.filter = value.filter.toBuffer()
+  } catch (ex) {
+
+  }
+}
+function sanitizeRandomResponse (value) {
+  try {
+    value.number = value.number.toNumber()
+    value.value = value.value.toBuffer()
+    value.filter = value.filter.toBuffer()
+  } catch (ex) {
+
+  }
+}
+function sanitizePromotionRequest (value) {
+  try {
+    value.number = value.number.toNumber()
+    value.hash = value.hash.toBuffer()
+    value.filter = value.filter.toBuffer()
+  } catch (ex) {
+
   }
 }

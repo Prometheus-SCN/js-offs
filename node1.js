@@ -16,6 +16,9 @@ let thisNode =  new Peer(util.hash(id),'127.0.0.1', config.startPort)
 let bucket = new Bucket(thisNode.id, 20)
 let messenger = new Messenger(config.timeout, thisNode.port, config.packetSize)
 let blockRouter= new BlockRouter('./node1/')
+blockRouter.on('promotion', (number, block)=>{
+  console.log(`promoted: ${block.key}`)
+})
 let peers =[]
 for(let i= 1; i < 5 ; i++){
   let id = new Buffer(32)

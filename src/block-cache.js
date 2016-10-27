@@ -1,4 +1,5 @@
 'use strict'
+const EventEmitter = require('events').EventEmitter
 const fs = require('fs')
 const Block = require('./block')
 const FibonacciCache = require('./fibonacci-cache')
@@ -6,15 +7,20 @@ let _cache = new WeakMap()
 let _blockSize = new WeakMap()
 
 module.exports =
-  class BlockCache {
+  class BlockCache extends EventEmitter {
     constructor (path, blockSize) {
+      super()
       if (!path || typeof path !== 'string') {
         throw new Error('Invalid path')
       }
       if (!Number.isInteger(blockSize)) {
         throw new Error('Block size must be an integer')
       }
-      _cache.set(this, new FibonacciCache(path, blockSize))
+      let cache = new FibonacciCache(path, blockSize)
+      cache.on('promote', (block)=> {
+        this.emit('promote', block)
+      })
+      _cache.set(this, cache)
       _blockSize.set(this, blockSize)
     }
 
@@ -94,7 +100,7 @@ module.exports =
       })
     }
 
-    storeBlocksAt (block, number, cb) {
+    storeBlockAt (block, number, cb) {
       let cache = _cache.get(this)
       cache.storeBlockAt(block, number, cb)
     }
@@ -112,5 +118,10 @@ module.exports =
     contains (key) {
       let cache = _cache.get(this)
       return cache.contains(key)
+    }
+
+    containsAt (number, key) {
+      let cache = _cache.get(this)
+      return cache.containsAt(number, key)
     }
   }

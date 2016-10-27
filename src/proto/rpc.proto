@@ -1,83 +1,83 @@
 package RPCProto;
 
-message Peer{
+message Peer {
     required bytes id = 1;
     required string ip = 2;
-    required int64 port= 3;
+    required int64 port = 3;
 }
 enum RPCType {
     Ping = 1;
     Find_Node = 2;
-    Find_Value= 3;
-    Store= 4;
+    Find_Value = 3;
+    Store = 4;
     Random = 5;
     Promotion = 6;
     Ping_Value = 7;
     Ping_Storage = 8;
 }
-enum Direction{
-    Response= 1;
+enum Direction {
+    Response = 1;
     Request = 2;
 }
-enum Status{
+enum Status {
     Success = 1;
     Failure = 2;
 }
-enum ValueType{
+enum ValueType {
     Block = 1;
     Mini = 2;
     Nano = 3;
 }
 message RPC {
-  required RPCType type =1;
-  required Peer from = 2;
-  required Direction comType = 3;
-  required bytes id = 4;
-  optional bytes payload= 5;
-  optional Status status = 6;
+    required RPCType type = 1;
+    required Peer from = 2;
+    required Direction comType = 3;
+    required bytes id = 4;
+    optional bytes payload = 5;
+    optional Status status = 6;
 }
 
-message FindNodeRequest{
+message FindNodeRequest {
     required bytes id = 1;
-    required int64 count= 2;
+    required int64 count = 2;
 }
-message FindNodeResponse{
-    repeated Peer nodes= 1;
+message FindNodeResponse {
+    repeated Peer nodes = 1;
 }
-message FindValueRequest{
+message FindValueRequest {
     required ValueType type = 1;
     required bytes hash = 2;
-    required int64 count= 3;
+    required int64 count = 3;
 }
-message FindValueResponse{
+message FindValueResponse {
     required ValueType type = 1;
-    required int64 number= 2;
+    required int64 number = 2;
     required bytes hash = 3;
     optional bytes data = 4;
-    repeated Peer nodes= 5;
+    repeated Peer nodes = 5;
 }
-message PingValueRequest{
+message PingValueRequest {
     required ValueType type = 1;
     required bytes hash = 2;
 }
-message StoreRequest{
+message StoreRequest {
     required ValueType type = 1;
-    required bytes value= 2;
-    required int64 number= 3;
+    required bytes value = 2;
+    required int64 number = 3;
 }
-message RandomRequest{
+message RandomRequest {
     required ValueType type = 1;
-    required int64 number= 2;
+    required int64 number = 2;
     required bytes filter = 3;
 }
-message RandomResponse{
+message RandomResponse {
     required ValueType type = 1;
-    required int64 number= 2;
-    required bytes value= 3;
+    required int64 number = 2;
+    required bytes value = 3;
 }
-message PromotionRequest{
+message PromotionRequest {
     required ValueType type = 1;
     required bytes hash = 2;
-    required int64 number= 3;
+    required int64 number = 3;
     required bytes filter = 4;
 }

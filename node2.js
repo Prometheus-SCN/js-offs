@@ -45,6 +45,7 @@ messenger.on('listening', ()=>{
 
     })
     */
+    /*
     let filter = new Cuckoo()
     filter.add('stuff')
     let cbor = filter.toCBOR()
@@ -56,7 +57,10 @@ messenger.on('listening', ()=>{
       console.log('random received')
 
     })
-
+    */
+    rpc.promote(new Buffer(bs58.decode('QmaJcEWpNunMvZYwucGmbbXdoRkZnUF43U1CP3Mg5ngjdC')), 3, 2, ()=>{
+      console.log('promotion issued')
+    })
   })
 })
 messenger.on('error', (err)=>{

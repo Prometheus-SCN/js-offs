@@ -7,7 +7,7 @@ const mkdirp = require('mkdirp')
 let _buckets = new WeakMap()
 let _path = new WeakMap()
 let _blockSize = new WeakMap()
-let EventEmitter = require('events').EventEmitter
+const EventEmitter = require('events').EventEmitter
 module.exports = class FibonacciCache extends EventEmitter {
   constructor (path, blockSize) {
     super()
@@ -203,6 +203,7 @@ module.exports = class FibonacciCache extends EventEmitter {
       let path = _path.get(this)
       buckets[ index + 1 ] = new FibonacciBucket(path, blockSize, index + 2)
     }
+
     buckets[ index ].remove(block.key, (err)=> {
       if (err) {
         return process.nextTick(()=> {
@@ -238,35 +239,71 @@ module.exports = class FibonacciCache extends EventEmitter {
       if (err) {
         return process.nextTick(()=> {cb(err)})
       }
-      if (blocks) {
-        if ((blocks.length + prior.length) >= number) {
-          blocks = prior.concat(blocks)
+      let j = -1
+      let tally = (err, cb)=> {
+        if (err) {}//TODO: Decide what should happen if this fails; most likely nothing
+        if (blocks) {
+          j++
+          if (j < blocks.length) {
+            let block = blocks[ j ]
+            if (buckets[ i ].tally(block.key)) {
+              return this.promote(block, i, (err)=> {
+                return tally(err, cb)
+              })
+            } else {
+              return tally(null, cb)
+            }
+          } else {
+            return cb()
+          }
+        } else {
+          return cb()
+        }
+      }
+      tally(null, ()=> {
+        if (blocks) {
+          if ((blocks.length + prior.length) >= number) {
+            blocks = prior.concat(blocks)
+            return process.nextTick(()=> {
+              return cb(null, { bucket: i, items: items }, blocks)
+            })
+          }
+          else {
+            prior = prior.concat(blocks)
+            number -= blocks.length
+          }
+        }
+        i--
+        if (i >= 0) {
+          let bucket = buckets[ i ]
+          bucket.randomBlocks(number, usageFilter, items, next)
+        } else {
           return process.nextTick(()=> {
-            return cb(null, { bucket: i, items: items }, blocks)
+            return cb(null, { bucket: i, items: items }, blocks || [])
           })
         }
-        else {
-          prior = prior.concat(blocks)
-          number -= blocks.length
-        }
-      }
-      i--
-      if (i >= 0) {
-        let bucket = buckets[ i ]
-        bucket.randomBlocks(number, usageFilter, items, next)
-      } else {
-        return process.nextTick(()=> {
-          return cb(null, { bucket: i, items: items }, blocks || [])
-        })
-      }
+      })
+
     }
     next(null, items, null)
+  }
+
+  containsAt (number, key) {
+    let index = number - 1
+    if (0 > index) {
+      return false
+    }
+    let buckets = _buckets.get(this)
+    if (number >= buckets.length) {
+      return false
+    }
+    return buckets[ index ].contains(key)
   }
 
   storeBlockAt (block, number, cb) {
     let index = number - 1
     if (0 > index) {
-      return process.nextTick(()=> {return cb(new TypeError("Invalid Fibonacci Number"))})
+      return process.nextTick(()=> {return cb(new TypeError('Invalid Fibonacci Number'))})
     }
     let buckets = _buckets.get(this)
     let blockSize = _blockSize.get(this)
@@ -277,8 +314,8 @@ module.exports = class FibonacciCache extends EventEmitter {
       }
       if (!buckets[ index ]) {
         let path = _path.get(this)
-        for (let i = buckets.length; i <= index; i++) {
-          buckets[ i ] = new FibonacciBucket(path, blockSize, i + 2)
+        for (let i = buckets.length; i < number; i++) {
+          buckets[ i ] = new FibonacciBucket(path, blockSize, i + 1)
         }
       }
       buckets[ index ].put(block, (err)=> {

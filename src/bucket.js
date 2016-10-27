@@ -241,9 +241,9 @@ module.exports = class Bucket extends EventEmitter {
     if (bucket) {
       let distance = new WeakMap()
       return bucket.map((peer)=> {
-        distance.set(peer, Bucket.distance(peer.id, id))
-        return peer
-      })
+          distance.set(peer, Bucket.distance(peer.id, id))
+          return peer
+        })
         .sort((a, b)=> {
           return distance.get(a) - distance.get(b)
         })

@@ -1,3 +1,4 @@
+'use strict'
 const fs = require('fs')
 const util = require('./utility')
 const mkdirp = require('mkdirp')
@@ -14,6 +15,7 @@ const _limit = new WeakMap()
 const _path = new WeakMap()
 let _dirty = new WeakMap()
 let _blockSize = new WeakMap()
+let _dirtyTimer = new WeakMap()
 function fibSequence (num) {
   let output = 0
   let sequence = [ 0, 1 ]
@@ -56,7 +58,7 @@ module.exports = class FibonacciBucket {
     }
     _contents.set(this, contents)
 
-    let fh = pth.join(path, `f${number}.content`)
+    let fh = pth.join(path, `f${number}.hitbox`)
     let hitBox
     try {
       let hitCBOR = fs.readFileSync(fh)
@@ -78,6 +80,21 @@ module.exports = class FibonacciBucket {
     return _dirty.get(this)
   }
 
+  set dirty (value) {
+    if (value === true) {
+      _dirty.set(this, true)
+      let dirtyTimer = _dirtyTimer.get(this)
+      clearTimeout(dirtyTimer)
+      dirtyTimer = setTimeout(()=> {
+        this.save(()=> {
+        })
+      }, 500)
+      _dirtyTimer.set(this, dirtyTimer)
+    } else {
+      _dirty.set(this, false)
+    }
+  }
+
   get number () {
     return _number.get(this)
   }
@@ -90,7 +107,7 @@ module.exports = class FibonacciBucket {
     let hitBox = _hitBox.get(this)
     let limit = _limit.get(this)
     hitBox.tally(key)
-    _dirty.set(this, true)
+    this.dirty = true
     if (hitBox.rank(key) >= limit) {
       return true
     } else {
@@ -113,7 +130,7 @@ module.exports = class FibonacciBucket {
     let fd = util.sanitize(block.key, this.path)
     fs.writeFile(fd, block.data, (err)=> {
       if (!err) {
-        _dirty.set(this, true)
+        this.dirty = true
         contents.add(block.key)
       }
       return process.nextTick(()=> {cb(err)})
@@ -137,7 +154,7 @@ module.exports = class FibonacciBucket {
     let fd = util.sanitize(key, this.path)
     fs.unlink(fd, (err) => {
       if (!err) {
-        _dirty.set(this, true)
+        this.dirty = true
         contents.remove(key)
       }
       return process.nextTick(()=> {cb(err)})
@@ -159,7 +176,7 @@ module.exports = class FibonacciBucket {
         if (err) {
           return process.nextTick(()=> { return cb(err)})
         }
-        _dirty.set(this, true)
+        this.dirty = false
         return process.nextTick(cb)
       })
     })

@@ -1,4 +1,5 @@
 'use strict'
+const EventEmitter = require('events').EventEmitter
 const config = require('../config')
 const BlockCache = require('./block-cache')
 const Block = require('./block')
@@ -10,13 +11,23 @@ let _bc = new WeakMap()
 let _mc = new WeakMap()
 let _nc = new WeakMap()
 
-module.exports = class BlockRouter {
+module.exports = class BlockRouter extends EventEmitter {
   constructor (path) {
+    super()
     let bc = new BlockCache(path + config.blockPath, config.blockSize)
     let mc = new BlockCache(path + config.miniPath, config.miniBlockSize)
     let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize)
-    _bc.set(this, bc),
-      _mc.set(this, mc)
+    bc.on('promotion', (block)=> {
+      this.emit('promotion', config.block, block)
+    })
+    mc.on('promotion', (block)=> {
+      this.emit('promotion', config.mini, block)
+    })
+    nc.on('promotion', (block)=> {
+      this.emit('promotion', config.nano, block)
+    })
+    _bc.set(this, bc)
+    _mc.set(this, mc)
     _nc.set(this, nc)
   }
 
@@ -77,7 +88,7 @@ module.exports = class BlockRouter {
           block = new Block(value, config.nanoBlockSize)
           break;
       }
-      bc.storeBlocksAt(block, number, cb)
+      bc.storeBlockAt(block, number, cb)
     }
     rpc.getValue = (hash, type, cb)=> {
       let bc
@@ -162,11 +173,27 @@ module.exports = class BlockRouter {
       } else {
         if (bc.number < number) {
           return process.nextTick(()=> {
-            return cb("Find this block")
+            return cb('Find this block')
           })
         }
         process.nextTick(cb)
       }
+    }
+    rpc.containsValueAt = (number, hash, type) => {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      let key = bs58.encode(hash)
+      return bc.containsAt(number, key)
     }
     rpc.closestValueAt = (number, key, filter, type, cb) => {
       let bc
