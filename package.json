@@ -21,6 +21,7 @@
     "end-of-stream": "^1.1.0",
     "express": "^4.14.0",
     "fs-blob-store": "^5.2.1",
+    "get-folder-size": "^1.0.0",
     "hamming-distance": "^1.0.0",
     "increment-buffer": "^1.0.0",
     "is-ip": "^1.0.0",

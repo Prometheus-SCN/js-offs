@@ -7,16 +7,20 @@ const ReadableOffStream = require('./readable-off-stream')
 const WritableOffStream = require('./writable-off-stream')
 const URL = require('./off-url')
 const bs58 = require('bs58')
+const RPC =require('./rpc')
+const Peer= require('./peer')
+const Messenger = require('udp-messenger')
+
 let _bc = new WeakMap()
 let _mc = new WeakMap()
 let _nc = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
-  constructor (path) {
+  constructor (path, peer, messenger, bucket) {
     super()
-    let bc = new BlockCache(path + config.blockPath, config.blockSize)
-    let mc = new BlockCache(path + config.miniPath, config.miniBlockSize)
-    let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize)
+    let bc = new BlockCache(path + config.blockPath, config.blockSize, config.blockCacheSize)
+    let mc = new BlockCache(path + config.miniPath, config.miniBlockSize, config.miniBlockCacheSize)
+    let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize, config.nanoBlockCacheSize)
     bc.on('promotion', (block)=> {
       this.emit('promotion', config.block, block)
     })
@@ -25,6 +29,24 @@ module.exports = class BlockRouter extends EventEmitter {
     })
     nc.on('promotion', (block)=> {
       this.emit('promotion', config.nano, block)
+    })
+    bc.on('capacity', (capacity)=> {
+      this.emit('capacity', config.block, capacity)
+    })
+    mc.on('capacity', (capacity)=> {
+      this.emit('capacity', config.mini, capacity)
+    })
+    nc.on('capacity', (capacity)=> {
+      this.emit('capacity', config.nano, capacity)
+    })
+    bc.on('full', ()=> {
+      this.emit('full', config.block)
+    })
+    mc.on('full', (capacity)=> {
+      this.emit('full', config.mini)
+    })
+    nc.on('full', (capacity)=> {
+      this.emit('full', config.nano)
     })
     _bc.set(this, bc)
     _mc.set(this, mc)
@@ -209,6 +231,21 @@ module.exports = class BlockRouter extends EventEmitter {
           break;
       }
       bc.closestBlockAt(number, key, filter, cb)
+    }
+    rpc    = () => {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      return bc.capacity()
     }
     return rpc
   }

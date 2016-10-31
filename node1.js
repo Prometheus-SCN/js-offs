@@ -19,6 +19,13 @@ let blockRouter= new BlockRouter('./node1/')
 blockRouter.on('promotion', (number, block)=>{
   console.log(`promoted: ${block.key}`)
 })
+blockRouter.on('capacity', (type, capacity)=>{
+  console.log(`type:${type} capacity: ${capacity}`)
+})
+
+blockRouter.on('full', (type)=>{
+  console.log(`full:${type}`)
+})
 let peers =[]
 for(let i= 1; i < 5 ; i++){
   let id = new Buffer(32)
@@ -41,6 +48,9 @@ messenger.on('listening', ()=>{
     url.contentType = mime.lookup('test.pdf')
     url.streamLength = data.length
     let ws = br.createWriteStream(url)
+    ws.on('error', (err)=>{
+      console.log(err)
+    })
     ws.on('url', (url)=> {
       console.log(url.descriptorHash)
     })

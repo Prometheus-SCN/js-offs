@@ -1,7 +1,13 @@
+const kb = 1000
+const mb = 1000000
+const gb = 1000000000
 module.exports = {
   blockPath:'.block-cache',
   miniPath: '.mini-cache',
   nanoPath: '.nano-cache',
+  blockCacheSize: 200 * gb,
+  miniBlockCacheSize: 23 * gb,
+  nanoBlockCacheSize: 200 * mb,
   nano: 3,
   block: 1,
   mini: 2,
@@ -22,5 +28,6 @@ module.exports = {
   nodeCount: 10, // how many nodes to find in or query in total
   concurrency:3, // how many nodes to query simultaneously
   kbucketSize: 20, // size of each k bucket
-  storeCount: 1 // how many nodes to store new data at
+  storeCount: 1, // how many nodes to store new data at
+  maxFillRate: 72 // in hours
 }
