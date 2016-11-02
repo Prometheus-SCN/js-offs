@@ -15,7 +15,7 @@ id.fill(40)
 let thisNode =  new Peer(util.hash(id),'127.0.0.1', config.startPort+1)
 let bucket = new Bucket(thisNode.id, 20)
 let messenger = new Messenger(config.timeout, thisNode.port, config.packetSize)
-let blockRouter= new BlockRouter('./node2/')
+let blockRouter= new BlockRouter('./node1/', thisNode, messenger)
 let peers =[]
 /*
 for(let i= 1; i < 32 ; i++){
@@ -58,9 +58,25 @@ messenger.on('listening', ()=>{
 
     })
     */
+    /*
     rpc.promote(new Buffer(bs58.decode('QmaJcEWpNunMvZYwucGmbbXdoRkZnUF43U1CP3Mg5ngjdC')), 3, 2, ()=>{
       console.log('promotion issued')
     })
+    */
+    /*
+    rpc.pingValue(new Buffer(bs58.decode('QmVEQhMp7w4BEzXfCnTWGfritiWAgfWamMxmLQ2n3SdACt')), new Buffer(bs58.decode('QmRuYJb5zKU7iWZFhRDhd6sJ7G8QrkzxDU9UnQssma9wXZ')),2,(err)=>{
+      if(err){
+       return console.log(err)
+      }
+      console.log('Value found')
+    } )
+    */
+    rpc.pingStorage(new Buffer(bs58.decode('QmVEQhMp7w4BEzXfCnTWGfritiWAgfWamMxmLQ2n3SdACt')), 2,(err, capacity)=>{
+      if(err){
+        return console.log(err)
+      }
+      console.log(`capacity: ${capacity}%`)
+    } )
   })
 })
 messenger.on('error', (err)=>{

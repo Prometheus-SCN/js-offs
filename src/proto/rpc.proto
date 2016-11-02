@@ -81,6 +81,9 @@ message PromotionRequest {
     required int64 number = 3;
     required bytes filter = 4;
 }
+message PingStorageRequest {
+    required ValueType type = 1;
+}
 message PingStorageResponse {
     required float capacity = 1;
 }

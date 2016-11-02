@@ -9,9 +9,9 @@ const getSize = require('get-folder-size')
 let _buckets = new WeakMap()
 let _path = new WeakMap()
 let _blockSize = new WeakMap()
-let _sizeTimer= new WeakMap()
+let _sizeTimer = new WeakMap()
 let _size = new WeakMap()
-let _maxSize= new WeakMap()
+let _maxSize = new WeakMap()
 module.exports = class FibonacciCache extends EventEmitter {
   constructor (path, blockSize, maxSize) {
     super()
@@ -39,31 +39,31 @@ module.exports = class FibonacciCache extends EventEmitter {
     }
     _buckets.set(this, buckets)
     //TODO: Possibly deasync this call
-    getSize(path, (err, size) =>{
-      if(err){
-        return  _size.set(this, 0)
+    getSize(path, (err, size) => {
+      if (err) {
+        return _size.set(this, 0)
       }
       _size.set(this, size)
       this.emit('capacity', this.capacity)
-      if(this.full){
+      if (this.full) {
         this.emit('full')
       }
     })
   }
 
-  get size(){
+  get size () {
     return _size.get(this)
   }
 
-  get capacity(){
-    return 100 * (this.size/ this.maxSize)
+  get capacity () {
+    return 100 * (this.size / this.maxSize)
   }
 
-  get full(){
+  get full () {
     return this.size >= this.maxSize
   }
 
-  get maxSize(){
+  get maxSize () {
     return _maxSize.get(this)
   }
 
@@ -86,20 +86,20 @@ module.exports = class FibonacciCache extends EventEmitter {
     return false
   }
 
-  updateSize(){
+  updateSize () {
     let sizeTimer = _sizeTimer.get(this)
     clearTimeout(sizeTimer)//dodge trip to fs when continuously writing or removing
     sizeTimer = setTimeout(()=> {
-      getSize(this.path, (err, size) =>{
-        if(!err) {
+      getSize(this.path, (err, size) => {
+        if (!err) {
           _size.set(this, size)
           this.emit('capacity', this.capacity)
-          if(this.full){
+          if (this.full) {
             this.emit('full')
           }
         }
       })
-    },500)
+    }, 500)
     _sizeTimer.set(this, sizeTimer)
   }
 
@@ -143,8 +143,8 @@ module.exports = class FibonacciCache extends EventEmitter {
     let index = buckets.findIndex((bucket)=> {return bucket.contains(block.key)})
     let found = buckets[ index ]
     if (!found) {
-      if(this.full){
-        return process.nextTick(()=>{
+      if (this.full) {
+        return process.nextTick(()=> {
           return cb(new Error("Block Cache is full"))
         })
       }
@@ -251,7 +251,7 @@ module.exports = class FibonacciCache extends EventEmitter {
               contents.remove(key)
               let blockSize = _blockSize.get(this)
               //approximation of size whilst dodging i/o to fs
-              _size.set(this,(this.size - blockSize)) 
+              _size.set(this, (this.size - blockSize))
               this.updateSize()
             }
             return cb(err)
@@ -388,8 +388,8 @@ module.exports = class FibonacciCache extends EventEmitter {
           buckets[ i ] = new FibonacciBucket(path, blockSize, i + 1)
         }
       }
-      if(this.full){
-        return process.nextTick(()=>{
+      if (this.full) {
+        return process.nextTick(()=> {
           return cb(new Error("Block Cache is full"))
         })
       }

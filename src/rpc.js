@@ -22,6 +22,7 @@ const RandomRequest = RPCProto.RandomRequest
 const RandomResponse = RPCProto.RandomResponse
 const PromotionRequest = RPCProto.PromotionRequest
 const PingValueRequest = RPCProto.PingValueRequest
+const PingStorageRequest = RPCProto.PingStorageRequest
 const RPCType = RPCProto.RPCType
 const ValueType = RPCProto.ValueType
 const Direction = RPCProto.Direction
@@ -160,11 +161,11 @@ module.exports = class RPC {
         rpcInterface.promoteValue(promotionpb.hash, promotionpb.number, promotionpb.type, (err)=> {
           if (err) {
             if (err === 'Find this block') {
-              this.findValue(promotionpb.hash, promotionpb.type, (err)=> {
+              this.findValue(promotionpb.hash, promotionpb.type, (err)=> { //TODO:Need to determine what appropriate error response should be
                 if (err) {
-                  return console.log(err)
+                  //return console.log(err)
                 }
-                console.log('block found')
+                //console.log('block found')
               })
             }
           }
@@ -198,19 +199,21 @@ module.exports = class RPC {
       responsepb.type = pb.type
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
-      responsepb.status = rpcInterface.containsValue(pingvaluepb.hash) ? Status.Success : Status.Failure
+      responsepb.status = rpcInterface.containsValue(pingvaluepb.hash, pingvaluepb.type) ? Status.Success : Status.Failure
       let response = new RPCProto.RPC(responsepb).encode().toBuffer()
       messenger.send(response, pb.from.ip, pb.from.port)
     }
     let pingStorageResponse = (pb)=> {
+      let pingstoragepb = PingStorageRequest.decode(pb.payload)
       let responsepb = {}
       responsepb.id = pb.id
       responsepb.type = pb.type
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
       responsepb.status = Status.Success
-      let pingstoragepb = {}
-      pingstoragepb.capacity= rpcInterface.storageCapacity()
+      let type = pingstoragepb.type
+      pingstoragepb = {}
+      pingstoragepb.capacity = rpcInterface.storageCapacity(type)
       let payload = new PingStorageResponse(pingstoragepb).encode().toBuffer()
       responsepb.payload = payload
       let response = new RPCProto.RPC(responsepb).encode().toBuffer()
@@ -562,13 +565,13 @@ module.exports = class RPC {
       requests.delete(key)
       _requests.set(this, requests)
       if (pb.status !== Status.Success) {
-        return process.nextTick(()=>{
+        return process.nextTick(()=> {
           return request.cb(new Error('Ping Storage Failed'))
         })
       }
       let pingstoragepb = PingStorageResponse.decode(pb.payload)
       return process.nextTick(()=> {
-          return request.cb(null, pingstoragepb.capacity)
+        return request.cb(null, pingstoragepb.capacity)
       })
     }
     let handleResponse = (pb)=> {
@@ -590,6 +593,9 @@ module.exports = class RPC {
           break;
         case RPCType.Ping_Value :
           pingValueRequest(pb)
+          break;
+        case RPCType.Ping_Storage :
+          pingStorageRequest(pb)
           break;
       }
     }
@@ -822,7 +828,6 @@ module.exports = class RPC {
     for (let i = 0; i < count && i < nodes.length && i < count && queried.length < count; i++) {
       let index = util.getRandomInt(0, nodes.length - 1)// random selection of nodes to ask
       let node = nodes.splice(index, 1)[ 0 ]
-      console.log(node)
       queried.push(node)
       messenger.send(request, node.ip, node.port)
     }
@@ -941,7 +946,7 @@ module.exports = class RPC {
     _rpcid.set(this, rpcid)
   }
 
-  pingStorage (id, cb) {
+  pingStorage (id, type, cb) {
     let messenger = _messenger.get(this)
     let peer = _peer.get(this)
     let rpcid = _rpcid.get(this)
@@ -953,6 +958,9 @@ module.exports = class RPC {
     requestpb.type = RPCType.Ping_Storage
     requestpb.comType = Direction.Request
     requestpb.from = peer.toJSON()
+    let pingstoragepb = {}
+    pingstoragepb.type = type
+    requestpb.payload = new PingStorageRequest(pingstoragepb).encode().toBuffer()
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     messenger.send(request, to.ip, to.port)
     let key = requestpb.id.toString('hex')

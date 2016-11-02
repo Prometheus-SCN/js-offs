@@ -27,13 +27,16 @@ module.exports = class Scheduler {
       }
       next()
     }
-    let onCapacity= (type, capacity)=> {
-     let fillRate
-     if (capacity >= 50 ) {
-       fillRate = config.maxFillRate
-     } else{
-       fillRate = config.maxFillRate * (capacity/50)
-     }
+    let onCapacity = (type, capacity)=> {
+      let fillRate
+      if (capacity >= 50) {
+        fillRate = config.maxFillRate
+      } else {
+        fillRate = config.maxFillRate * (capacity / 50)
+      }
+      let now = new Date()
+      let then = new Date(now)
+      
       let maintenanceJob = new CronJob('*/15 * * * *', maintainBucket)
     }
     blockRouter.on('capacity', onCapacity)
