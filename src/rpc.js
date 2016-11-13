@@ -24,7 +24,6 @@ const PromotionRequest = RPCProto.PromotionRequest
 const PingValueRequest = RPCProto.PingValueRequest
 const PingStorageRequest = RPCProto.PingStorageRequest
 const RPCType = RPCProto.RPCType
-const ValueType = RPCProto.ValueType
 const Direction = RPCProto.Direction
 const Status = RPCProto.Status
 let _messenger = new WeakMap()
@@ -430,11 +429,14 @@ module.exports = class RPC {
       request.resCount++
 
       let nodes = request.nodes
-      if (pb.status == Status.Success && request.resCount >= config.storeCount) {
+
+      //Successful after storing at redundancy percentage
+      if (pb.status == Status.Success && request.resCount >= request.redundancy) {
         requests.delete(key)
         _requests.set(this, requests)
         return process.nextTick(request.cb)
       }
+      //Failure if exceeded queryable nodes
       if (request.resCount >= nodes.length) {
         requests.delete(key)
         _requests.set(this, requests)
@@ -444,11 +446,8 @@ module.exports = class RPC {
       } else {
         let queried = request.queried
         let isSending = (nodes.length > 0) && (queried.length < config.storeCount)
-        for (let i = 0; i < config.concurrency && i < nodes.length && i < config.storeCount && queried.length < config.storeCount; i++) {
+        for (let i = 0; i < request.redundancy && i < config.concurrency && i < nodes.length && i < config.storeCount && queried.length < config.storeCount; i++) {
           let node = nodes.shift()
-          while (queried.find((peer)=> {return peer.id === node.id})) {
-            node = nodes.shift()
-          }
           queried.push(node)
           messenger.send(request.req, node.ip, node.port)
         }
@@ -705,6 +704,7 @@ module.exports = class RPC {
     let query = ()=> {
       let nodes = bucket.closest(hash, config.nodeCount)
       let queried = []
+
       for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
         let node = nodes.shift()
         queried.push(node)
@@ -792,14 +792,17 @@ module.exports = class RPC {
     let payload = new StoreRequest(storepb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    let nodes = bucket.closest(hash, config.nodeCount)
+    // Determine current redundancy percentage for connected peers
+    let redundancy = Math.floor(bucket.count * config.redundancy)
+    redundancy = (redundancy < 1 && bucket.count > 1) ? 1 : redundancy
+    let nodes = bucket.closest(hash, redundancy + config.kbucketSize)
     let queried = []
-    for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount; i++) {
+    for (let i = 0;  i < redundancy &&  i < config.concurrency && i < nodes.length && i < config.nodeCount; i++) {
       let node = nodes.shift()
       queried.push(node)
       messenger.send(request, node.ip, node.port)
     }
-    requests.set(requestpb.id.toString('hex'), { req: request, resCount: 0, cb: cb, nodes: nodes, stored: queried })
+    requests.set(requestpb.id.toString('hex'), { req: request, resCount: 0, cb: cb, nodes: nodes, queried: queried, redundancy: redundancy })
     _requests.set(this, requests)
     rpcid = increment(rpcid)
     _rpcid.set(this, rpcid)

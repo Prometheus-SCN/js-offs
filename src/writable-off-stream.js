@@ -161,7 +161,7 @@ module.exports = class WritableOffStream extends Writable {
                 }
                 return process.nextTick(()=> {nxt(null, buf)})
               })
-
+              bc.emit('block', offBlock)
             })
           }))//hash original file
           .pipe(through((buf, enc, nxt)=> {
@@ -250,6 +250,7 @@ module.exports = class WritableOffStream extends Writable {
           }
           return process.nextTick(next)
         })
+        bc.emit('block', offBlock)
       })
     }
   }

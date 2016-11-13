@@ -20,39 +20,44 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Cache = require('./fibonacci-cache')
 const config = require('../config')
 const BlockRouter = require('./block-router')
-
+const Peer = require('./peer')
+const Messenger = require('udp-messenger')
 let sieve = new CuckooSieve(20000, 8, 4, 2)
 console.log(sieve.toJSON())
 let cbor = sieve.toCBOR()
 let fromCbor = CuckooSieve.fromCBOR(cbor)
 
-/*
- fs.readFile('test.pdf', (err, data)=> {
- if (err) {
- throw err
- }
+fs.readFile('test.pdf', (err, data)=> {
+  if (err) {
+    throw err
+  }
 
- let url = new OffUrl()
- let br = new BlockRouter
- let rs = fs.createReadStream('test.pdf')
- url.fileName = 'test.pdf'
- url.contentType = mime.lookup('test.pdf')
- url.streamLength = data.length
- let ws = br.createWriteStream(url)
- ws.on('url', (url)=> {
- console.log(url.toString())
+  let id = new Buffer(32)
+  id.fill(0)
+  let thisNode = new Peer(util.hash(id), '127.0.0.1', config.startPort)
 
- let rs = br.createReadStream(url)
- collect(rs, (err, data)=> {
- if (err) {
- throw err
- }
- console.log(data.toString('hex'))
- })
- })
- rs.pipe(ws)
+  let url = new OffUrl()
+  let messenger = new Messenger(config.timeout, thisNode.port, config.packetSize)
+  let br = new BlockRouter('../thisNode/', thisNode,messenger)
+  let rs = fs.createReadStream('test.pdf')
+  url.fileName = 'test.pdf'
+  url.contentType = mime.lookup('test.pdf')
+  url.streamLength = data.length
+  let ws = br.createWriteStream(url)
+  ws.on('url', (url)=> {
+    console.log(url.toString())
 
- })*/
+    let rs = br.createReadStream(url)
+    collect(rs, (err, data)=> {
+      if (err) {
+        throw err
+      }
+      console.log(data.toString('hex'))
+    })
+  })
+  rs.pipe(ws)
+
+})
 /*
  let cache =  new Cache('../.block-cache')
  let blocks = []

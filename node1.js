@@ -53,6 +53,7 @@ messenger.on('listening', ()=>{
       console.log(err)
     })
     ws.on('url', (url)=> {
+      console.log(url.toString())
       console.log(url.descriptorHash)
     })
     rs.pipe(ws)

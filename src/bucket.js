@@ -123,7 +123,6 @@ module.exports = class Bucket extends EventEmitter {
         let size = _size.get(this)
         if (bucket.length < size) {
           bucket.push(peer)
-          _bucket.set(this, bucket)
         } else {
           if (this.capped) {
             let root = _root.get(this)
@@ -151,7 +150,6 @@ module.exports = class Bucket extends EventEmitter {
     let bucket = _bucket.get(this)
     bucket = bucket.filter((known)=> { return known.id.compare(peer.id) !== 0})
     bucket.push(peer)
-    _bucket.set(bucket)
   }
 
   remove (peer, index) {
@@ -161,7 +159,6 @@ module.exports = class Bucket extends EventEmitter {
     let bucket = _bucket.get(this)
     if (bucket) {
       bucket = bucket.filter((known)=> { return known.id.compare(peer.id) !== 0})
-      _bucket.set(bucket)
       let root = _root.get(this)
       root.emit('removed', peer)
     } else {
@@ -224,7 +221,6 @@ module.exports = class Bucket extends EventEmitter {
       }
     }
     bucket = null
-    _bucket.set(this, bucket)
 
     if (this.getBit(nodeId, index)) {
       zero.cap()
@@ -237,6 +233,7 @@ module.exports = class Bucket extends EventEmitter {
     if (!index) {
       index = 0
     }
+
     let bucket = _bucket.get(this)
     if (bucket) {
       let distance = new WeakMap()

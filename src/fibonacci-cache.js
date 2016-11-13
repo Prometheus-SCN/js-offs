@@ -12,6 +12,7 @@ let _blockSize = new WeakMap()
 let _sizeTimer = new WeakMap()
 let _size = new WeakMap()
 let _maxSize = new WeakMap()
+let _contentFilter = new WeakMap()
 module.exports = class FibonacciCache extends EventEmitter {
   constructor (path, blockSize, maxSize) {
     super()
@@ -38,6 +39,13 @@ module.exports = class FibonacciCache extends EventEmitter {
       }
     }
     _buckets.set(this, buckets)
+    let onDirty = ()=> {
+      if (_contentFilter.has(this)) {
+        _contentFilter.delete(this)
+      }
+    }
+    this.on('dirty', onDirty)
+
     //TODO: Possibly deasync this call
     getSize(path, (err, size) => {
       if (err) {
@@ -126,6 +134,78 @@ module.exports = class FibonacciCache extends EventEmitter {
     next()
   }
 
+  contentFilter (cb) {
+    let content = _contentFilter.get(this)
+    if (content) {
+      return process.nextTick(()=> {
+        return cb(null, content)
+      })
+    } else {
+      let buckets = _buckets.get(this)
+      let i = -1
+      let keys = []
+      let next = (err, items)=> {
+        if (err) {
+          return process.nextTick(()=> { return cb(err)})
+        }
+        if (items) {
+          keys = keys.concat(items)
+        }
+        i++
+        if (i < buckets.length) {
+          let bucket = buckets[ i ]
+          bucket.content(next)
+        } else {
+          // up by 5% to avoid collisions
+          let content = new CuckooFilter((keys.length + Math.ceil(keys.length * .05)), config.bucketSize, config.fingerprintSize)
+          for (let i = 0; i < keys.length; i++) {
+            content.add(keys[ i ])
+          }
+          _contentFilter.set(this, content)
+          return process.nextTick(()=> {
+            return cb(null, content)
+          })
+        }
+      }
+      next()
+    }
+  }
+
+  content (cb) {
+    let buckets = _buckets.get(this)
+    let i = bucket.length
+    let keys = []
+    let next = (err, items)=> {
+      if (err) {
+        return process.nextTick(()=> { return cb(err)})
+      }
+      if (items) {
+        keys = keys.concat(items)
+      }
+      i--
+      if (i >= 0) {
+        let bucket = buckets[ i ]
+        bucket.content(next)
+      } else {
+        return process.nextTick(()=> {
+          return cb(null, keys)
+        })
+      }
+    }
+    next()
+
+  }
+
+  contentAt (number, cb) {
+    let index = number - 1
+    if (0 > index) {
+      return false
+    }
+    let buckets = _buckets.get(this)
+    let bucket = buckets[ index ]
+    bucket.content(cb)
+  }
+
   contains (key) {
     let buckets = _buckets.get(this)
     for (let i = buckets.length - 1; i >= 0; i--) {
@@ -157,6 +237,9 @@ module.exports = class FibonacciCache extends EventEmitter {
           return process.nextTick(()=> {
             return cb(err)
           })
+        }
+        if (bucket.dirty) {
+          this.emit('dirty')
         }
         if (bucket.tally(block.key)) {
           return this.promote(block, 0, (err)=> {
@@ -254,6 +337,9 @@ module.exports = class FibonacciCache extends EventEmitter {
               _size.set(this, (this.size - blockSize))
               this.updateSize()
             }
+            if (bucket.dirty) {
+              this.emit('dirty')
+            }
             return cb(err)
           })
         }
@@ -286,7 +372,7 @@ module.exports = class FibonacciCache extends EventEmitter {
             return cb(new Error("Promotion Failed"))
           })
         }
-        this.emit('promote', block)
+        this.emit('promote', block, (index + 2))
         return process.nextTick(cb)
       })
     })

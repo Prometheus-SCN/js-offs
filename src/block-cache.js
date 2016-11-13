@@ -4,23 +4,28 @@ const Block = require('./block')
 const FibonacciCache = require('./fibonacci-cache')
 let _cache = new WeakMap()
 let _blockSize = new WeakMap()
+let _cacheInterface = new WeakMap()
 
 module.exports =
   class BlockCache extends EventEmitter {
-    constructor (path, blockSize, maxSize) {
+    constructor (path, blockSize, maxSize, cacheInterface) {
       super()
       if (!path || typeof path !== 'string') {
-        throw new Error('Invalid path')
+        throw new TypeError('Invalid path')
       }
       if (!Number.isInteger(blockSize)) {
-        throw new Error('Block size must be an integer')
+        throw new TypeError('Block size must be an integer')
       }
       if (!Number.isInteger(maxSize)) {
-        throw new Error('Max size must be an integer')
+        throw new TypeError('Max size must be an integer')
       }
+      if (!cacheInterface) {
+        throw new TypeError('Invalid Cache Interface')
+      }
+      _cacheInterface.set(this, cacheInterface)
       let cache = new FibonacciCache(path, blockSize, maxSize)
-      cache.on('promote', (block)=> {
-        this.emit('promote', block)
+      cache.on('promote', (block, number)=> {
+        this.emit('promote', block, number)
       })
       cache.on('capacity', (capacity)=> {
         this.emit('capacity', capacity)
@@ -62,6 +67,14 @@ module.exports =
       return cache.number
     }
 
+    load(keys){
+      keys = keys.filter((key)=>{
+        return !this.contains(key)
+      })
+      let cacheInterface = _cacheInterface.get(this)
+      return cacheInterface.load(keys)
+    }
+    
     put (block, cb) {
       if (!cb || typeof cb !== 'function') {
         throw new Error('Invalid Callback')
@@ -110,6 +123,7 @@ module.exports =
               while (cache.contains(block.key)) {
                 block = Block.randomBlock(blockSize)
               }
+              this.emit('block', block)
               this.put(block, (err)=> {
                 if (err) {
                   return process.nextTick(()=> {
@@ -159,6 +173,14 @@ module.exports =
     containsAt (number, key) {
       let cache = _cache.get(this)
       return cache.containsAt(number, key)
+    }
+    contentFilter(cb){
+      let cache = _cache.get(this)
+      cache.contentFilter(cb)
+    }
+    content(cb){
+      let cache = _cache.get(this)
+      cache.content(cb)
     }
 
     get capacity () {

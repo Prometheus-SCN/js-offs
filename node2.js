@@ -9,13 +9,15 @@ const Block = require('./src/block')
 const RPC = require('./src/rpc')
 const bs58= require('bs58')
 const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
+const OffUrl= require('./src/off-url')
+const collect = require('collect-stream')
 
 let id = new Buffer(32)
 id.fill(40)
 let thisNode =  new Peer(util.hash(id),'127.0.0.1', config.startPort+1)
-let bucket = new Bucket(thisNode.id, 20)
+
 let messenger = new Messenger(config.timeout, thisNode.port, config.packetSize)
-let blockRouter= new BlockRouter('./node1/', thisNode, messenger)
+let blockRouter= new BlockRouter('./node2/', thisNode, messenger)
 let peers =[]
 /*
 for(let i= 1; i < 32 ; i++){
@@ -25,17 +27,33 @@ for(let i= 1; i < 32 ; i++){
   peers.push(peer)
   bucket.add(peer)
 }*/
-let rpc = new RPC(thisNode, messenger,bucket, blockRouter.rpcInterface())
+
 messenger.on('listening', ()=>{
   console.log(`listening on port: ${thisNode.port}`)
   let id = new Buffer(32)
   id.fill(0)
   let thatNode =  new Peer(util.hash(id),'127.0.0.1', config.startPort)
-  rpc.connect(thatNode,(err)=>{
+  blockRouter.connect(thatNode,(err)=>{
     if (err){
       throw err
     }
     let block = Block.randomBlock(config.nanoBlockSize)
+    let url = new
+      OffUrl()
+    url.contentType = 'application/pdf'
+    url.streamOffset = 0
+    url.streamLength = 34514
+    url.streamOffsetLength = 34514
+    url.fileHash = '99yBwaxMU8VeQ4XN8f3MFt16A6UkJHf9gGRjEMyC68SR'
+    url.descriptorHash = 'QmdLAHMwRjEB6M8g86cYX6t4eLTjWBz2ztswNBsfNtY13h'
+    url.fileName = 'test.pdf'
+    let rs = blockRouter.createReadStream(url)
+    collect(rs, (err, data)=> {
+      if (err) {
+        throw err
+      }
+      console.log(data.toString('hex'))
+    })
     /*
     rpc.store(block.hash, 3, block.data, 1, (err)=>{
      if(err){
@@ -71,12 +89,14 @@ messenger.on('listening', ()=>{
       console.log('Value found')
     } )
     */
+    /*
     rpc.pingStorage(new Buffer(bs58.decode('QmVEQhMp7w4BEzXfCnTWGfritiWAgfWamMxmLQ2n3SdACt')), 2,(err, capacity)=>{
       if(err){
         return console.log(err)
       }
       console.log(`capacity: ${capacity}%`)
     } )
+    */
   })
 })
 messenger.on('error', (err)=>{

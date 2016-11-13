@@ -17,10 +17,10 @@ function randomPad (buf, blockSize) {
 module.exports = class Block {
   constructor (data, blockSize) {
     if (!data) {
-      throw new Error('Block must be constructed with data')
+      throw new TypeError('Block must be constructed with data')
     }
     if (!Number.isInteger(blockSize)) {
-      throw new Error('Block size must be an integer')
+      throw new TypeError('Block size must be an integer')
     }
 
     if (Buffer.isBuffer(data)) {
@@ -28,8 +28,8 @@ module.exports = class Block {
     } else {
       data = new Buffer(data)
     }
-    if (data.length > blockSize) { //TODO: make test cases for all exceptions
-      throw new Error('Invalid Block Size')
+    if (data.length > blockSize) { 
+      throw new Error('Invalid block size for this data size')
     }
     if (data.length < blockSize) {
       data = randomPad(data, blockSize)

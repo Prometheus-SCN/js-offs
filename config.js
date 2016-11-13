@@ -29,5 +29,6 @@ module.exports = {
   concurrency:3, // how many nodes to query simultaneously
   kbucketSize: 20, // size of each k bucket
   storeCount: 1, // how many nodes to store new data at
-  maxFillRate: 72 // in hours
+  maxFillRate: 72, // in hours
+  redundancy: .30 //30% network redundancy target
 }

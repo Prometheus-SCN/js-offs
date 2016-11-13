@@ -75,6 +75,24 @@ module.exports = class FibonacciBucket {
     let contents = _contents.get(this)
     return contents.contains(key)
   }
+  content(cb){
+    fs.readdir(this.path, (err, items)=>{
+      if(err){
+        return process.nextTick(()=>{
+          return cb(err)
+        })
+      }
+      items = items.filter((item)=> {
+        if (item === `f${this.number}.content` || item === `f${this.number}.hitbox`) {
+          return false
+        }
+        return true
+      })
+      return process.nextTick(()=>{
+        return cb(err, items)
+      })
+    })
+  }
 
   get dirty () {
     return _dirty.get(this)

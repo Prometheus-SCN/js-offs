@@ -11,6 +11,8 @@ const RPC = require('./rpc')
 const Peer = require('./peer')
 const Messenger = require('udp-messenger')
 const Bucket = require('./bucket')
+const util = require('util')
+const CuckooFilter= require('cuckoo-filter').CuckooFilter
 
 let _bc = new WeakMap()
 let _mc = new WeakMap()
@@ -23,23 +25,34 @@ module.exports = class BlockRouter extends EventEmitter {
       throw new TypeError('Invalid Peer')
     }
     super()
-    let bc = new BlockCache(path + config.blockPath, config.blockSize, config.blockCacheSize)
-    let mc = new BlockCache(path + config.miniPath, config.miniBlockSize, config.miniBlockCacheSize)
-    let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize, config.nanoBlockCacheSize)
     let bucket = new Bucket(peer.id, config.bucketSize)
+    let rpc = new RPC(peer, messenger, bucket, this.rpcInterface())
+    _rpc.set(this, rpc)
+    let bc = new BlockCache(path + config.blockPath, config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
+    let mc = new BlockCache(path + config.miniPath, config.miniBlockSize, config.miniBlockCacheSize, this.cacheInterface(config.mini))
+    let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize, config.nanoBlockCacheSize, this.cacheInterface(config.nano))
+
     _bc.set(this, bc)
     _mc.set(this, mc)
     _nc.set(this, nc)
-    let rpc = new RPC(peer, messenger, bucket, this.rpcInterface())
-    _rpc.set(this, rpc)
-    bc.on('promotion', (block)=> {
-      this.emit('promotion', config.block, block)
+
+    bc.on('block', (block)=> {
+      rpc.store(block.hash, config.block, block.data, 1, ()=> {})
     })
-    mc.on('promotion', (block)=> {
-      this.emit('promotion', config.mini, block)
+    mc.on('block', (block)=> {
+      rpc.store(block.hash, config.mini, block.data, 1, ()=> {})
     })
-    nc.on('promotion', (block)=> {
-      this.emit('promotion', config.nano, block)
+    nc.on('block', (block)=> {
+      rpc.store(block.hash, config.nano, block.data, 1, ()=> {})
+    })
+    bc.on('promotion', (block, number)=> {
+      rpc.promote(block.hash, number, config.block, ()=> {})
+    })
+    mc.on('promotion', (block, number)=> {
+      rpc.promote(block.hash, number, config.mini, ()=> {})
+    })
+    nc.on('promotion', (block, number)=> {
+      rpc.promote(block.hash, number, config.nano, ()=> {})
     })
     bc.on('capacity', (capacity)=> {
       this.emit('capacity', config.block, capacity)
@@ -261,22 +274,31 @@ module.exports = class BlockRouter extends EventEmitter {
   cacheInterface (type) {
     let rpc = _rpc.get(this)
     let cache = {}
-    cache.load= (keys)=>{
-      if(!Array.isArray(keys)){
+    cache.load = (keys)=> {
+      if (!Array.isArray(keys)) {
         throw new TypeError('Invalid Key Array')
       }
-      let flightBox = new EventEmitter()
-      let inflight = new CuckooFilter(keys.length,  )
-      for(let i = 0; i < keys.length; i++){
-        let key = keys[i]
-
-        rpc.findValue(new Buffer(bs58.decode(key)), type, (err)=>{
-          flightbox.emit(key)
+      let flightBox = { filter: new CuckooFilter(keys.length + Math.ceil(keys.length * .05), 4, 8) , emitter : new EventEmitter ()}//add 5% to decrease collision probability
+      
+      for (let i = 0; i < keys.length; i++) {
+        let key = keys[ i ]
+        flightBox.filter.add(key)
+        rpc.findValue(new Buffer(bs58.decode(key)), type, (err)=> {
+          flightBox.filter.remove(key)
+          if(err){
+           return  flightBox.emitter.emit('error', err)
+          }
+          flightBox.emitter.emit(key)
+          flightBox.filter.remove('key')
         })
       }
-
+      return flightBox
     }
-    return
-    
+    return cache
+
+  }
+  connect(peer, cb){
+    let rpc = _rpc.get(this)
+    rpc.connect(peer, cb)
   }
 }

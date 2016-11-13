@@ -41,6 +41,8 @@
     "urlencode": "^1.1.0"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.1.2",
     "random-ipv4": "^1.0.2"
   }
 }
