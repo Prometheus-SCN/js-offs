@@ -38,14 +38,13 @@ messenger.on('listening', ()=>{
       throw err
     }
     let block = Block.randomBlock(config.nanoBlockSize)
-    let url = new
-      OffUrl()
+    let url = new OffUrl()
     url.contentType = 'application/pdf'
     url.streamOffset = 0
     url.streamLength = 34514
     url.streamOffsetLength = 34514
     url.fileHash = '99yBwaxMU8VeQ4XN8f3MFt16A6UkJHf9gGRjEMyC68SR'
-    url.descriptorHash = 'QmdLAHMwRjEB6M8g86cYX6t4eLTjWBz2ztswNBsfNtY13h'
+    url.descriptorHash = 'QmQwFYFviQhEFJpa53XrMhQXXTypuPVjdxRbipcp1vjqyn'
     url.fileName = 'test.pdf'
     let rs = blockRouter.createReadStream(url)
     collect(rs, (err, data)=> {

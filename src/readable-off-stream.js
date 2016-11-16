@@ -7,7 +7,6 @@ let _blockCache = new WeakMap()
 let _descriptor = new WeakMap()
 let _url = new WeakMap()
 let _size = new WeakMap()
-let _detupler = new WeakMap()
 let _offsetStart = new WeakMap()
 let _blockSize = new WeakMap()
 let _flightBox = new WeakMap()
@@ -34,7 +33,6 @@ module.exports = class ReadableOffStream extends Readable {
     _url.set(this, url)
     _size.set(this, 0)
     _blockCache.set(this, opts.bc)
-    _detupler.set(this, ()=> {})
     _blockSize.set(this, blockSize)
   }
 
@@ -96,9 +94,17 @@ module.exports = class ReadableOffStream extends Readable {
           let doNext = ()=> {
             bc.get(key, next)
           }
-          if (flightBox.filter.contains(key)) {
-            flightBox.emitter.on(key, doNext)
-          } else {
+          if(!bc.contains(key)) {
+            if (flightBox.filter.contains(key)) {
+              flightBox.emitter.on(key, doNext)
+            } else {
+              let flightBox = bc.load([key])
+              flightBox.emitter.on(key, doNext)
+              flightBox.emitter.on('error', (err)=>{
+                this.emit('error', err)
+              })
+            }
+          } else{
             doNext()
           }
         } else {

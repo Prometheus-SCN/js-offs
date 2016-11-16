@@ -18,7 +18,7 @@ let _keyPair = new WeakMap()
 let _peerInfo = new WeakMap()
 let _client = new WeakMap()
 let _messenger = new WeakMap()
-const fileName = 'node.hhh'
+const fileName = 'node.off'
 module.exports = class Node extends EventEmitter {
   constructor (applicationName, putValue, getValue, pth) {
     super()
