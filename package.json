@@ -37,7 +37,7 @@
     "readable-stream": "^2.1.4",
     "streamifier": "^0.1.1",
     "through2": "^2.0.1",
-    "udp-messenger": "^0.1.1",
+    "udp-messenger": "^0.2.0",
     "urlencode": "^1.1.0"
   },
   "devDependencies": {

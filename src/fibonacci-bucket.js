@@ -3,11 +3,13 @@ const fs = require('fs')
 const util = require('./utility')
 const mkdirp = require('mkdirp')
 const pth = require('path')
-const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
+const ScalableCuckooFilter = require('cuckoo-filter').ScalableCuckooFilter
+const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const hamming = require('hamming-distance')
 const Sieve = require('./cuckoo-sieve')
 const config = require('../config')
 const Block = require('./block')
+const bs58 = require('bs58')
 const _contents = new WeakMap()
 const _hitBox = new WeakMap()
 const _number = new WeakMap()
@@ -47,14 +49,15 @@ module.exports = class FibonacciBucket {
     _number.set(this, number)
     _limit.set(this, fibSequence(number + 1))
     _blockSize.set(this, blockSize)
-
-    let fc = pth.join(path, `f${number}.content`)
+    _dirty.set(this, false)
+    let fc = pth.join(path, `f${number}.content`)    
     let contents
     try {
       let contCBOR = fs.readFileSync(fc)
-      contents = Cuckoo.fromCBOR(contCBOR)
+      contents = ScalableCuckooFilter.fromCBOR(contCBOR)
     } catch (ex) {
-      contents = new Cuckoo(config.filterSize, config.bucketSize, config.fingerprintSize, config.scale)
+      contents = new ScalableCuckooFilter(config.filterSize, config.bucketSize, config.fingerprintSize, config.scale)
+      this.dirty = true
     }
     _contents.set(this, contents)
 
@@ -65,9 +68,10 @@ module.exports = class FibonacciBucket {
       hitBox = Sieve.fromCBOR(hitCBOR)
     } catch (ex) {
       hitBox = new Sieve(config.hitBoxSize, config.bucketSize, config.fingerprintSize, config.scale)
+      this.dirty = true
     }
     _hitBox.set(this, hitBox)
-    _dirty.set(this, false)
+    
 
   }
 
@@ -206,7 +210,7 @@ module.exports = class FibonacciBucket {
       cb = items
       items = null
     }
-    if (!(usageFilter instanceof Cuckoo)) {
+    if (!((usageFilter instanceof ScalableCuckooFilter) || (usageFilter instanceof CuckooFilter))) {
       throw TypeError('Invalid Usage Filter')
     }
 
@@ -264,7 +268,7 @@ module.exports = class FibonacciBucket {
   }
 
   closestBlockAt (key, usageFilter, cb) {
-    if (!(usageFilter instanceof Cuckoo)) {
+    if  (!((usageFilter instanceof ScalableCuckooFilter) || (usageFilter instanceof CuckooFilter))) {
       throw TypeError('Invalid Usage Filter')
     }
 
@@ -280,8 +284,11 @@ module.exports = class FibonacciBucket {
         contents.add(item)
         return !usageFilter.contains(item)
       })
+      let hash= new Buffer(bs58.decode(key))
       items.sort((a, b)=> {
-        return hamming(a, key) - hamming(b, key)
+        let hashA= new Buffer(bs58.decode(a))
+        let hashB= new Buffer(bs58.decode(b))
+        return hamming(hashA, hash) - hamming(hashB, hash)
       })
       if (items.length > 0) {
         let visit = items.shift()
@@ -293,7 +300,9 @@ module.exports = class FibonacciBucket {
           return process.nextTick(()=> {cb(null, block)})
         })
       } else {
-        return process.nextTick(cb)
+        return process.nextTick(()=>{
+          cb(new Error('Bucket has no new blocks'))
+        })
       }
     }
     fs.readdir(this.path, getItems)

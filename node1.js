@@ -14,7 +14,6 @@ let id = new Buffer(32)
 id.fill(0)
 let thisNode =  new Peer(util.hash(id),'127.0.0.1', config.startPort)
 console.log(`I am node ${thisNode.key}`)
-let bucket = new Bucket(thisNode.id, 20)
 let messenger = new Messenger(config.timeout, thisNode.port, config.packetSize)
 let blockRouter= new BlockRouter('./node1/', thisNode, messenger)
 blockRouter.on('promotion', (number, block)=>{
@@ -27,15 +26,7 @@ blockRouter.on('capacity', (type, capacity)=>{
 blockRouter.on('full', (type)=>{
   console.log(`full:${type}`)
 })
-let peers =[]
-for(let i= 1; i < 5 ; i++){
-  let id = new Buffer(32)
-  id.fill(i)
-  let peer = new Peer(util.hash(id),randomIP(), config.startPort)
-  peers.push(peer)
-  bucket.add(peer)
-}
-let rpc = new RPC(thisNode, messenger,bucket, blockRouter.rpcInterface())
+
 messenger.on('listening', ()=>{
   console.log(`listening on port: ${thisNode.port}`)
   fs.readFile('./src/test.pdf', (err, data)=> {
@@ -67,4 +58,3 @@ messenger.on('dropped', (err)=>{
   console.log('message dropped')
 })
 messenger.listen()
-console.log(bucket.toString())

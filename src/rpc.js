@@ -1,7 +1,8 @@
 'use strict'
 const Peer = require('./peer')
 const Bucket = require('./bucket')
-const Cuckoo = require('cuckoo-filter').ScalableCuckooFilter
+const ScalableCuckoo = require('cuckoo-filter').ScalableCuckooFilter
+const Cuckoo = require('cuckoo-filter').CuckooFilter
 const util = require('./utility')
 const Messenger = require('udp-messenger')
 const config = require('../config')
@@ -161,17 +162,14 @@ module.exports = class RPC {
           if (err) {
             if (err === 'Find this block') {
               this.findValue(promotionpb.hash, promotionpb.type, (err)=> { //TODO:Need to determine what appropriate error response should be
-                if (err) {
-                  //return console.log(err)
-                }
-                //console.log('block found')
+
               })
             }
           }
         })
         let bucket = _bucket.get(this)
         let nodes = bucket.toArray()
-        let filter = Cuckoo.fromCBOR(promotionpb.filter)
+        let filter = ScalableCuckoo.fromCBOR(promotionpb.filter)
 
         nodes = nodes.filter((node)=> {
           return !filter.contains(node.id)
@@ -483,21 +481,23 @@ module.exports = class RPC {
 
       let bucket = _bucket.get(this)
       request.resCount++
-      let randompb = RandomResponse.decode(pb.payload)
 
-      sanitizeRandomResponse(randompb)
       let nodes = request.nodes
 
-      if (pb.status == Status.Success && randompb.value) {
-        rpcInterface.storeValueAt(randompb.value, randompb.number, randompb.type, (err)=> {
-          requests.delete(key)
-          return process.nextTick(()=> {
-            return request.cb(err)
+      if (pb.status == Status.Success) {
+        let randompb = RandomResponse.decode(pb.payload)
+        sanitizeRandomResponse(randompb)
+        if(randompb.value) {
+          rpcInterface.storeValueAt(randompb.value, randompb.number, randompb.type, (err)=> {
+            requests.delete(key)
+            return process.nextTick(()=> {
+              return request.cb(err)
+            })
           })
-        })
+        }
       }
 
-      if (request.resCount >= config.nodeCount) {
+      if (request.resCount >= request.count) {
         requests.delete(key)
         _requests.set(this, requests)
         return process.nextTick(()=> {
@@ -505,15 +505,12 @@ module.exports = class RPC {
         })
       } else {
         let queried = request.queried
-        let isSending = (nodes.length > 0) && (queried.length < config.nodeCount)
-        for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
-          let index = config.getRandomInt(0, nodes.length)// random selection of nodes to ask
-          let node = nodes.splice(index, 1)
-          while (queried.find((peer)=> {return peer.id === node.id})) {
-            node = nodes.shift()
-          }
+        let isSending = (nodes.length > 0) && (queried.length < request.count)
+        for (let i = 0; i < request.count && i < nodes.length && i < count && queried.length < count; i++) {
+          let index = util.getRandomInt(0, nodes.length - 1)// random selection of nodes to ask
+          let node = nodes.splice(index, 1)[ 0 ]
           queried.push(node)
-          messenger.send(request.req, node.ip, node.port)
+          messenger.send(request, node.ip, node.port)
         }
         if (isSending) {
           let timer = setTimeout(()=> {
@@ -613,9 +610,6 @@ module.exports = class RPC {
       }
     }
     messenger.on('message', onmessage)
-
-    let ondropped = ()=> {}
-    messenger.on('dropped', ondropped)
   }
 
   findNode (id, cb) {
@@ -704,7 +698,6 @@ module.exports = class RPC {
     let query = ()=> {
       let nodes = bucket.closest(hash, config.nodeCount)
       let queried = []
-
       for (let i = 0; i < config.concurrency && i < nodes.length && i < config.nodeCount && queried.length < config.nodeCount; i++) {
         let node = nodes.shift()
         queried.push(node)
@@ -870,7 +863,7 @@ module.exports = class RPC {
     promotionpb.type = type
 
     let nodes = bucket.toArray()
-    let filter = new Cuckoo(bucket.count + Math.ceil(bucket.count * .95), config.bucketSize, config.fingerprintSize)
+    let filter = new ScalableCuckoo(bucket.count + Math.ceil(bucket.count * .95), config.bucketSize, config.fingerprintSize)
 
     for (let i = 0; i < nodes.length; i++) {
       filter.add(nodes[ i ].id)
@@ -1021,6 +1014,7 @@ function sanitizeValueResponse (value) {
   try {
     value.hash = value.hash.toBuffer()
     value.data = value.data.toBuffer()
+    value.number = value.number.toNumber()
   } catch (ex) {
 
   }

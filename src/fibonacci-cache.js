@@ -5,6 +5,7 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const FibonacciBucket = require('./fibonacci-bucket')
 const mkdirp = require('mkdirp')
 const EventEmitter = require('events').EventEmitter
+const config= require('../config')
 const getSize = require('get-folder-size')
 let _buckets = new WeakMap()
 let _path = new WeakMap()
@@ -38,7 +39,9 @@ module.exports = class FibonacciCache extends EventEmitter {
         buckets.push(new FibonacciBucket(path, blockSize, parseInt(results[ 1 ])))
       }
     }
+
     _buckets.set(this, buckets)
+
     let onDirty = ()=> {
       if (_contentFilter.has(this)) {
         _contentFilter.delete(this)
@@ -527,19 +530,30 @@ module.exports = class FibonacciCache extends EventEmitter {
       return process.nextTick(()=> {return cb(new Error("Bucket number exceeds number of buckets"))})
     }
     if (number < 1) { // if it is zero then pull from the largest bucket since 0 is not a valid number
-      number = buckets.length
+      this.randomBlocks(1, usageFilter, (err, items, blocks)=> {
+        if (err) {
+          return process.nextTick(()=> {cb(err)})
+        }
+        let block
+        if (blocks.length > 0) {
+          block = blocks[ 0 ]
+        }
+        number = buckets.findIndex((bucket)=>{return bucket.contains(block.key)})
+        return process.nextTick(()=> {cb(err, (number + 1), block)})
+      })
+    } else {
+      let bucket = buckets[ (number - 1) ]
+      bucket.randomBlocks(1, usageFilter, (err, items, blocks)=> {
+        if (err) {
+          return process.nextTick(()=> {cb(err)})
+        }
+        let block
+        if (blocks.length > 0) {
+          block = blocks[ 0 ]
+        }
+        return process.nextTick(()=> {cb(err, number, block)})
+      })
     }
-    let bucket = buckets[ (number - 1) ]
-    bucket.randomBlocks(1, usageFilter, (err, items, blocks)=> {
-      if (err) {
-        return process.nextTick(()=> {cb(err)})
-      }
-      let block
-      if (blocks.length > 0) {
-        block = blocks[ 0 ]
-      }
-      return process.nextTick(()=> {cb(err, number, block)})
-    })
   }
 
   closestBlockAt (number, key, usageFilter, cb) {
@@ -547,20 +561,34 @@ module.exports = class FibonacciCache extends EventEmitter {
       return process.nextTick(()=> {return cb(new Error("Invalid usage filter"))})
     }
     let buckets = _buckets.get(this)
-
     if (number > buckets.length) {
       return process.nextTick(()=> {return cb(new Error("Bucket number exceeds number of buckets"))})
     }
     if (number < 1) { // if it is zero then pull from the largest bucket since 0 is not a valid number
       number = buckets.length
     }
+    if(number === 0){
+      return process.nextTick(()=>{
+        return cb( new Error("Cache is Empty"))
+      })
+    }
     let bucket = buckets[ (number - 1) ]
-    bucket.closestBlockAt(key, usageFilter, (err, block)=> {
+    let find= (err, block)=> {
       if (err) {
+        if(err.message === 'Bucket has no new blocks'){
+          if(number > 1) {
+            number--
+            bucket = buckets[ (number - 1) ]
+            bucket.closestBlockAt(key, usageFilter, find)
+          } else{
+            return process.nextTick(()=> {cb(new Error('Cache has no new blocks'))})
+          }
+        }
         return process.nextTick(()=> {cb(err)})
       }
       return process.nextTick(()=> {cb(err, number, block)})
-    })
+    }
+    bucket.closestBlockAt(key, usageFilter, find)
   }
 
 }

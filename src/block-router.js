@@ -12,12 +12,14 @@ const Peer = require('./peer')
 const Messenger = require('udp-messenger')
 const Bucket = require('./bucket')
 const util = require('util')
-const CuckooFilter= require('cuckoo-filter').CuckooFilter
+const CuckooFilter = require('cuckoo-filter').CuckooFilter
+const Scheduler = require('./scheduler')
 
 let _bc = new WeakMap()
 let _mc = new WeakMap()
 let _nc = new WeakMap()
 let _rpc = new WeakMap()
+let _scheduler = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
   constructor (path, peer, messenger) {
@@ -31,10 +33,11 @@ module.exports = class BlockRouter extends EventEmitter {
     let bc = new BlockCache(path + config.blockPath, config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
     let mc = new BlockCache(path + config.miniPath, config.miniBlockSize, config.miniBlockCacheSize, this.cacheInterface(config.mini))
     let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize, config.nanoBlockCacheSize, this.cacheInterface(config.nano))
-
+    let scheduler = new Scheduler(rpc, bucket, bc, mc, nc)
     _bc.set(this, bc)
     _mc.set(this, mc)
     _nc.set(this, nc)
+    _scheduler.set(this, scheduler)
 
     bc.on('block', (block)=> {
       rpc.store(block.hash, config.block, block.data, 1, ()=> {})
@@ -45,23 +48,20 @@ module.exports = class BlockRouter extends EventEmitter {
     nc.on('block', (block)=> {
       rpc.store(block.hash, config.nano, block.data, 1, ()=> {})
     })
-    bc.on('promotion', (block, number)=> {
-      rpc.promote(block.hash, number, config.block, ()=> {})
+    bc.on('promote', (block, number)=> {
+     process.nextTick(()=>{
+       rpc.promote(block.hash, number, config.block, ()=> {})
+     })
     })
-    mc.on('promotion', (block, number)=> {
-      rpc.promote(block.hash, number, config.mini, ()=> {})
+    mc.on('promote', (block, number)=> {
+      process.nextTick(()=>{
+        rpc.promote(block.hash, number, config.mini, ()=> {})
+      })
     })
-    nc.on('promotion', (block, number)=> {
-      rpc.promote(block.hash, number, config.nano, ()=> {})
-    })
-    bc.on('capacity', (capacity)=> {
-      this.emit('capacity', config.block, capacity)
-    })
-    mc.on('capacity', (capacity)=> {
-      this.emit('capacity', config.mini, capacity)
-    })
-    nc.on('capacity', (capacity)=> {
-      this.emit('capacity', config.nano, capacity)
+    nc.on('promote', (block, number)=> {
+      process.nextTick(()=>{
+        rpc.promote(block.hash, number, config.nano, ()=> {})
+      })
     })
     bc.on('full', ()=> {
       this.emit('full', config.block)
@@ -205,7 +205,7 @@ module.exports = class BlockRouter extends EventEmitter {
       }
       let key = bs58.encode(hash)
       if (bc.contains(key)) {
-        bc.get(key, (err, block)=> {
+        bc.get(key, (err, block, num)=> {
           if (err) {
             return process.nextTick(()=> {
               return cb(err)
@@ -278,26 +278,37 @@ module.exports = class BlockRouter extends EventEmitter {
       if (!Array.isArray(keys)) {
         throw new TypeError('Invalid Key Array')
       }
-      let flightBox = { filter: new CuckooFilter(keys.length + Math.ceil(keys.length * .05), 4, 8) , emitter : new EventEmitter ()}//add 5% to decrease collision probability
-      
+      let flightBox = {
+        filter: new CuckooFilter(keys.length + Math.ceil(keys.length * .05), 4, 8),
+        emitter: new EventEmitter()
+      }//add 5% to decrease collision probability
       for (let i = 0; i < keys.length; i++) {
-        let key = keys[ i ]
-        flightBox.filter.add(key)
-        rpc.findValue(new Buffer(bs58.decode(key)), type, (err)=> {
-          flightBox.filter.remove(key)
-          if(err){
-           return  flightBox.emitter.emit('error', err)
-          }
-          flightBox.emitter.emit(key)
-          flightBox.filter.remove('key')
-        })
+        flightBox.filter.add(keys[ i ])
       }
+      let i = -1
+      let next = ()=> {
+        i++
+        if (i < keys.length) {
+          let key = keys[ i ]
+          rpc.findValue(new Buffer(bs58.decode(key)), type, (err)=> {
+            flightBox.filter.remove(key)
+            if (err) {
+              return flightBox.emitter.emit('error', err)
+            }
+            flightBox.emitter.emit(key)
+            flightBox.filter.remove('key')
+            return err ? null : next()//do next after callback
+          })
+        }
+      }
+      next()
       return flightBox
     }
     return cache
 
   }
-  connect(peer, cb){
+
+  connect (peer, cb) {
     let rpc = _rpc.get(this)
     rpc.connect(peer, cb)
   }

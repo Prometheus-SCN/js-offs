@@ -2,8 +2,11 @@
 const RPC = require('./rpc')
 const Bucket = require('./bucket')
 const CronJob = require('cron').CronJob
+const config = require('../config')
 let _maintenanceJob = new WeakMap()
-let _capacityJob = new WeakMap()
+let _capacityJobBlock = new WeakMap()
+let _capacityJobMini = new WeakMap()
+let _capacityJobNano = new WeakMap()
 module.exports = class Scheduler {
   constructor (rpc, bucket, block, mini, nano) {
     if (!(rpc instanceof RPC )) {
@@ -16,6 +19,7 @@ module.exports = class Scheduler {
       let i = -1
       let next = (err)=> {
         if (err) {
+          bucket.remove(peer[ i ])
           bucket.add(peer)
         }
         i++
@@ -173,11 +177,11 @@ module.exports = class Scheduler {
       next()
     }
 
-    let onCapacity = (type, capacity)=> {
+    let onBlockCapacity = (capacity)=> {
       let fillRate
-      let capacityJob = _capacityJob.get(this)
-      if (capacityJob) {
-        capacityJob.stop()
+      let capacityJobBlock = _capacityJobBlock.get(this)
+      if (capacityJobBlock) {
+        clearTimeout(capacityJobBlock)
       }
       if (capacity >= 50) {
         fillRate = config.maxFillRate
@@ -188,42 +192,129 @@ module.exports = class Scheduler {
           return clean(type)
         }
       } else {
-        fillRate = config.maxFillRate * (capacity / 50)
+        fillRate = Math.floor(config.maxFillRate * (capacity / 50))
       }
-      let now = new Date()
-      let then = new Date(now)
-      then.setTime(now.getTime() + (fillRate * 60 * 60 * 1000))
-      let bc
-      switch (type) {
-        case 1:
-          bc = block
-          break;
-        case 2:
-          bc = mini
-          break;
-        case 3:
-          bc = nano
-          break;
-      }
-      capacityJob = new CronJob(then, ()=> {
+      let then = (fillRate * 60 * 60 * 1000)
+      let bc = block
+      let job = ()=> {
+        let reschedule = ()=> {
+          then = (fillRate * 60 * 60 * 1000)
+          capacityJobBlock = setTimeout(job, then)
+          _capacityJobBlock.set(this, capacityJobBlock)
+        }
         bc.contentFilter((err, contentFilter)=> {
           if (err) {
+            reschedule()
             return //TODO: Decide what happens when this fails
           }
-          rpc.random(0, 1, type, contentFilter, ()=> {})
+          rpc.random(0, 1, config.block, contentFilter, ()=> {
+            reschedule()
+          })
         })
-
-      })
-      _capacityJob.set(this, capacityJob)
+      }
+      //capacityJobBlock = setTimeout(job, then)
+      _capacityJobBlock.set(this, capacityJobBlock)
     }
-    blockRouter.on('capacity', onCapacity)
+    block.on('capacity', onBlockCapacity)
+
+    let onMiniCapacity = (capacity)=> {
+      let fillRate
+      let capacityJobMini = _capacityJobMini.get(this)
+      if (capacityJobMini) {
+        clearTimeout(capacityJobMini)
+      }
+      if (capacity >= 50) {
+        fillRate = config.maxFillRate
+        if (capacity >= 80) { //TODO: Figure out what to do at 80%
+          if (isCleaning) { //if process has begun do not restart it
+            return
+          }
+          return clean(type)
+        }
+      } else {
+        fillRate = Math.floor(config.maxFillRate * (capacity / 50))
+      }
+      let now = new Date()
+      let then = (fillRate * 60 * 60 * 1000)
+
+      let bc = mini
+      let job = ()=> {
+        let reschedule = ()=> {
+          then = (fillRate * 60 * 60 * 1000)
+          capacityJobMini = setTimeout(job, then)
+          _capacityJobMini.set(this, capacityJobMini)
+        }
+        bc.contentFilter((err, contentFilter)=> {
+          if (err) {
+            reschedule()
+            return //TODO: Decide what happens when this fails
+          }
+          rpc.random(0, 1, config.mini, contentFilter, ()=> {
+            reschedule()
+          })
+        })
+      }
+      capacityJobMini = setTimeout(job, then)
+      _capacityJobMini.set(this, capacityJobMini)
+    }
+    mini.on('capacity', onMiniCapacity)
+
+    let onNanoCapacity = (capacity)=> {
+      let fillRate
+      let capacityJobNano = _capacityJobNano.get(this)
+      if (capacityJobNano) {
+        clearTimeout(capacityJobNano)
+      }
+      if (capacity >= 50) {
+        fillRate = config.maxFillRate
+        if (capacity >= 80) { //TODO: Figure out what to do at 80%
+          if (isCleaning) { //if process has begun do not restart it
+            return
+          }
+          return clean(type)
+        }
+      } else {
+        fillRate = Math.floor(config.maxFillRate * (capacity / 50))
+      }
+      let now = new Date()
+      let then = (fillRate * 60 * 60 * 1000)
+      let bc = nano
+      let job = ()=> {
+        let reschedule = ()=> {
+          then = (fillRate * 60 * 60 * 1000)
+          capacityJobNano = setTimeout(job, then)
+          _capacityJobNano.set(this, capacityJobNano)
+        }
+        bc.contentFilter((err, contentFilter)=> {
+          if (err) {
+            reschedule()
+            return //TODO: Decide what happens when this fails
+          }
+          rpc.random(0, 1, config.nano, contentFilter, ()=> {
+            reschedule()
+          })
+        })
+      }
+      //capacityJobNano = setTimeout(job, then)
+      _capacityJobNano.set(this, capacityJobNano)
+    }
+    nano.on('capacity', onNanoCapacity)
+
     bucket.on('ping', onPing)
     let maintainBucket = ()=> {
       let nodes = bucket.toArray()
-      for (let i = 0; i < nodes.length; i++) {
-        let node = nodes[ i ]
-        rpc.ping(node.id, ()=> {})
+      let i = -1
+      let next = (err)=> {
+        if (err) {
+          bucket.remove(nodes[ i ])
+        }
+        i++
+        if (i < nodes.length) {
+          let node = nodes[ i ]
+          rpc.ping(node.id, next)
+        }
       }
+      next()
     }
     let maintenanceJob = new CronJob('*/15 * * * *', maintainBucket) // every 15 minutes
     _maintenanceJob.set(this, maintenanceJob)

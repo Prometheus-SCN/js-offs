@@ -21,7 +21,7 @@ module.exports = {
   fingerprintSize: 8,
   hitBoxSize: 100,
   bucketSize: 4,
-  startPort: 7200,
+  startPort: 8200,
   numPortTries : 2,
   timeout: 60000, // how long to wait on a rpc response
   packetSize: 512, // message size in bytes
@@ -30,5 +30,6 @@ module.exports = {
   kbucketSize: 20, // size of each k bucket
   storeCount: 1, // how many nodes to store new data at
   maxFillRate: 72, // in hours
-  redundancy: .30 //30% network redundancy target
+  redundancy: .30, //30% network redundancy target
+  batchConcurrency: 10
 }

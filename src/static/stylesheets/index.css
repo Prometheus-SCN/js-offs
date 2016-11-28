@@ -2,7 +2,10 @@
     font-Family: Odin;
     src: url('../font/Odin%20Rounded%20-%20Bold.otf');
 }
-
+html{
+    width: 100%;
+    height: 100%;
+}
 body {
     font-family: 'Odin';
     min-width: 512px;
