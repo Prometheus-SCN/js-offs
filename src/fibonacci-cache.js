@@ -580,13 +580,15 @@ module.exports = class FibonacciCache extends EventEmitter {
             number--
             bucket = buckets[ (number - 1) ]
             bucket.closestBlockAt(key, usageFilter, find)
-          } else{
+          } else {
             return process.nextTick(()=> {cb(new Error('Cache has no new blocks'))})
           }
+        } else {
+          return process.nextTick(()=> {cb(err)})
         }
-        return process.nextTick(()=> {cb(err)})
+      } else {
+        return process.nextTick(()=> {cb(err, number, block)})
       }
-      return process.nextTick(()=> {cb(err, number, block)})
     }
     bucket.closestBlockAt(key, usageFilter, find)
   }

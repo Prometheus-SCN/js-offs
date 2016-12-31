@@ -2,7 +2,7 @@ const Peer = require('./src/peer')
 const util= require('./src/utility')
 const Bucket = require('./src/bucket')
 const randomIP = require('random-ipv4')
-const Messenger = require('udp-messenger')
+const Messenger = require('./src/messenger')
 const config = require('./config')
 const BlockRouter = require('./src/block-router')
 const Block = require('./src/block')
@@ -16,7 +16,7 @@ let id = new Buffer(32)
 id.fill(40)
 let thisNode =  new Peer(util.hash(id),'127.0.0.1', config.startPort+1)
 
-let messenger = new Messenger(config.timeout, thisNode.port, config.packetSize)
+let messenger = new Messenger(thisNode.port)
 let blockRouter= new BlockRouter('./node2/', thisNode, messenger)
 let peers =[]
 /*

@@ -9,7 +9,6 @@ const URL = require('./off-url')
 const bs58 = require('bs58')
 const RPC = require('./rpc')
 const Peer = require('./peer')
-const Messenger = require('udp-messenger')
 const Bucket = require('./bucket')
 const util = require('util')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
@@ -22,13 +21,13 @@ let _rpc = new WeakMap()
 let _scheduler = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
-  constructor (path, peer, messenger) {
+  constructor (path, peer) {
     if (!(peer instanceof Peer)) {
       throw new TypeError('Invalid Peer')
     }
     super()
     let bucket = new Bucket(peer.id, config.bucketSize)
-    let rpc = new RPC(peer, messenger, bucket, this.rpcInterface())
+    let rpc = new RPC(peer, bucket, this.rpcInterface())
     _rpc.set(this, rpc)
     let bc = new BlockCache(path + config.blockPath, config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
     let mc = new BlockCache(path + config.miniPath, config.miniBlockSize, config.miniBlockCacheSize, this.cacheInterface(config.mini))
@@ -311,5 +310,20 @@ module.exports = class BlockRouter extends EventEmitter {
   connect (peer, cb) {
     let rpc = _rpc.get(this)
     rpc.connect(peer, cb)
+  }
+
+  listen(){
+    let rpc = _rpc.get(this)
+    rpc.listen()
+  }
+
+  get rpc(){
+    let rpc = _rpc.get(this)
+    return rpc
+  }
+
+  get mini(){
+    let mini =_mc.get(this)
+    return mini
   }
 }
