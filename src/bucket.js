@@ -115,6 +115,7 @@ module.exports = class Bucket extends EventEmitter {
       throw new Error('Invalid index')
     }
     let bucket = _bucket.get(this)
+    let root = _root.get(this)
     if (bucket) {
       let found = bucket.find((known)=> { return known.id.compare(peer.id) === 0})
       if (found) {
@@ -123,9 +124,9 @@ module.exports = class Bucket extends EventEmitter {
         let size = _size.get(this)
         if (bucket.length < size) {
           bucket.push(peer)
+          root.emit('added')
         } else {
           if (this.capped) {
-            let root = _root.get(this)
             root.emit('ping', bucket.slice(0), peer)
           } else {
             this.split(index)

@@ -4,6 +4,7 @@ const Bucket = require('./bucket')
 const CronJob = require('cron').CronJob
 const TimerJob = require('timer-jobs')
 const config = require('../config')
+const bs58 = require('bs58')
 let _maintenanceJob = new WeakMap()
 let _capacityJob = new WeakMap()
 module.exports = class Scheduler {
@@ -29,7 +30,7 @@ module.exports = class Scheduler {
       next()
     }
 
-    let capacityJob =(bc, typeId) => {
+    let capacityJob = (bc, type) => {
       let isCleaning = false
       let clean = (bc) => {
         //1. gather all blocks in the cache
@@ -38,10 +39,9 @@ module.exports = class Scheduler {
         //4. If not possible to reach 50% redistribute blocks that are less then 30% redundant and then delete
         //5. If not possible to redistribute sleep until more connections obtained
         isCleaning = true
-
         let pingBlock = (key, cb)=> {
           let redundancy = Math.floor(bucket.count * config.redundancy)
-          redundancy = (redundancy < 1 && bucket.count > 1) ? 1 : redundancy
+          redundancy = (redundancy < 1 && bucket.count > 0) ? 1 : redundancy
           let count = 0
           let hash = new Buffer(bs58.decode(key))
           let peers = bucket.closest(hash, bucket.count)
@@ -59,14 +59,16 @@ module.exports = class Scheduler {
               //delete Block
               bc.remove(key, (err)=> {
                 if (err) {
+                  console.log(err)
                   //TODO: Decide what to do when this fails
                 }
+                console.log('happened')
                 return process.nextTick(cb)
               })
             }
             i++
             if (i < peers.length) {
-              return rpc.pingValue(peer[ i ].id, hash, type, next)
+              return rpc.pingValue(peers[ i ].id, hash, type, next)
             } else {
               return process.nextTick(()=> {
                 return cb(new Error("Insufficient Peer Redundancy"))
@@ -84,7 +86,7 @@ module.exports = class Scheduler {
           let i = -1
           let next = (err, block)=> {
             if (err) {
-
+              console.log(err)
             }
             // stop once capacity is below 50%
             if (bc.capacity <= 50) {
@@ -111,7 +113,10 @@ module.exports = class Scheduler {
             }
           }
         }
-        let loopContent = (content, cb)=> {
+        let loopContent = (err, content)=> {
+          if (err) {
+            //console.log(err) //TODO: Figure out what happens when this fails
+          }
           let i = -1
           let key
           let next = (err)=> {
@@ -123,47 +128,50 @@ module.exports = class Scheduler {
               key = content[ i ]
               return pingBlock(key, next)
             } else {
-              return process.nextTick(cb)
+              return process.nextTick(redistributeBlocks)
             }
           }
           next()
         }
-
-        let stop = bc.number
-        let i = 0
-        //Loop through all block buckets
-        let next = (err, content)=> {
-          //increment the loop and get next bucket's content
-          let increment = ()=> {
-            i++
-            if (i >= stop) {
-              return bc.contentAt(i, next)
-            }
-            else {
-              // if the capacity  is  above 50% still
-              // then go through the redistribution list and try to store at other nodes
-              return redistributeBlocks()
-            }
-          }
-          if (err) {
-            //TODO: Figure out WTF to do when this fails
-          }
-          //ping bucket contacts until 30% of contacts respond with a value
-          if (content) {
-            loopContent(content, ()=> {
-              //cleared enough space
-              if (bc.capacity <= 50) {
-                isCleaning = false
-                return
-              } else {
-                return increment()
-              }
-            })
-          } else {
-            return increment()
-          }
-        }
-        next()
+        /*
+         let stop = bc.number
+         let i = 0
+         //Loop through all block buckets
+         let next = (err, content)=> {
+         //increment the loop and get next bucket's content
+         let increment = ()=> {
+         console.log(stop)
+         i++
+         if (i <= stop) {
+         console.log(bc)
+         return bc.contentAt(i, next)
+         }
+         else {
+         // if the capacity  is  above 50% still
+         // then go through the redistribution list and try to store at other nodes
+         return redistributeBlocks()
+         }
+         }
+         if (err) {
+         //TODO: Figure out WTF to do when this fails
+         }
+         //ping bucket contacts until 30% of contacts respond with a value
+         if (content) {
+         loopContent(content, ()=> {
+         //cleared enough space
+         if (bc.capacity <= 50) {
+         isCleaning = false
+         return
+         } else {
+         return increment()
+         }
+         })
+         } else {
+         return increment()
+         }
+         }
+         next()*/
+        bc.content(loopContent)
       }
       let isRunningCapacity = false
       let onCapacity = (capacity)=> {
@@ -173,14 +181,17 @@ module.exports = class Scheduler {
           isRunningCapacity = false
           clearInterval(capacityJob)
         }
-
         if (capacity >= 50) {
           fillRate = config.maxFillRate
           if (capacity >= 80) { //TODO: Figure out what to do at 80%
             if (isCleaning) { //if process has begun do not restart it
               return
             }
-            return clean(bc)
+            if (bucket.count < 1) {
+              bucket.once('added', () => { return clean(bc)})
+            } else {
+              return clean(bc)
+            }
           }
         } else {
           fillRate = Math.floor(config.maxFillRate * (capacity / 50))
@@ -198,7 +209,7 @@ module.exports = class Scheduler {
               console.log(err)
               return //TODO: Decide what happens when this fails
             }
-            rpc.random(0, 1, typeId, contentFilter, ()=> {
+            rpc.random(0, 1, type, contentFilter, ()=> {
               isRunningCapacity = false
             })
           })

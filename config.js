@@ -6,7 +6,7 @@ module.exports = {
   miniPath: '.mini-cache',
   nanoPath: '.nano-cache',
   blockCacheSize: 200 * gb,
-  miniBlockCacheSize: 23 * gb,
+  miniBlockCacheSize: 100 * mb,
   nanoBlockCacheSize: 200 * mb,
   nano: 3,
   block: 1,

@@ -11,6 +11,7 @@ const collect = require('collect-stream')
 const EventEmitter = require('events').EventEmitter
 const crypto = require('crypto')
 const increment = require('increment-buffer')
+const equal= require('buffer-equal')
 const path = require('path')
 const file = path.join(__dirname, '/proto/', 'rpc.proto')
 const builder = protobuf.loadProtoFile(file)
@@ -237,36 +238,40 @@ module.exports = class RPC extends EventEmitter {
         if (err) {
           return this.emit('error', err)
         }
-        let pb = RPCProto.RPC.decode(msg)
-        sanitizeRPC(pb)
-        let bucket = _bucket.get(this)
-        bucket.add(new Peer(pb.from.id, pb.from.ip, pb.from.port))
-        _bucket.set(this, bucket)
-        switch (pb.type) {
-          case RPCType.Ping :
-            pingResponse(pb, socket)
-            break;
-          case RPCType.Find_Node :
-            findNodeResponse(pb, socket)
-            break;
-          case RPCType.Find_Value :
-            findValueResponse(pb, socket)
-            break;
-          case RPCType.Store :
-            storeResponse(pb, socket)
-            break;
-          case RPCType.Random :
-            randomResponse(pb, socket)
-            break;
-          case RPCType.Promotion :
-            promotionResponse(pb, socket)
-            break;
-          case RPCType.Ping_Value :
-            pingValueResponse(pb, socket)
-            break;
-          case RPCType.Ping_Storage :
-            pingStorageResponse(pb, socket)
-            break;
+        try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
+          let bucket = _bucket.get(this)
+          bucket.add(new Peer(pb.from.id, pb.from.ip, pb.from.port))
+          _bucket.set(this, bucket)
+          switch (pb.type) {
+            case RPCType.Ping :
+              pingResponse(pb, socket)
+              break;
+            case RPCType.Find_Node :
+              findNodeResponse(pb, socket)
+              break;
+            case RPCType.Find_Value :
+              findValueResponse(pb, socket)
+              break;
+            case RPCType.Store :
+              storeResponse(pb, socket)
+              break;
+            case RPCType.Random :
+              randomResponse(pb, socket)
+              break;
+            case RPCType.Promotion :
+              promotionResponse(pb, socket)
+              break;
+            case RPCType.Ping_Value :
+              pingValueResponse(pb, socket)
+              break;
+            case RPCType.Ping_Storage :
+              pingStorageResponse(pb, socket)
+              break;
+          }
+        } catch (err){
+          return this.emit('error', err)
         }
       })
     }
@@ -330,22 +335,26 @@ module.exports = class RPC extends EventEmitter {
             if (err) {
               return process.nextTick(next)
             }
-            i++
-            let pb = RPCProto.RPC.decode(msg)
-            sanitizeRPC(pb)
-            let nodespb = FindNodeResponse.decode(pb.payload)
-            let thisNode = peer
-            nodespb.nodes.forEach((peer)=> {
-              sanitizePeer(peer)
-              if (peer.id.equals(thisNode.id)) {
-                return
-              }
-              peer = new Peer(peer.id, peer.ip, peer.port)
-              if (!queried.contains(peer.id)) {
-                nodeBucket.add(peer)
-              }
-              bucket.add(peer)
-            })
+            try {
+              i++
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
+              let nodespb = FindNodeResponse.decode(pb.payload)
+              let thisNode = peer
+              nodespb.nodes.forEach((peer)=> {
+                sanitizePeer(peer)
+                if (peer.id.equals(thisNode.id)) {
+                  return
+                }
+                peer = new Peer(peer.id, peer.ip, peer.port)
+                if (!queried.contains(peer.id)) {
+                  nodeBucket.add(peer)
+                }
+                bucket.add(peer)
+              })
+            } catch (err) {
+              return process.nextTick(next)
+            }
           })
           socket.end(request)
         })
@@ -394,30 +403,36 @@ module.exports = class RPC extends EventEmitter {
                 return cb(err)
               })
             }
-            let pb = RPCProto.RPC.decode(msg)
-            sanitizeRPC(pb)
-            let valuespb = FindValueResponse.decode(pb.payload)
-            sanitizeValueResponse(valuespb)
-            if (valuespb.data) {
-              return rpcInterface.storeValueAt(valuespb.data, valuespb.number, valuespb.type, (err)=> {
-                return process.nextTick(()=> {
-                  return cb(err)
+            try {
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
+              let valuespb = FindValueResponse.decode(pb.payload)
+              sanitizeValueResponse(valuespb)
+              if (valuespb.data) {
+                return rpcInterface.storeValueAt(valuespb.data, valuespb.number, valuespb.type, (err)=> {
+                  return process.nextTick(()=> {
+                    return cb(err)
+                  })
                 })
+              } else {
+                let thisNode = _peer.get(this)
+                valuespb.nodes.forEach((peer)=> {
+                  sanitizePeer(peer)
+                  if (peer.id.equals(thisNode.id)) {
+                    return
+                  }
+                  peer = new Peer(peer.id, peer.ip, peer.port)
+                  if (!queried.contains(peer.id)) {
+                    nodeBucket.add(peer)
+                  }
+                  bucket.add(peer)
+                })
+                process.nextTick(next)
+              }
+            } catch(err){
+              return process.nextTick(() => {
+                return cb(err)
               })
-            } else {
-              let thisNode = _peer.get(this)
-              valuespb.nodes.forEach((peer)=> {
-                sanitizePeer(peer)
-                if (peer.id.equals(thisNode.id)) {
-                  return
-                }
-                peer = new Peer(peer.id, peer.ip, peer.port)
-                if (!queried.contains(peer.id)) {
-                  nodeBucket.add(peer)
-                }
-                bucket.add(peer)
-              })
-              process.nextTick(next)
             }
           })
           socket.end(request)
@@ -449,13 +464,19 @@ module.exports = class RPC extends EventEmitter {
             return cb(err)
           })
         }
-        let pb = RPCProto.RPC.decode(msg)
-        sanitizeRPC(pb)
-        if (requestpb.id.equals(pb.id) && pb.Status === Status.Sucess) {
-          return process.nextTick(cb)
-        } else {
+        try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
+          if (pb.Status === Status.Sucess) {
+            return process.nextTick(cb)
+          } else {
+            return process.nextTick((err)=> {
+              return cb(new Error('Ping Failed'))
+            })
+          }
+        } catch (err) {
           return process.nextTick((err)=> {
-            return cb(new Error('Ping Failed'))
+            return cb(err)
           })
         }
       })
@@ -501,12 +522,16 @@ module.exports = class RPC extends EventEmitter {
             if (err) {
               return process.nextTick(next)
             }
-            let pb = RPCProto.RPC.decode(msg)
-            sanitizeRPC(pb)
-            if (pb.status == Status.Success && i++ && i >= redundancy) {
-              return process.nextTick(cb)
-            } else {
-              return next()
+            try {
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
+              if (pb.status == Status.Success && i++ && i >= redundancy) {
+                return process.nextTick(cb)
+              } else {
+                return next()
+              }
+            } catch(err){
+              return process.nextTick(next)
             }
           })
           socket.end(request)
@@ -552,21 +577,25 @@ module.exports = class RPC extends EventEmitter {
             if (err) {
               return process.nextTick(next)
             }
-            let pb = RPCProto.RPC.decode(msg)
-            sanitizeRPC(pb)
-            if (pb.status == Status.Success) {
-              let randompb = RandomResponse.decode(pb.payload)
-              sanitizeRandomResponse(randompb)
-              if (randompb.value) {
-                rpcInterface.storeValueAt(randompb.value, randompb.number, randompb.type, (err)=> {
-                  if (!err) {
-                    i++
-                  }
-                  return next()
-                })
+            try {
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
+              if (pb.status == Status.Success) {
+                let randompb = RandomResponse.decode(pb.payload)
+                sanitizeRandomResponse(randompb)
+                if (randompb.value) {
+                  rpcInterface.storeValueAt(randompb.value, randompb.number, randompb.type, (err)=> {
+                    if (!err) {
+                      i++
+                    }
+                    return next()
+                  })
+                }
+              } else {
+                return next()
               }
-            } else {
-              return next()
+            } catch (err){
+              return process.nextTick(next)
             }
           })
           socket.end(request)
@@ -614,7 +643,7 @@ module.exports = class RPC extends EventEmitter {
       i++
       if (i < nodes.length) {
         let to = nodes[ i ]
-        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, ()=> {
+        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, () => {
           socket.end(request, next)
         })
         socket.on('error', (err) => {
@@ -660,13 +689,19 @@ module.exports = class RPC extends EventEmitter {
             return cb(err)
           })
         }
-        let pb = RPCProto.RPC.decode(msg)
-        sanitizeRPC(pb)
-        if (requestpb.id.equals(pb.id) && pb.Status === Status.Sucess) {
-          return process.nextTick(cb)
-        } else {
+        try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
+          if (pb.Status === Status.Sucess) {
+            return process.nextTick(cb)
+          } else {
+            return process.nextTick((err)=> {
+              return cb(new Error('Ping Value Failed'))
+            })
+          }
+        } catch(err) {
           return process.nextTick((err)=> {
-            return cb(new Error('Ping Value Failed'))
+            return cb(err)
           })
         }
       })
@@ -699,16 +734,22 @@ module.exports = class RPC extends EventEmitter {
             return cb(err)
           })
         }
-        let pb = RPCProto.RPC.decode(msg)
-        sanitizeRPC(pb)
-        if (requestpb.id.equals(pb.id) && pb.Status === Status.Sucess) {
-          let storagepb = PingStorageResponse.decode(pb.payload)
-          return process.nextTick(()=>{
-            return cb(null, storagepb.capacity)
-          })
-        } else {
+        try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
+          if (pb.Status === Status.Sucess) {
+            let storagepb = PingStorageResponse.decode(pb.payload)
+            return process.nextTick(()=> {
+              return cb(null, storagepb.capacity)
+            })
+          } else {
+            return process.nextTick((err)=> {
+              return cb(new Error('Ping Storage Failed'))
+            })
+          }
+        } catch(err){
           return process.nextTick((err)=> {
-            return cb(new Error('Ping Storage Failed'))
+            return cb(err)
           })
         }
       })
