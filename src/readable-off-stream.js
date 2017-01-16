@@ -94,17 +94,17 @@ module.exports = class ReadableOffStream extends Readable {
           let doNext = ()=> {
             bc.get(key, next)
           }
-          if(!bc.contains(key)) {
+          if (!bc.contains(key)) {
             if (flightBox.filter.contains(key)) {
               flightBox.emitter.on(key, doNext)
             } else {
-              let flightBox = bc.load([key])
+              let flightBox = bc.load([ key ])
               flightBox.emitter.on(key, doNext)
-              flightBox.emitter.on('error', (err)=>{
+              flightBox.emitter.on('error', (err)=> {
                 this.emit('error', err)
               })
             }
-          } else{
+          } else {
             doNext()
           }
         } else {
@@ -178,37 +178,37 @@ module.exports = class ReadableOffStream extends Readable {
                 descriptor.push(block)
               }
               _descriptor.set(this, descriptor)
-              let getNextDesc = ()=>{
+              let getNextDesc = ()=> {
                 bc.get(nextDesc, getNext)
               }
               if (nextDesc) {
-                if(bc.contains(nextDesc)){
+                if (bc.contains(nextDesc)) {
                   getNextDesc()
                 } else {
-                  let flightBox = bc.load([nextDesc])
+                  let flightBox = bc.load([ nextDesc ])
                   flightBox.emitter.on(nextDesc, getNextDesc)
-                  flightBox.emitter.on('error', (err)=>{
+                  flightBox.emitter.on('error', (err)=> {
                     this.emit('error', err)
                   })
                 }
               } else {
                 let flightBox = bc.load(descriptor)
-                flightBox.emitter.on('error', (err)=>{
+                flightBox.emitter.on('error', (err)=> {
                   this.emit('error', err)
                 })
                 _flightBox.set(this, flightBox)
                 process.nextTick(getBlock)
               }
             }
-            let getNextDesc = ()=>{
+            let getNextDesc = ()=> {
               bc.get(nextDesc, getNext)
             }
-            if(bc.contains(nextDesc)){
+            if (bc.contains(nextDesc)) {
               getNextDesc()
             } else {
-              let flightBox = bc.load([nextDesc])
+              let flightBox = bc.load([ nextDesc ])
               flightBox.emitter.on(nextDesc, getNextDesc)
-              flightBox.emitter.on('error', (err)=>{
+              flightBox.emitter.on('error', (err)=> {
                 this.emit('error', err)
               })
             }
@@ -228,12 +228,12 @@ module.exports = class ReadableOffStream extends Readable {
           }
         })
       }
-      if (bc.contains(url.descriptorHash)){
+      if (bc.contains(url.descriptorHash)) {
         getDesc()
-      } else{
-        let flightBox = bc.load([url.descriptorHash])
+      } else {
+        let flightBox = bc.load([ url.descriptorHash ])
         flightBox.emitter.on(url.descriptorHash, getDesc)
-        flightBox.emitter.on('error', (err)=>{
+        flightBox.emitter.on('error', (err)=> {
           this.emit('error', err)
         })
       }

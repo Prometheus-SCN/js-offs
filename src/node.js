@@ -6,21 +6,21 @@ const natUpnp = require('nat-upnp')
 const keypair = require('./keypair')
 const Peer = require('./peer.js')
 const config = require('../config.js')
-const multihashing = require('multihashing')
 const network = require('network')
 const mkdirp = require('mkdirp')
-const Messenger = require('udp-messenger')
-const Bucket = require('./bucket')
-const RPC = require('./rpc')
+const util = require('./utility')
+const BlockRouter = require('./block-router')
+const Server = require('./server')
 let _platformPath = new WeakMap()
 let _applicationName = new WeakMap()
 let _keyPair = new WeakMap()
 let _peerInfo = new WeakMap()
 let _client = new WeakMap()
-let _messenger = new WeakMap()
+let _blockRouter = new WeakMap()
+let _server = new WeakMap()
 const fileName = 'node.off'
 module.exports = class Node extends EventEmitter {
-  constructor (applicationName, putValue, getValue, pth) {
+  constructor (applicationName, pth) {
     super()
     if (typeof applicationName !== 'string') {
       throw new Error('Application name must be a string')
@@ -54,22 +54,24 @@ module.exports = class Node extends EventEmitter {
           process.nextTick(()=> {
             let getPeer = (err, ip)=> {
               let pk = keyPair.publicKey
-              let id = multihashing(pk, 'sha2-256')
+              let id = util.hash(pk)
               let peerInfo = new Peer(id, ip, port)
               _peerInfo.set(this, peerInfo)
-              let messenger = new Messenger(config.timeout, port, config.packetSize)
-              _messenger.set(this, messenger)
-              let bucket = new Bucket(peerInfo.id, config.kbucketSize)
-              let rpc = new RPC(peerInfo, messenger, bucket, getValue, putValue)
-              messenger.listen()
+              let blockRouter = new BlockRouter('~/', peerInfo)
+              _blockRouter.set(this, blockRouter)
+              let server = Server(blockRouter)
+              _server.set(this, server)
+              server.listen(23402, () => {
+                console.log('listening at localhost:23402')
+              })
+              blockRouter.listen()
+              console.log(`I am node ${peerInfo.toString()}`)
+
               //this.emit('ready',  peerInfo)
               process.on('exit', ()=> {
-                let messenger = _messenger.get(this)
-                messenger.close(()=> {
-                  let client = _client.get(this)
-                  let peerInfo = _peerInfo.get(this)
-                  client.client.portUnmapping({ public: peerInfo.port })
-                })
+                let client = _client.get(this)
+                let peerInfo = _peerInfo.get(this)
+                client.client.portUnmapping({ public: peerInfo.port })
               })
             }
 

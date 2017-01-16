@@ -50,7 +50,7 @@ module.exports = class FibonacciBucket {
     _limit.set(this, fibSequence(number + 1))
     _blockSize.set(this, blockSize)
     _dirty.set(this, false)
-    let fc = pth.join(path, `f${number}.content`)    
+    let fc = pth.join(path, `f${number}.content`)
     let contents
     try {
       let contCBOR = fs.readFileSync(fc)
@@ -71,7 +71,6 @@ module.exports = class FibonacciBucket {
       this.dirty = true
     }
     _hitBox.set(this, hitBox)
-    
 
   }
 
@@ -79,10 +78,11 @@ module.exports = class FibonacciBucket {
     let contents = _contents.get(this)
     return contents.contains(key)
   }
-  content(cb){
-    fs.readdir(this.path, (err, items)=>{
-      if(err){
-        return process.nextTick(()=>{
+
+  content (cb) {
+    fs.readdir(this.path, (err, items)=> {
+      if (err) {
+        return process.nextTick(()=> {
           return cb(err)
         })
       }
@@ -92,7 +92,7 @@ module.exports = class FibonacciBucket {
         }
         return true
       })
-      return process.nextTick(()=>{
+      return process.nextTick(()=> {
         return cb(err, items)
       })
     })
@@ -268,7 +268,7 @@ module.exports = class FibonacciBucket {
   }
 
   closestBlockAt (key, usageFilter, cb) {
-    if  (!((usageFilter instanceof ScalableCuckooFilter) || (usageFilter instanceof CuckooFilter))) {
+    if (!((usageFilter instanceof ScalableCuckooFilter) || (usageFilter instanceof CuckooFilter))) {
       throw TypeError('Invalid Usage Filter')
     }
 
@@ -284,10 +284,10 @@ module.exports = class FibonacciBucket {
         contents.add(item)
         return !usageFilter.contains(item)
       })
-      let hash= new Buffer(bs58.decode(key))
+      let hash = new Buffer(bs58.decode(key))
       items.sort((a, b)=> {
-        let hashA= new Buffer(bs58.decode(a))
-        let hashB= new Buffer(bs58.decode(b))
+        let hashA = new Buffer(bs58.decode(a))
+        let hashB = new Buffer(bs58.decode(b))
         return hamming(hashA, hash) - hamming(hashB, hash)
       })
       if (items.length > 0) {
@@ -300,7 +300,7 @@ module.exports = class FibonacciBucket {
           return process.nextTick(()=> {cb(null, block)})
         })
       } else {
-        return process.nextTick(()=>{
+        return process.nextTick(()=> {
           cb(new Error('Bucket has no new blocks'))
         })
       }

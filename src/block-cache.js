@@ -67,14 +67,14 @@ module.exports =
       return cache.number
     }
 
-    load(keys){
-      keys = keys.filter((key)=>{
+    load (keys) {
+      keys = keys.filter((key)=> {
         return !this.contains(key)
       })
       let cacheInterface = _cacheInterface.get(this)
       return cacheInterface.load(keys)
     }
-    
+
     put (block, cb) {
       if (!cb || typeof cb !== 'function') {
         throw new Error('Invalid Callback')
@@ -174,11 +174,13 @@ module.exports =
       let cache = _cache.get(this)
       return cache.containsAt(number, key)
     }
-    contentFilter(cb){
+
+    contentFilter (cb) {
       let cache = _cache.get(this)
       cache.contentFilter(cb)
     }
-    content(cb){
+
+    content (cb) {
       let cache = _cache.get(this)
       cache.content(cb)
     }

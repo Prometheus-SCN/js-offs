@@ -28,7 +28,7 @@ module.exports = class Block {
     } else {
       data = new Buffer(data)
     }
-    if (data.length > blockSize) { 
+    if (data.length > blockSize) {
       throw new Error('Invalid block size for this data size')
     }
     if (data.length < blockSize) {
@@ -80,6 +80,9 @@ module.exports = class Block {
   }
 
   static randomBlock (blockSize) {
+    if (!Number.isInteger(blockSize)) {
+      throw new TypeError('Invalid block size')
+    }
     let data = crypto.randomBytes(blockSize)
     return new Block(data, blockSize)
   }

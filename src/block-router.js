@@ -48,17 +48,17 @@ module.exports = class BlockRouter extends EventEmitter {
       rpc.store(block.hash, config.nano, block.data, 1, ()=> {})
     })
     bc.on('promote', (block, number)=> {
-     process.nextTick(()=>{
-       rpc.promote(block.hash, number, config.block, ()=> {})
-     })
+      process.nextTick(()=> {
+        rpc.promote(block.hash, number, config.block, ()=> {})
+      })
     })
     mc.on('promote', (block, number)=> {
-      process.nextTick(()=>{
+      process.nextTick(()=> {
         rpc.promote(block.hash, number, config.mini, ()=> {})
       })
     })
     nc.on('promote', (block, number)=> {
-      process.nextTick(()=>{
+      process.nextTick(()=> {
         rpc.promote(block.hash, number, config.nano, ()=> {})
       })
     })
@@ -312,18 +312,8 @@ module.exports = class BlockRouter extends EventEmitter {
     rpc.connect(peer, cb)
   }
 
-  listen(){
+  listen () {
     let rpc = _rpc.get(this)
     rpc.listen()
-  }
-
-  get rpc(){
-    let rpc = _rpc.get(this)
-    return rpc
-  }
-
-  get mini(){
-    let mini =_mc.get(this)
-    return mini
   }
 }

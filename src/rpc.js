@@ -11,7 +11,7 @@ const collect = require('collect-stream')
 const EventEmitter = require('events').EventEmitter
 const crypto = require('crypto')
 const increment = require('increment-buffer')
-const equal= require('buffer-equal')
+const equal = require('buffer-equal')
 const path = require('path')
 const file = path.join(__dirname, '/proto/', 'rpc.proto')
 const builder = protobuf.loadProtoFile(file)
@@ -270,7 +270,7 @@ module.exports = class RPC extends EventEmitter {
               pingStorageResponse(pb, socket)
               break;
           }
-        } catch (err){
+        } catch (err) {
           return this.emit('error', err)
         }
       })
@@ -429,7 +429,7 @@ module.exports = class RPC extends EventEmitter {
                 })
                 process.nextTick(next)
               }
-            } catch(err){
+            } catch (err) {
               return process.nextTick(() => {
                 return cb(err)
               })
@@ -530,7 +530,7 @@ module.exports = class RPC extends EventEmitter {
               } else {
                 return next()
               }
-            } catch(err){
+            } catch (err) {
               return process.nextTick(next)
             }
           })
@@ -594,7 +594,7 @@ module.exports = class RPC extends EventEmitter {
               } else {
                 return next()
               }
-            } catch (err){
+            } catch (err) {
               return process.nextTick(next)
             }
           })
@@ -699,7 +699,7 @@ module.exports = class RPC extends EventEmitter {
               return cb(new Error('Ping Value Failed'))
             })
           }
-        } catch(err) {
+        } catch (err) {
           return process.nextTick((err)=> {
             return cb(err)
           })
@@ -747,7 +747,7 @@ module.exports = class RPC extends EventEmitter {
               return cb(new Error('Ping Storage Failed'))
             })
           }
-        } catch(err){
+        } catch (err) {
           return process.nextTick((err)=> {
             return cb(err)
           })

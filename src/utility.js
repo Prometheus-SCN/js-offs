@@ -1,14 +1,17 @@
 'use strict'
 
-const multihashing = require('multihashing')
-const crypto = require('crypto')
+const blake2 = require('blake2')
 const pth = require('path')
 
 let util = {}
 
-util.hash = (data) => multihashing(data, 'sha2-256')
+util.hash = (data) => {
+  let hash = blake2.createHash('blake2b', { digestLength: 34 })
+  hash.update(data)
+  return hash.digest()
+}
 
-util.hasher = () => {return crypto.createHash('sha256')}
+util.hasher = () => {return blake2.createHash('blake2b', { digestLength: 32 })}
 
 util.sanitize = (key, path)=> {
   if (typeof key === 'string') {
