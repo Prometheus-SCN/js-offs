@@ -18,7 +18,6 @@ let _peerInfo = new WeakMap()
 let _client = new WeakMap()
 let _blockRouter = new WeakMap()
 let _server = new WeakMap()
-const fileName = 'node.off'
 module.exports = class Node extends EventEmitter {
   constructor (applicationName, pth) {
     super()
@@ -51,63 +50,64 @@ module.exports = class Node extends EventEmitter {
 
           let client = natUpnp.createClient()
           _client.set(this, client)
-          process.nextTick(()=> {
-            let getPeer = (err, ip)=> {
-              let pk = keyPair.publicKey
-              let id = util.hash(pk)
-              let peerInfo = new Peer(id, ip, port)
-              _peerInfo.set(this, peerInfo)
-              let blockRouter = new BlockRouter('~/', peerInfo)
-              _blockRouter.set(this, blockRouter)
-              let server = Server(blockRouter)
-              _server.set(this, server)
-              server.listen(23402, () => {
-                console.log('listening at localhost:23402')
-              })
-              blockRouter.listen()
-              console.log(`I am node ${peerInfo.toString()}`)
 
-              //this.emit('ready',  peerInfo)
-              process.on('exit', ()=> {
-                let client = _client.get(this)
-                let peerInfo = _peerInfo.get(this)
-                client.client.portUnmapping({ public: peerInfo.port })
-              })
+          let getPeer = (err, ip)=> {
+            let pk = keyPair.publicKey
+            let id = util.hash(pk)
+            let peerInfo = new Peer(id, ip, port)
+            _peerInfo.set(this, peerInfo)
+            let blockRouter = new BlockRouter('~/.offs/', peerInfo)
+            _blockRouter.set(this, blockRouter)
+            let server = Server(blockRouter)
+            _server.set(this, server)
+            server.listen(23402, () => {
+              this.emit('listening')
+            })
+            blockRouter.listen()
+            process.nextTick(() => {
+              this.emit('ready', peerInfo)
+            })
+
+            this.emit('ready',  peerInfo)
+            process.on('exit', ()=> {
+              let client = _client.get(this)
+              let peerInfo = _peerInfo.get(this)
+              client.portUnmapping({ public: peerInfo.port })
+            })
+          }
+
+          let port = config.startPort - 1
+          let tries = -1
+          let getIp = (err, ip)=> {
+            if (err) {
+              this.emit('error', err)
+              return network.get_private_ip(getPeer)
+            } else {
+              return getPeer(null, ip)
             }
-
-            let port = config.startPort - 1
-            let tries = -1
-            let getIp = (err, ip)=> {
-              if (err) {
-                this.emit('error', err)
-                network.get_private_ip(getPeer)
-              }
-              getPeer(err, '127.0.0.1')
-
-            }
-            let findPort = (err)=> {
-              if (err || tries === -1) {
-                tries++
-                if (tries < config.numPortTries) {
-                  port++
-                  client.portMapping({
-                    protocol: 'udp',
-                    public: port,
-                    private: port,
-                    ttl: 10
-                  }, findPort)
-                } else {
-                  this.emit('error', new Error("Failed to configure UPnP port"))
-                  port = config.startPort
-                  client.externalIp(getIp)
-                }
+          }
+          let findPort = (err)=> {
+            if (err || tries === -1) {
+              tries++
+              if (tries < config.numPortTries) {
+                port++
+                client.portMapping({
+                  protocol: 'tcp',
+                  public: port,
+                  private: port,
+                  ttl: 10
+                }, findPort)
               } else {
+                this.emit('error', new Error('Failed to configure UPnP port'))
+                port = config.startPort
                 client.externalIp(getIp)
               }
-
+            } else {
+              client.externalIp(getIp)
             }
-            findPort()
-          })
+
+          }
+          findPort()
         }
         if (err) {
           keypair.createKeypair((err, pair)=> {
@@ -130,8 +130,15 @@ module.exports = class Node extends EventEmitter {
           }
         }
       })
-
     })
-
   }
+
+  get blockRouter () {
+    return _blockRouter.get(this)
+  }
+
+  get peerInfo () {
+    return _peerInfo.get(this)
+  }
+
 }

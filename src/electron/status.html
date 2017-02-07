@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Off System</title>
+    <link rel="stylesheet" href="stylesheets/bulma.css">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <style>
+        .container{
+           margin: 40px;
+        }
+        .cache{
+            margin: 14px;
+            border: solid black 1px;
+            min-height: 150px;
+            min-width: 150px;
+            height: 150px;
+            width: 150px;
+        }
+        .logo{
+            max-height: 7em;
+            max-width: 7em;
+            margin: 4em;
+        }
+        .svg.radial-progress {
+            position: relative;
+            display: inline-block;
+        }
+
+        svg {
+            transform: rotate(270deg);
+        }
+
+        circle {
+            stroke-width: 2em;
+            fill: transparent;
+            transform: rotate(0.1deg); // to fix Firefox
+        }
+
+        .radial-progress-background-orange {
+            stroke: orange;
+        }
+        .radial-progress-background-blue {
+            stroke: #369bff;
+        }
+        .radial-progress-background {
+            stroke: #59ff65;
+        }
+
+        .radial-progress-cover {
+            stroke: #DEDEDE;
+            stroke-width: 2.01em;
+            border: 12px solid red;
+        }
+
+        .radial-progress-center {
+            fill: #CCC;
+        }
+
+        .radial-fill {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+    </style>
+    <div class="container">
+        <table>
+            <tr>
+                <td>
+                   <img src="images/off-logo-lettered.svg" class="logo">
+                </td>
+                <td>
+                    <svg height="10em" width="10em">
+                        <circle class="radial-progress-background" r="" cx="5em" cy="5em" fill="transparent" stroke-dasharray="0em" stroke-dashoffset="0em"></circle>
+                        <circle class="radial-progress-cover" r="" cx="5em" cy="5em" fill="transparent" stroke-dasharray="0em" stroke-dashoffset="0"></circle>
+                        <circle class="radial-progress-center" r="" cx="5em" cy="5em" fill="transparent" stroke-dasharray="0em" stroke-dashoffset="0em"></circle>
+                    </svg>
+                    <input type="range" min=0 max=1 value=0 step=0.01>
+                </td>
+                <td>
+
+                </td>
+                <td>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        var radius = 3, // set the radius of the circle
+                circumference = 2 * radius * Math.PI;
+
+        var els = document.querySelectorAll('circle');
+        Array.prototype.forEach.call(els, function (el) {
+            el.setAttribute('stroke-dasharray', circumference + 'em');
+            el.setAttribute('r', radius + 'em');
+        });
+
+        document.querySelector('.radial-progress-center').setAttribute('r', (radius - 0.01 + 'em'));
+
+        document.querySelector('input[type="range"]').addEventListener('change', function (a) {
+
+            var offset = circumference * event.target.value + 'em';
+
+            document.querySelector('.radial-progress-cover').setAttribute('stroke-dashoffset', offset);
+
+        });
+    </script>
+</body>
+</html>

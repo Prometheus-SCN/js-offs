@@ -65,11 +65,20 @@ module.exports = class BlockRouter extends EventEmitter {
     bc.on('full', ()=> {
       this.emit('full', config.block)
     })
-    mc.on('full', (capacity)=> {
+    mc.on('full', ()=> {
       this.emit('full', config.mini)
     })
-    nc.on('full', (capacity)=> {
+    nc.on('full', ()=> {
       this.emit('full', config.nano)
+    })
+    bc.on('capacity', (capacity)=> {
+      this.emit('capacity', config.block, capacity)
+    })
+    mc.on('capacity', (capacity)=> {
+      this.emit('capacity', config.mini, capacity)
+    })
+    nc.on('capacity', (capacity)=> {
+      this.emit('capacity', config.nano, capacity)
     })
   }
 
@@ -316,4 +325,20 @@ module.exports = class BlockRouter extends EventEmitter {
     let rpc = _rpc.get(this)
     rpc.listen()
   }
+
+  get blockCapacity(){
+    let bc = _bc.get(this)
+    return bc.capacity
+  }
+
+  get miniCapacity(){
+    let mc = _mc.get(this)
+    return mc.capacity
+  }
+
+  get nanoCapacity(){
+    let nc = _nc.get(this)
+    return nc.capacity
+  }
+
 }
