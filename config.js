@@ -14,7 +14,7 @@ let defaults = {
   tupleSize: 3,
   blockSize: 128000,
   miniBlockSize: 1000,
-  nanoBlockSize: 134,
+  nanoBlockSize: 136,
   descriptorPad: 34,
   scale: 2,
   filterSize: 20000,

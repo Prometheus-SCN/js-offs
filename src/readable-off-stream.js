@@ -35,7 +35,7 @@ module.exports = class ReadableOffStream extends Readable {
     _blockCache.set(this, opts.bc)
     _blockSize.set(this, blockSize)
   }
-
+// TODO make this DRY
   _read () {
     let url = _url.get(this)
     let size = _size.get(this)
@@ -95,7 +95,7 @@ module.exports = class ReadableOffStream extends Readable {
             bc.get(key, next)
           }
           if (!bc.contains(key)) {
-            if (flightBox.filter.contains(key)) {
+            if (flightBox && flightBox.filter.contains(key)) {
               flightBox.emitter.on(key, doNext)
             } else {
               let flightBox = bc.load([ key ])
@@ -103,6 +103,7 @@ module.exports = class ReadableOffStream extends Readable {
               flightBox.emitter.on('error', (err)=> {
                 this.emit('error', err)
               })
+              _flightBox.set(this, flightBox)
             }
           } else {
             doNext()
@@ -127,8 +128,7 @@ module.exports = class ReadableOffStream extends Readable {
           let cutPoint = ((Math.floor(blockSize / _descriptorPad) ) * _descriptorPad)// maximum length of a descriptor in bytes
 
           let tuppleBytes = blocks * _descriptorPad * _tupleSize // total size of all tupple descriptions
-
-          let descKeySize = ((Math.ceil(tuppleBytes / blockSize)) * _descriptorPad) - _descriptorPad//total number of bytes for descriptor keys minus first desc block
+          let descKeySize = ((Math.ceil(tuppleBytes / blockSize)) * _descriptorPad) //total number of bytes for descriptor keys
 
           let ttlDescSize = tuppleBytes + descKeySize
 
@@ -136,7 +136,6 @@ module.exports = class ReadableOffStream extends Readable {
           let nextDesc
 
           keybuf = block.data.slice(0, cutPoint)
-
           if (ttlDescSize <= cutPoint) {
             keybuf = keybuf.slice(0, ttlDescSize)
             ttlDescSize -= ttlDescSize
@@ -151,6 +150,7 @@ module.exports = class ReadableOffStream extends Readable {
             let block = bs58.encode(keybuf.slice(i, (i + _descriptorPad)))
             descriptor.push(block)
           }
+
           _descriptor.set(this, descriptor)
           if (nextDesc) {
             let getNext = (err, block)=> {
@@ -163,8 +163,7 @@ module.exports = class ReadableOffStream extends Readable {
               let descriptor = _descriptor.get(this)
 
               keybuf = block.data.slice(0, cutPoint)
-
-              if (ttlDescSize < cutPoint) {
+              if (ttlDescSize <= cutPoint) {
                 keybuf = keybuf.slice(0, ttlDescSize)
                 ttlDescSize -= ttlDescSize
               } else {
@@ -177,6 +176,7 @@ module.exports = class ReadableOffStream extends Readable {
                 let block = bs58.encode(keybuf.slice(i, (i + _descriptorPad)))
                 descriptor.push(block)
               }
+
               _descriptor.set(this, descriptor)
               let getNextDesc = ()=> {
                 bc.get(nextDesc, getNext)
@@ -192,11 +192,19 @@ module.exports = class ReadableOffStream extends Readable {
                   })
                 }
               } else {
-                let flightBox = bc.load(descriptor)
-                flightBox.emitter.on('error', (err)=> {
-                  this.emit('error', err)
-                })
-                _flightBox.set(this, flightBox)
+                // If there is a stream offset it means we are looking for a specific section of the data
+                // we remove descriptor until the blocks are in the range of the data we want
+                if (url.streamOffset) {
+                  let offset = Math.floor(url.streamOffset / config.blockSize)
+                  for (let i = 0; i < (offset * _tupleSize); i++) {
+                    size = size + config.blockSize
+                    descriptor.shift()
+                  }
+                  _size.set(this, size)
+                  let start = url.streamOffset % config.blockSize
+                  _offsetStart.set(this, start)
+                }
+                // start the actual data retrieval
                 process.nextTick(getBlock)
               }
             }
@@ -214,6 +222,8 @@ module.exports = class ReadableOffStream extends Readable {
             }
 
           } else {
+            // If there is a stream offset it means we are looking for a specific section of the data
+            // we remove descriptor until the blocks are in the range of the data we want
             if (url.streamOffset) {
               let offset = Math.floor(url.streamOffset / config.blockSize)
               for (let i = 0; i < (offset * _tupleSize); i++) {

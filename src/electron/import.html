@@ -181,8 +181,8 @@
                         importer(entry, next)
                     } else {
                         console.log(ofd.toString())
-                        var ab = toAb(ofd)
-                        var file = new Blob([ab], {type: 'text/plain'})
+                        var file = new File([ofd.toString()], {type: 'text/plain'})
+                        console.log(file.size)
                         uploadFile(file, name,'offsystem/directory', cb)
                     }
                 }

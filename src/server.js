@@ -3,6 +3,7 @@ const express = require('express')
 const OffUrl = require('./off-url')
 const collect = require('collect-stream')
 const config = require('../config')
+const through = require('through2')
 const pth = require('path')
 let basename
 let parse = pth.posix.parse
@@ -45,6 +46,8 @@ module.exports = function (br) {
             return res.status(404).send("Resource Not Found")
           }
           let lines = data.toString('utf8').split('\n')
+          console.log(data.toString())
+          console.log(lines)
           let stats = parse(url.fileName)
           if (stats.dir) {
             let dirs = stats.dir.split('/')
@@ -61,7 +64,7 @@ module.exports = function (br) {
               }
               i++
               if (i < dirs.length) {
-                let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/
+                let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\//
                 let file = dirs[ i ] + ".ofd"
                 let found
                 let path = lines.find((line)=> {
@@ -86,7 +89,7 @@ module.exports = function (br) {
                   return res.status(404).send("Resource Not Found")
                 }
               } else {
-                let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/
+                let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\//
                 let path = lines.find((line)=> {
                   return basename(line) == stats.base
                 })
@@ -105,7 +108,7 @@ module.exports = function (br) {
                   if (url.contentType === 'offsystem/directory') {
                     collect(rs, (err, data)=> {
                       let lines = data.toString('utf8').split('\n')
-                      let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/
+                      let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\//
                       let index = lines.find((line)=> {
                         return basename(line) == "index.html"
                       })
@@ -137,7 +140,7 @@ module.exports = function (br) {
             }
             next()
           } else {
-            let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/
+            let reg = /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\//
             let index = lines.find((line)=> {
               return basename(line) == "index.html"
             })
@@ -185,7 +188,6 @@ module.exports = function (br) {
     url.contentType = req.get('type')
     url.fileName = req.get('file-name')
     url.streamLength = parseInt(req.get('stream-length'))
-
     let ws = br.createWriteStream(url)
     ws.on('url', (url)=> {
       res.write(url.toString())
