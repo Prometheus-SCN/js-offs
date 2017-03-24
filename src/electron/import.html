@@ -166,24 +166,28 @@
             var dirReader = entry.createReader()
             dirReader.readEntries((entries) => {
                 var i = -1
-                var ofd = new Buffer(0)
+                var ofd = {}
                 var name = entry.name
                 var next = (err, url) => {
                     if(err){
                         return cb(err)
                     }
                     if(url){
-                        ofd = Buffer.concat([ ofd, new Buffer(url + '\n') ])
+                        ofd[entries[i].name] = url
                     }
                     i++
                     if(i < entries.length){
                         var entry = entries[i]
                         importer(entry, next)
                     } else {
-                        console.log(ofd.toString())
-                        var file = new File([ofd.toString()], {type: 'text/plain'})
-                        console.log(file.size)
-                        uploadFile(file, name,'offsystem/directory', cb)
+                        var file = new File([JSON.stringify(ofd)], {type: 'text/plain'})
+                        console.log(ofd)
+                        uploadFile(file, name,'offsystem/directory', (err, url) => {
+                            if(err){
+                                return cb(err)
+                            }
+                            return cb(err, url + '.ofd')
+                        })
                     }
                 }
                 next()

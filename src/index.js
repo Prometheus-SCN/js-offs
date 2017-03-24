@@ -36,7 +36,8 @@ function createWindow () {
   let windowPosition = (process.platform === 'win32') ? 'trayBottomCenter' : 'trayCenter'
   node = new Node('OFFSYSTEM', '../offsystem')
   node.on('error', console.log)
-  node.on('ready', () => {
+  node.once('ready', () => {
+    console.log('happened')
     let statusWin
     let hideStatusWin = () => {
       statusWin.hide()

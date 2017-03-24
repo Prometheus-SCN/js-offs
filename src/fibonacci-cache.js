@@ -278,9 +278,18 @@ module.exports = class FibonacciCache extends EventEmitter {
     let i = buckets.length
     let next = (err, block)=> {
       if (err) {
+        // Sometimes when there are many requests a block can get promoted while being requested
+        // causing an error when reading, this checks if the block has been promoted
+        for (let n = buckets.length - 1; n <= -1; n--) {
+          if (buckets[ n ].contains(key)) {
+            i = n + 1
+            return next()
+          }
+        }
         return process.nextTick(()=> {
           return cb(err)
         })
+
       }
       if (block) {
         if (buckets[ i ].tally(block.key)) {

@@ -20,7 +20,7 @@
     "buffer-xor": "2.0.1",
     "collect-stream": "1.1.1",
     "cron": "1.1.1",
-    "cuckoo-filter": "1.0.1",
+    "cuckoo-filter": "1.0.3",
     "electron-positioner": "3.0.0",
     "end-of-stream": "1.1.0",
     "express": "4.14.0",
