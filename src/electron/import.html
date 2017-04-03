@@ -154,40 +154,69 @@
         if (isDropped) {
             return
         }
-        importFile(file, complete)
+        importer(file, complete)
         //dropzone.removeFile(file)
     })
-    function importer(entry, cb){
+    function importer (entry, cb) {
         if (entry.isFile) {
             entry.file((file) => {
-                uploadFile(file, (err, url) => cb (null, url))
+                uploadFile(file, cb)
+            })
+        } else if (entry.isDirectory) {
+            let ofd = {}
+            let name = entry.name + '.ofd'
+            dirImporter(entry, ofd, entry, () => {
+                let keys = Object.keys(ofd)
+                let i = -1
+                let next = (err, url) => {
+                    if(err){
+                       return cb(err)
+                    }
+                    if(url) {
+                        ofd[keys[i]] = url
+                    }
+                    i++
+                    if(i < keys.length) {
+                        uploadFile(ofd[keys[i]], next)
+                    } else {
+                        let text = JSON.stringify(ofd)
+                        console.log(ofd)
+                        let file = new File([text], {type: 'text/plain'})
+                        uploadFile(file, name,'offsystem/directory', (err, url) => {
+                            if(err) {
+                                return cb(err)
+                            }
+                            return cb(err, url)
+                        })
+                    }
+                }
+                next()
+            })
+        }
+    }
+    function dirImporter(entry, ofd, dir, cb){
+        //remove the first directory from the path
+        var dirPath
+        if ( dir === entry ) {
+            dirPath = ''
+        } else {
+            dirPath = (dir ? dir + '/' : '') + entry.name
+        }
+        if (entry.isFile) {
+            entry.file((file) => {
+                ofd[dirPath] = file
+                return cb()
             })
         } else if (entry.isDirectory) {
             var dirReader = entry.createReader()
             dirReader.readEntries((entries) => {
                 var i = -1
-                var ofd = {}
-                var name = entry.name
-                var next = (err, url) => {
-                    if(err){
-                        return cb(err)
-                    }
-                    if(url){
-                        ofd[entries[i].name] = url
-                    }
+                var next = () => {
                     i++
                     if(i < entries.length){
-                        var entry = entries[i]
-                        importer(entry, next)
+                        dirImporter(entries[i], ofd, dirPath, next)
                     } else {
-                        var file = new File([JSON.stringify(ofd)], {type: 'text/plain'})
-                        console.log(ofd)
-                        uploadFile(file, name,'offsystem/directory', (err, url) => {
-                            if(err){
-                                return cb(err)
-                            }
-                            return cb(err, url + '.ofd')
-                        })
+                        return cb()
                     }
                 }
                 next()

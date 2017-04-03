@@ -202,7 +202,6 @@ module.exports = class FibonacciBucket {
         return process.nextTick(cb)
       })
     })
-
   }
 
   randomBlocks (number, usageFilter, items, cb) {

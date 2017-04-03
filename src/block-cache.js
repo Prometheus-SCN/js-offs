@@ -1,10 +1,18 @@
 'use strict'
 const EventEmitter = require('events').EventEmitter
 const Block = require('./block')
+const config = require('../config')
 const FibonacciCache = require('./fibonacci-cache')
+const ScalableCuckooFilter = require('cuckoo-filter').ScalableCuckooFilter
+const pth = require('path')
+const fs = require('fs')
 let _cache = new WeakMap()
 let _blockSize = new WeakMap()
 let _cacheInterface = new WeakMap()
+let _local = new WeakMap()
+let _dirty = new WeakMap()
+let _dirtyTimer = new WeakMap()
+let _path = new WeakMap()
 
 module.exports =
   class BlockCache extends EventEmitter {
@@ -23,6 +31,8 @@ module.exports =
         throw new TypeError('Invalid Cache Interface')
       }
       _cacheInterface.set(this, cacheInterface)
+      _dirty.set(this, false)
+      _path.set(this, path)
       let cache = new FibonacciCache(path, blockSize, maxSize)
       cache.on('promote', (block, number)=> {
         this.emit('promote', block, number)
@@ -33,8 +43,54 @@ module.exports =
       cache.on('full', ()=> {
         this.emit('full')
       })
+      try {
+        let localCBOR = fs.readFileSync(pth.join(path, 'cache.local'))
+        let local = ScalableCuckooFilter.fromCBOR(localCBOR)
+        _local.set(this, local)
+      } catch (ex) {
+        let local = new ScalableCuckooFilter(100000, config.bucketSize, config.fingerprintSize, config.scale)
+        _local.set(this, local)
+        this.dirty = true
+      }
       _cache.set(this, cache)
       _blockSize.set(this, blockSize)
+    }
+
+    get dirty () {
+      return _dirty.get(this)
+    }
+
+    set dirty (value) {
+      if (value === true) {
+        _dirty.set(this, true)
+        let dirtyTimer = _dirtyTimer.get(this)
+        clearTimeout(dirtyTimer)
+        dirtyTimer = setTimeout(()=> {
+          this.save(() => {})
+        }, 500)
+        _dirtyTimer.set(this, dirtyTimer)
+      } else {
+        _dirty.set(this, false)
+      }
+    }
+
+    save (cb) {
+      let path = _path.get(this)
+      let local = _local.get(this)
+      let fd = pth.join(path, `cache.local`)
+      fs.writeFile(fd, local.toCBOR(), (err) => {
+        if (err) {
+          return process.nextTick(() => {return cb(err)})
+        }
+        this.dirty = false
+        return process.nextTick(cb)
+      })
+    }
+
+    get local () {
+      let local = _local.get(this)
+      this.dirty = true
+      return local
     }
 
     get capacity () {

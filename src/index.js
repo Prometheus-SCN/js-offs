@@ -37,7 +37,6 @@ function createWindow () {
   node = new Node('OFFSYSTEM', '../offsystem')
   node.on('error', console.log)
   node.once('ready', () => {
-    console.log('happened')
     let statusWin
     let hideStatusWin = () => {
       statusWin.hide()
@@ -61,7 +60,7 @@ function createWindow () {
     let createImportWin = () => {
       importWin = new BrowserWindow({ width: 512, height: 308, icon: icon})
       importWin.loadURL(`file://${path.join(__dirname, 'electron', 'import.html')}`)
-      importWin.webContents.openDevTools()
+      importWin.webContents.openDevTools({})
     }
     let openImportWin = () => {
       if (importWin) {

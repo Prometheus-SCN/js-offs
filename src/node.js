@@ -47,7 +47,6 @@ module.exports = class Node extends EventEmitter {
           if (err) {
             return this.emit('error', err)
           }
-          console.log(new Error('network happened'))
           let client = natUpnp.createClient()
           _client.set(this, client)
 
@@ -56,7 +55,6 @@ module.exports = class Node extends EventEmitter {
               this.emit('error', err)
               ip = '127.0.0.1'
             }
-            console.log(new Error('peer happened'))
             let pk = keyPair.publicKey
             let id = util.hash(pk)
             let peerInfo = new Peer(id, ip, port)
@@ -84,7 +82,6 @@ module.exports = class Node extends EventEmitter {
           let port = config.startPort - 1
           let tries = -1
           let getIp = (err, ip)=> {
-            console.log('ip happened')
             if (err) {
               this.emit('error', err)
               return network.get_private_ip(getPeer)
@@ -93,7 +90,6 @@ module.exports = class Node extends EventEmitter {
             }
           }
           let findPort = (err)=> {
-            console.log('port happened')
             /*
             if (err || tries === -1) {
               tries++
