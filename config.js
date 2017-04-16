@@ -30,7 +30,8 @@ let defaults = {
   storeCount: 1, // how many nodes to store new data at
   maxFillRate: 72, // in hours
   redundancy: .30, //30% network redundancy target
-  batchConcurrency: 10
+  batchConcurrency: 10,
+  bootstrap: []
 }
 let _blockPath = new WeakMap()
 let _miniPath = new WeakMap()
@@ -60,6 +61,7 @@ let _storeCount = new WeakMap()
 let _maxFillRate = new WeakMap()
 let _redundancy = new WeakMap()
 let _batchConcurrency = new WeakMap()
+let _bootstrap = new WeakMap()
 class Config {
   constructor(){
     this.loadDefaults()
@@ -93,6 +95,7 @@ class Config {
     _maxFillRate.set(this, defaults.maxFillRate)
     _redundancy.set(this, defaults.redundancy)
     _batchConcurrency.set(this, defaults.batchConcurrency)
+    _bootstrap.set(this, defaults.bootstrap.slice(0))
   }
   get blockPath(){
     return _blockPath.get(this)
@@ -186,6 +189,9 @@ class Config {
   }
   get batchConcurrency(){
     return _redundancy.get(this)
+  }
+  get bootstrap() {
+    return _bootstrap.get(this).slice(0)
   }
 }
 module.exports = new Config()

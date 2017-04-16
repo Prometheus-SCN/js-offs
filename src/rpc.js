@@ -307,6 +307,9 @@ module.exports = class RPC extends EventEmitter {
   findNode (id, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
+    if(!bucket.count){
+      return cb(new Error('No Peers Connected'))
+    }
     let requestpb = {}
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Find_Node
@@ -371,6 +374,9 @@ module.exports = class RPC extends EventEmitter {
   findValue (hash, type, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
+    if(!bucket.count){
+      return cb(new Error('No Peers Connected'))
+    }
     let rpcInterface = _rpcInterface.get(this)
     let requestpb = {}
     requestpb.id = this.rpcid
@@ -492,6 +498,9 @@ module.exports = class RPC extends EventEmitter {
   store (hash, type, value, number, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
+    if(!bucket.count){
+      return cb(new Error('No Peers Connected'))
+    }
     let requestpb = {}
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Store
@@ -553,6 +562,9 @@ module.exports = class RPC extends EventEmitter {
   random (number, count, type, filter, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
+    if(!bucket.count){
+      return cb(new Error('No Peers Connected'))
+    }
     let requestpb = {}
     let rpcInterface = _rpcInterface.get(this)
     requestpb.id = this.rpcid
@@ -671,6 +683,9 @@ module.exports = class RPC extends EventEmitter {
   pingValue (id, hash, type, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
+    if(!bucket.count){
+      return cb(new Error('No Peers Connected'))
+    }
     let to = bucket.get(id)
     let requestpb = {}
     requestpb.id = this.rpcid
@@ -717,6 +732,9 @@ module.exports = class RPC extends EventEmitter {
   pingStorage (id, type, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
+    if(!bucket.count){
+      return cb(new Error('No Peers Connected'))
+    }
     let to = bucket.get(id)
     let requestpb = {}
     requestpb.id = this.rpcid

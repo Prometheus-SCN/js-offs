@@ -55,4 +55,7 @@ module.exports = class Peer {
   toJSON () {
     return { id: this.id, ip: this.ip, port: this.port }
   }
+  static fromJSON(peer) {
+    return new Peer(peer.id, peer.ip, peer.port)
+  }
 }

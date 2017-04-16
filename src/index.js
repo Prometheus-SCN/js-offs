@@ -36,6 +36,7 @@ function createWindow () {
   let windowPosition = (process.platform === 'win32') ? 'trayBottomCenter' : 'trayCenter'
   node = new Node('OFFSYSTEM', '../offsystem')
   node.on('error', console.log)
+  node.on('bootstrapped',() => console.log('boostrapped'))
   node.once('ready', () => {
     let statusWin
     let hideStatusWin = () => {
@@ -58,9 +59,14 @@ function createWindow () {
       importWin.hide()
     }
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 512, height: 308, icon: icon})
+      importWin = new BrowserWindow({ width: 512, height: 268, icon: icon})
+      importWin.on('close', (e) => {
+        e.preventDefault()
+        importWin.hide()
+      })
+      importWin.setResizable(false)
       importWin.loadURL(`file://${path.join(__dirname, 'electron', 'import.html')}`)
-      importWin.webContents.openDevTools({})
+      //importWin.webContents.openDevTools({})
     }
     let openImportWin = () => {
       if (importWin) {

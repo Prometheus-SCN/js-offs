@@ -77,6 +77,7 @@ module.exports = class Node extends EventEmitter {
               let peerInfo = _peerInfo.get(this)
               client.portUnmapping({ public: peerInfo.port })
             })
+            this.blockRouter.bootstrap(() => this.emit('bootstrapped'))
           }
 
           let port = config.startPort - 1

@@ -95,9 +95,6 @@ module.exports = function (br) {
             if (err) {
               res.status(500).send("Server Error")
             }
-            if (!data) {
-              return res.status(404).send("Resource Not Found")
-            }
             let ofd = JSON.parse(data.toString('utf8'))
             ofdCache.set(url.fileHash, ofd)
             handleFolder(ofd)

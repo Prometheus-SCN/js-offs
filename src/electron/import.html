@@ -1,228 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Off System: Importer</title>
-    <link rel="stylesheet" href="./stylesheets/index.css">
-    <link rel="stylesheet" href="./stylesheets/progressjs.css">
-    <link rel="stylesheet" href="./stylesheets/bulma.css" />
-    <link rel="icon" href="./favicon.ico" type="image/x-icon">
-    <link rel="image_src" href="/images/off-logo.gif"/>
+  <meta charset="UTF-8">
+  <title>Off System: Importer</title>
+  <link rel="stylesheet" href="./stylesheets/index.css">
+  <link rel="stylesheet" href="./stylesheets/progressjs.css">
+  <link rel="stylesheet" href="./stylesheets/bulma.css"/>
+  <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <link rel="image_src" href="/images/off-logo.gif"/>
 </head>
 
-<body>
-<div id="container">
-    <div id="dropzone">
-        <h3 id="uploadMessage">Drag and Drop a File or Folder</h3>
-        <img id="uploadIcon" src="images/upload.svg" class="upload">
-    </div>
+<body style="overflow:hidden;">
+<div id="container" style="overflow:hidden;">
+  <div id="dropzone">
+    <h3 id="uploadMessage">Drag and Drop a File or Folder</h3>
+    <img id="uploadIcon" src="images/upload.svg" class="upload">
+  </div>
 </div>
 <div id="dztrash" style="display:none"></div>
 <div class="modal">
-    <div class="modal-background"></div>
-    <div class="modal-content" style="width: 300px">
-        <div class="notification is-rounded">
+  <div class="modal-background"></div>
+  <div class="modal-content" style="width: 300px">
+    <div class="notification is-rounded">
 
-                <h1 id="title" class="title">
-                    Import complete!
-                </h1>
-                <span id="link"></span>
-        </div>
+      <h1 id="title" class="title">
+        Import complete!
+      </h1>
+      <span id="link"></span>
     </div>
-    <div class="modal-close" onclick="toggleModal"></div>
+  </div>
+  <div class="modal-close" onclick="toggleModal"></div>
 </div>
 <style>
-    .notification {
-        word-wrap: break-word;
-    }
-    .title, .notification {
-        font-family: Odin;
-    }
+  .notification {
+    word-wrap: break-word;
+  }
+
+  .title, .notification {
+    font-family: Odin;
+  }
 </style>
 <script src="progress.js"></script>
 <script type="text/javascript">
-    window.$ = require('./jquery-3.1.1.min')
-    var toAb = require('to-array-buffer')
-    var Dropzone = require('./dropzone')
-    var completeModal =  $('.modal')[0]
-    var div = document.getElementById('dropzone');
-    var dropzone = new Dropzone(div, {
-        url: 'http://localhost:23402/offsystem',
-        previewsContainer: $('#dztrash')[0],
-        uploadMultiple: false,
-        autoProcessQueue: false
-    });
-    var loader = document.getElementById('loader');
-    var message = document.getElementById('uploadMessage');
-    var icon = document.getElementById('uploadIcon');
-    var timer
-    var isDropped= true
-    function toggleModal(){
-        if ($(completeModal).hasClass('is-active')) {
-            $(completeModal).removeClass('is-active')
-        } else {
-            $(completeModal).addClass('is-active')
-        }
+  window.$ = require('./jquery-3.1.1.min')
+  var Dropzone = require('./dropzone')
+  var completeModal = $('.modal')[ 0 ]
+  var div = document.getElementById('dropzone');
+  var dropzone = new Dropzone(div, {
+    url: 'http://localhost:23402/offsystem',
+    previewsContainer: $('#dztrash')[ 0 ],
+    uploadMultiple: false,
+    autoProcessQueue: false
+  });
+  var loader = document.getElementById('loader');
+  var message = document.getElementById('uploadMessage');
+  var icon = document.getElementById('uploadIcon');
+  var timer
+  var isDropped = true
+  function toggleModal () {
+    if ($(completeModal).hasClass('is-active')) {
+      $(completeModal).removeClass('is-active')
+    } else {
+      $(completeModal).addClass('is-active')
     }
-    $('.modal-close').click(toggleModal)
-    function enter (e) {
-        if (e.keyCode == 13) {
-            resolve()
-        }
-        return false
+  }
+  $('.modal-close').click(toggleModal)
+  function enter (e) {
+    if (e.keyCode == 13) {
+      resolve()
     }
-    function getRandomInt (min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    return false
+  }
+  function getRandomInt (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
 
-    function startLoader () {
-        message.innerHTML = 'Dissolving...';
-        var messages = [ 'Dissolving', 'Dissolving.', 'Dissolving..', 'Dissolving...' ];
-        var i = 0;
-        timer = setInterval(function () {
-            i++;
-            if (i > messages.length - 1) {
-                i = 0;
-            }
-            message.innerHTML = messages[ i ];
+  function startLoader () {
+    message.innerHTML = 'Dissolving...';
+    var messages = [ 'Dissolving', 'Dissolving.', 'Dissolving..', 'Dissolving...' ];
+    var i = 0;
+    timer = setInterval(function () {
+      i++;
+      if (i > messages.length - 1) {
+        i = 0;
+      }
+      message.innerHTML = messages[ i ];
 
-        }, 500);
-        icon.setAttribute('src', 'images/Preloader_' + getRandomInt(1, 7) + '.gif');
-        div.setAttribute('style', "background-color: #fff; outline: 5px solid #fff;")
-    }
+    }, 500);
+    icon.setAttribute('src', 'images/Preloader_' + getRandomInt(1, 7) + '.gif');
+    div.setAttribute('style', "background-color: #fff; outline: 5px solid #fff;")
+  }
 
-    function endLoader () {
-        toggleModal()
-        clearInterval(timer)
-        message.innerHTML = 'Drag and Drop a File or Folder';
-        icon.setAttribute('src', 'images/upload.svg');
-        div.setAttribute('style', "");
-    }
+  function endLoader () {
+    toggleModal()
+    clearInterval(timer)
+    message.innerHTML = 'Drag and Drop a File or Folder';
+    icon.setAttribute('src', 'images/upload.svg');
+    div.setAttribute('style', "");
+  }
 
-    function uploadFile (file, name, type, cb) {
-        if (typeof type === 'function'){
-            cb = type
-            type = null
-        }
-        if (typeof name === 'function'){
-            cb = name
-            name= null
-        }
-        var xhr = new XMLHttpRequest();
-        xhr.open('PUT', 'http://localhost:23402/offsystem', true);
-        xhr.setRequestHeader('server-address', 'http://localhost:23402');
-        xhr.setRequestHeader('type', type || file.type || 'application/octet-stream');
-        xhr.setRequestHeader('file-name', name || file.name);
-        xhr.setRequestHeader('stream-length', file.size);
-        xhr.addEventListener('load', (e) => {
-            progressJs().end()
-            if(e.target.status === 200) {
-                return cb(null, e.target.responseText)
-            } else {
-                return cb(e.target.responseText)
-            }
-        })
-        xhr.addEventListener('error', function () {
-            progressJs().end()
-            return cb(new Error('Upload Failure'))
-        })
-        xhr.upload.addEventListener('progress', function (e) {
-            progressJs().set((e.loaded / e.total) * 100)
-        })
-        progressJs().start()
-        xhr.send(file);
+  function uploadFile (file, name, type, cb) {
+    if (typeof type === 'function') {
+      cb = type
+      type = null
     }
-    function complete (err, url) {
-        if(err){
-            $('#link').text(err.toString())
-        } else {
-            $('#link').text(url)
-        }
-        isDropped = false
-        setTimeout(endLoader, 1000)
+    if (typeof name === 'function') {
+      cb = name
+      name = null
     }
-    dropzone.on('drop', function (e) {
-        isDropped = true
-        var length = e.dataTransfer.items.length
-        for (var i = 0; i < length; i++) {
-            var entry = e.dataTransfer.items[ i ].webkitGetAsEntry();
-            //dropzone.removeFile(e.dataTransfer.items[ i ].getAsFile())
-            importer(entry, complete)
-        }
-    });
-    dropzone.on('addedfile', function (file) {
-        if (isDropped) {
-            return
-        }
-        importer(file, complete)
-        //dropzone.removeFile(file)
+    var xhr = new XMLHttpRequest();
+    xhr.open('PUT', 'http://localhost:23402/offsystem', true);
+    xhr.setRequestHeader('server-address', 'http://localhost:23402');
+    xhr.setRequestHeader('type', type || file.type || 'application/octet-stream');
+    xhr.setRequestHeader('file-name', name || file.name);
+    xhr.setRequestHeader('stream-length', file.size);
+    xhr.addEventListener('load', (e) => {
+      progressJs().end()
+      if (e.target.status === 200) {
+        return cb(null, e.target.responseText)
+      } else {
+        return cb(e.target.responseText)
+      }
     })
-    function importer (entry, cb) {
-        if (entry.isFile) {
-            entry.file((file) => {
-                uploadFile(file, cb)
-            })
-        } else if (entry.isDirectory) {
-            let ofd = {}
-            let name = entry.name + '.ofd'
-            dirImporter(entry, ofd, entry, () => {
-                let keys = Object.keys(ofd)
-                let i = -1
-                let next = (err, url) => {
-                    if(err){
-                       return cb(err)
-                    }
-                    if(url) {
-                        ofd[keys[i]] = url
-                    }
-                    i++
-                    if(i < keys.length) {
-                        uploadFile(ofd[keys[i]], next)
-                    } else {
-                        let text = JSON.stringify(ofd)
-                        console.log(ofd)
-                        let file = new File([text], {type: 'text/plain'})
-                        uploadFile(file, name,'offsystem/directory', (err, url) => {
-                            if(err) {
-                                return cb(err)
-                            }
-                            return cb(err, url)
-                        })
-                    }
-                }
-                next()
-            })
-        }
+    xhr.addEventListener('error', function () {
+      progressJs().end()
+      return cb(new Error('Upload Failure'))
+    })
+    xhr.upload.addEventListener('progress', function (e) {
+      progressJs().set((e.loaded / e.total) * 100)
+    })
+    progressJs().start()
+    xhr.send(file);
+  }
+  function complete (err, url) {
+    if (err) {
+      $('#link').text(err.toString())
+    } else {
+      $('#link').text(url)
     }
-    function dirImporter(entry, ofd, dir, cb){
-        //remove the first directory from the path
-        var dirPath
-        if ( dir === entry ) {
-            dirPath = ''
-        } else {
-            dirPath = (dir ? dir + '/' : '') + entry.name
-        }
-        if (entry.isFile) {
-            entry.file((file) => {
-                ofd[dirPath] = file
-                return cb()
-            })
-        } else if (entry.isDirectory) {
-            var dirReader = entry.createReader()
-            dirReader.readEntries((entries) => {
-                var i = -1
-                var next = () => {
-                    i++
-                    if(i < entries.length){
-                        dirImporter(entries[i], ofd, dirPath, next)
-                    } else {
-                        return cb()
-                    }
-                }
-                next()
-            })
-        }
+    isDropped = false
+    setTimeout(endLoader, 1000)
+  }
+  dropzone.on('drop', function (e) {
+    isDropped = true
+    var length = e.dataTransfer.items.length
+    for (var i = 0; i < length; i++) {
+      var entry = e.dataTransfer.items[ i ].webkitGetAsEntry();
+      //dropzone.removeFile(e.dataTransfer.items[ i ].getAsFile())
+      importer(entry, complete)
     }
+  });
+  dropzone.on('addedfile', function (file) {
+    if (isDropped) {
+      return
+    }
+    importer(file, complete)
+    //dropzone.removeFile(file)
+  })
+  function importer (entry, cb) {
+    if (entry.isFile) {
+      entry.file((file) => {
+        uploadFile(file, cb)
+      })
+    } else if (entry.isDirectory) {
+      let ofd = {}
+      let name = entry.name + '.ofd'
+      dirImporter(entry, ofd, entry, () => {
+        let keys = Object.keys(ofd)
+        let i = -1
+        let next = (err, url) => {
+          if (err) {
+            return cb(err)
+          }
+          if (url) {
+            ofd[ keys[ i ] ] = url
+          }
+          i++
+          if (i < keys.length) {
+            uploadFile(ofd[ keys[ i ] ], next)
+          } else {
+            let text = JSON.stringify(ofd)
+            let file = new File([ text ], { type: 'text/plain' })
+            uploadFile(file, name, 'offsystem/directory', (err, url) => {
+              if (err) {
+                return cb(err)
+              }
+              return cb(err, url)
+            })
+          }
+        }
+        next()
+      })
+    }
+  }
+  function dirImporter (entry, ofd, dir, cb) {
+    //remove the first directory from the path
+    var dirPath
+    if (dir === entry) {
+      dirPath = ''
+    } else {
+      dirPath = (dir ? dir + '/' : '') + entry.name
+    }
+    if (entry.isFile) {
+      entry.file((file) => {
+        ofd[ dirPath ] = file
+        return cb()
+      })
+    } else if (entry.isDirectory) {
+      var dirReader = entry.createReader()
+      dirReader.readEntries((entries) => {
+        var i = -1
+        var next = () => {
+          i++
+          if (i < entries.length) {
+            dirImporter(entries[ i ], ofd, dirPath, next)
+          } else {
+            return cb()
+          }
+        }
+        next()
+      })
+    }
+  }
 </script>
 
 </body>

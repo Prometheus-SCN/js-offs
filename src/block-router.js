@@ -19,6 +19,7 @@ let _mc = new WeakMap()
 let _nc = new WeakMap()
 let _rpc = new WeakMap()
 let _scheduler = new WeakMap()
+let _self = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
   constructor (path, peer) {
@@ -37,6 +38,7 @@ module.exports = class BlockRouter extends EventEmitter {
     _mc.set(this, mc)
     _nc.set(this, nc)
     _scheduler.set(this, scheduler)
+    _self.set(this, peer)
 
     bc.on('block', (block)=> {
       rpc.store(block.hash, config.block, block.data, 1, ()=> {})
@@ -320,7 +322,24 @@ module.exports = class BlockRouter extends EventEmitter {
     let rpc = _rpc.get(this)
     rpc.connect(peer, cb)
   }
-
+  bootstrap (cb) {
+    let i = -1
+    let next = (err) => {
+      if (err) {
+        this.emit('error', err)
+      }
+      i++
+      if (i < config.bootstrap.length){
+        let peer = Peer.fromJSON(config.bootstrap[i])
+        this.connect(peer, next)
+      } else {
+        let rpc = _rpc.get(this)
+        let self = _self.get(this)
+        rpc.findNode(self, cb)
+      }
+    }
+    next()
+  }
   listen () {
     let rpc = _rpc.get(this)
     rpc.listen()
