@@ -3,7 +3,9 @@
     src: url('../font/Odin%20Rounded%20-%20Bold.otf');
 }
 
-html {
+html, body, #container, #dropzone {
+    height: 100%;
+    width: 100%;
 }
 
 body {

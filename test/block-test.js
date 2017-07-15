@@ -1,7 +1,7 @@
 const expect = require('chai').expect
 const Block = require('../src/block')
 const crypto = require('crypto')
-const config = require('../config')
+const config = require('../src/config')
 
 describe('testing block functionality', function () {
   it('testing invalid instantiation parameter errors', function () {
@@ -87,7 +87,5 @@ describe('testing block functionality', function () {
       nanoBlock = new Block(nanoData, config.nanoBlockSize)
       expect(Buffer.compare(nanoBlock.data, nanoData)).to.equal(0)
     })
-
-
   })
 })

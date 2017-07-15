@@ -3,7 +3,6 @@ const util = require('./utility')
 const crypto = require('crypto')
 const xor = require('buffer-xor')
 const bs58 = require('bs58')
-const config = require('../config')
 
 let _data = new WeakMap()
 let _key = new WeakMap()

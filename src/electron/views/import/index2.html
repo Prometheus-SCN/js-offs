@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Off System: Importer</title>
-  <link rel="stylesheet" href="./stylesheets/index.css">
-  <link rel="stylesheet" href="./stylesheets/progressjs.css">
-  <link rel="stylesheet" href="./stylesheets/bulma.css"/>
-  <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="../../stylesheets/index.css">
+  <link rel="stylesheet" href="../../stylesheets/progressjs.css">
+  <link rel="stylesheet" href="../../stylesheets/bulma.css"/>
+  <link rel="icon" href="../../favicon.ico" type="image/x-icon">
   <link rel="image_src" href="/images/off-logo.gif"/>
 </head>
 
@@ -14,13 +14,13 @@
 <div id="container" style="overflow:hidden;">
   <div id="dropzone">
     <h3 id="uploadMessage">Drag and Drop a File or Folder</h3>
-    <img id="uploadIcon" src="images/upload.svg" class="upload">
+    <img id="uploadIcon" src="../../images/upload.svg" class="upload">
   </div>
 </div>
 <div id="dztrash" style="display:none"></div>
 <div class="modal">
   <div class="modal-background"></div>
-  <div class="modal-content" style="width: 300px">
+  <div class="modal-content">
     <div class="notification is-rounded">
 
       <h1 id="title" class="title">
@@ -40,10 +40,10 @@
     font-family: Odin;
   }
 </style>
-<script src="progress.js"></script>
+<script src="../../scripts/progress.js"></script>
 <script type="text/javascript">
-  window.$ = require('./jquery-3.1.1.min')
-  var Dropzone = require('./dropzone')
+  window.$ = require('./../../scripts/jquery-3.1.1.min.js')
+  var Dropzone = require('./../../scripts/dropzone')
   var completeModal = $('.modal')[ 0 ]
   var div = document.getElementById('dropzone');
   var dropzone = new Dropzone(div, {

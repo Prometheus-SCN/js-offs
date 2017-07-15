@@ -1,5 +1,5 @@
 'use strict'
-const config = require('../config')
+const config = require('./config')
 let _urls = new WeakMap()
 module.export = class Recycler {
   constructor (urls) {

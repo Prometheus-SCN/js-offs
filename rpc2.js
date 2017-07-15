@@ -1,6 +1,6 @@
 const rpc = require('./src/rpc')
 const Peer = require('./src/peer')
-const config = require('./config')
+const config = require('./src/config')
 const collect = require('collect-stream')
 const BlockRouter = require('./src/block-router')
 const util = require('./src/utility')

@@ -2,9 +2,8 @@ const { app, Menu, MenuItem, Tray, BrowserWindow } = require('electron')
 const path = require('path')
 const url = require('url')
 const Node = require('./node')
-const config = require('../config')
+const config = require('./config')
 const { ipcMain } = require('electron')
-//const menubar = require('menubar')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
 let win
 let node
@@ -45,7 +44,7 @@ function createWindow () {
     let createStatusWin = () => {
       statusWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
       statusWin.on('blur', hideStatusWin)
-      statusWin.loadURL(`file://${path.join(__dirname, 'electron', 'status.html')}`)
+      statusWin.loadURL(`file://${path.join(__dirname, 'electron','views','status', 'index.html')}`)
     }
     let openStatusWin = () => {
       if (statusWin) {
@@ -59,14 +58,14 @@ function createWindow () {
       importWin.hide()
     }
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 512, height: 268, icon: icon})
+      importWin = new BrowserWindow({ width: 530, height: 270, icon: icon})
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
       })
-      importWin.setResizable(false)
-      importWin.loadURL(`file://${path.join(__dirname, 'electron', 'import.html')}`)
-      //importWin.webContents.openDevTools({})
+      // importWin.setResizable(false)
+      importWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'import', 'index.html')}`)
+      // importWin.webContents.openDevTools({})
     }
     let openImportWin = () => {
       if (importWin) {
@@ -82,7 +81,7 @@ function createWindow () {
     let createExportWin = () => {
       exportWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
       exportWin.on('blur', hideExportWin)
-      exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'export.html')}`)
+      exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'export','export.html')}`)
     }
     let openExportWin = () => {
       if (exportWin) {
@@ -98,7 +97,7 @@ function createWindow () {
     let createConnectWin = () => {
       connectWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
       connectWin.on('blur', hideConnectWin)
-      connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'connect.html')}`)
+      connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect','connect.html')}`)
     }
 
     let openConnectWin = () => {
@@ -115,7 +114,7 @@ function createWindow () {
     let createConfigurationWin = () => {
       configurationWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
       configurationWin.on('blur', hideConfigurationWin)
-      configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'configuration.html')}`)
+      configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'configuration', 'configuration.html')}`)
     }
     let openConfigurationWin = () => {
       if (configurationWin) {

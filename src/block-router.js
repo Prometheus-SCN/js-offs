@@ -1,6 +1,6 @@
 'use strict'
 const EventEmitter = require('events').EventEmitter
-const config = require('../config')
+const config = require('./config')
 const BlockCache = require('./block-cache')
 const Block = require('./block')
 const ReadableOffStream = require('./readable-off-stream')
@@ -10,7 +10,6 @@ const bs58 = require('bs58')
 const RPC = require('./rpc')
 const Peer = require('./peer')
 const Bucket = require('./bucket')
-const util = require('util')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Scheduler = require('./scheduler')
 
@@ -143,7 +142,7 @@ module.exports = class BlockRouter extends EventEmitter {
       }
       bc.storeBlockAt(block, number, cb)
     }
-    rpc.getValue = (hash, type, cb)=> {
+    rpc.getValue = (hash, type, cb) => {
       let bc
       switch (type) {
         case 1:

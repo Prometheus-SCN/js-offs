@@ -1,7 +1,7 @@
 'use strict'
 const EventEmitter = require('events').EventEmitter
 const Block = require('./block')
-const config = require('../config')
+const config = require('./config')
 const FibonacciCache = require('./fibonacci-cache')
 const ScalableCuckooFilter = require('cuckoo-filter').ScalableCuckooFilter
 const pth = require('path')

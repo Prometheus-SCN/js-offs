@@ -2,7 +2,7 @@
 const express = require('express')
 const OffUrl = require('./off-url')
 const collect = require('collect-stream')
-const config = require('../config')
+const config = require('./config')
 const through = require('through2')
 const pth = require('path')
 let basename
@@ -42,9 +42,6 @@ module.exports = function (br) {
       }
       if (url.contentType === 'offsystem/directory') {
         let handleFolder = function (ofd) {
-          if(!ofd) {
-            throw new Error("WTF")
-          }
           let stats = parse(url.fileName) //This is where we figure out if it is for the base directory or some file or directory withi
           if (stats.ext === '.ofd') {
             let index = ofd['index.html']

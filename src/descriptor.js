@@ -1,6 +1,6 @@
 'use strict'
 const Block = require('./block')
-const config = require('../config.js')
+const config = require('./config')
 let _data = new WeakMap()
 const _descriptorPad = config.descriptorPad
 let _blockArr = new WeakMap()

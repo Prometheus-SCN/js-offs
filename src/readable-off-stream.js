@@ -1,7 +1,7 @@
 const Readable = require('readable-stream').Readable;
 const BlockCache = require('./block-cache')
 const OffUrl = require('./off-url')
-const config = require('../config')
+const config = require('./config')
 const bs58 = require('bs58')
 let _blockCache = new WeakMap()
 let _descriptor = new WeakMap()
