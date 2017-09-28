@@ -15,7 +15,7 @@ let defaults = {
   blockSize: 128000,
   miniBlockSize: 1000,
   nanoBlockSize: 136,
-  descriptorPad: 34,
+  descriptorPad: 32,
   scale: 2,
   filterSize: 20000,
   fingerprintSize: 8,

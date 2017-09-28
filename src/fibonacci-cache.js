@@ -223,7 +223,7 @@ module.exports = class FibonacciCache extends EventEmitter {
     let buckets = _buckets.get(this)
     let blockSize = _blockSize.get(this)
 
-    let index = buckets.findIndex((bucket)=> {return bucket.contains(block.key)})
+    let index = buckets.findIndex((bucket) => {return bucket.contains(block.key)})
     let found = buckets[ index ]
     if (!found) {
       if (this.full) {

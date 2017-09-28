@@ -1,17 +1,17 @@
 'use strict'
 
-const blake2 = require('blake2')
+const crypto = require('crypto')
 const pth = require('path')
 
 let util = {}
 
 util.hash = (data) => {
-  let hash = blake2.createHash('blake2b', { digestLength: 34 })
+  let hash = crypto.createHash('sha256', { digestLength: 34 })
   hash.update(data)
   return hash.digest()
 }
 
-util.hasher = () => {return blake2.createHash('blake2b', { digestLength: 32 })}
+util.hasher = () => {return crypto.createHash('sha256', { digestLength: 34 })}
 
 util.sanitize = (key, path)=> {
   if (typeof key === 'string') {

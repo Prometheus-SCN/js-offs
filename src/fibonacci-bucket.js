@@ -32,7 +32,7 @@ function fibSequence (num) {
 module.exports = class FibonacciBucket {
   constructor (path, blockSize, number) {
     if (!number) {
-      number = 1
+      number = 3
     }
     if (!Number.isInteger(number)) {
       throw TypeError('Invalid Number')

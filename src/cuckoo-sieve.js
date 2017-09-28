@@ -62,16 +62,21 @@ module.exports = class CuckooSieve {
     let mark = 0
     for (let i = sieve.length - 1; i >= 0; i--) {
       let rank = sieve[ i ]
-      if (rank.contains(item)) {
+      if (rank && rank.contains(item)) {
         rank.remove(item)
+        //remove empty ranks to save space
+        if (!rank.count) {
+          sieve[ i ] = null
+        }
         mark = i + 1
         break;
       }
     }
-    if (mark > sieve.length - 1) {
-      sieve.push(new Cuckoo(cfSize, bSize, fpSize, scale))
+    if (!sieve[ mark ]) {
+      sieve[ mark ] = new Cuckoo(cfSize, bSize, fpSize, scale)
     }
     sieve[ mark ].add(item)
+    return mark + 1
   }
 
   remove (item) {
@@ -79,9 +84,27 @@ module.exports = class CuckooSieve {
     for (let i = sieve.length - 1; i >= 0; i--) {
       let rank = sieve[ i ]
       if (rank.remove(item)) {
-        break;
+        //remove empty ranks to save space
+        if (!rank.count) {
+          sieve[ i ] = null
+        }
+        // Trim the extraneous ranks at the end
+        if (i === (sieve.length - 1)) {
+          for (let j = sieve.length - 1; j >= 0; j--) {
+            if (sieve[ j ]) {
+              if (j < sieve.length - 2) {
+                sieve = sieve.slice(0, j + 1)
+                _sieve.set(this, sieve)
+              } else { // break if already trimmed
+                break
+              }
+            }
+          }
+        }
+        return true
       }
     }
+    return false
   }
 
   get max () {
@@ -93,11 +116,11 @@ module.exports = class CuckooSieve {
     let sieve = _sieve.get(this)
     for (let i = sieve.length - 1; i >= 0; i--) {
       let rank = sieve[ i ]
-      if (rank.contains(item)) {
+      if (rank && rank.contains(item)) {
         return (i + 1)
       }
     }
-    return 0
+    return 0 //NOTE: zero is not a rank but a not found status
   }
 
   toString () {
@@ -142,12 +165,23 @@ module.exports = class CuckooSieve {
       fpSize: fpSize,
       bSize: bSize,
       scale: scale,
-      sieve: sieve.map((filter)=> {return filter.toJSON()})
+      sieve: sieve.map((filter)=> {
+        if (filter) {
+          return filter.toJSON()
+        }
+        return null
+      })
     }
     return obj
   }
 
   static fromJSON (obj) {
+    obj.sieve = obj.sieve.map((filter)=> {
+      if(filter) {
+        return Cuckoo.fromJSON(filter)
+      }
+      return null
+    })
     return new CuckooSieve(obj)
   }
 
@@ -158,7 +192,6 @@ module.exports = class CuckooSieve {
 
   static fromCBOR (buf) {
     let obj = cbor.decode(toAb(buf))
-    obj.sieve = obj.sieve.map((filter)=> {return Cuckoo.fromJSON(filter)})
     return CuckooSieve.fromJSON(obj)
   }
 }
