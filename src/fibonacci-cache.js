@@ -537,7 +537,7 @@ module.exports = class FibonacciCache extends EventEmitter {
       return process.nextTick(()=> {return cb(new Error("Bucket number exceeds number of buckets"))})
     }
     if (number < 1) { // if it is zero then pull from the largest bucket since 0 is not a valid number
-      this.randomBlocks(1, usageFilter, (err, items, blocks)=> {
+      this.randomBlocks(1, usageFilter, (err, items, blocks) => {
         if (err) {
           return process.nextTick(()=> {cb(err)})
         }

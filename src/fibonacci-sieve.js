@@ -1,3 +1,4 @@
+const EventEmitter = require('events').EventEmitter
 const cbor = require('cbor-js')
 const toAb = require('to-array-buffer')
 const abToB = require('arraybuffer-to-buffer')
@@ -20,8 +21,9 @@ let _bSize = new WeakMap()
 let _fpSize = new WeakMap()
 let _scale = new WeakMap()
 let _offset = new WeakMap()
-module.exports = class FibonacciSieve {
+module.exports = class FibonacciSieve extends EventEmitter {
   constructor(cfSize, bSize, fpSize, scale, offset) {
+    super()
     if (typeof cfSize == 'object') {
       if (!Number.isInteger(cfSize.cfSize)) {
         throw new TypeError('Invalid Filter Size')
@@ -98,11 +100,11 @@ module.exports = class FibonacciSieve {
       buckets[ number ] = new CuckooSieve(cfSize, bSize, fpSize, scale)
       buckets[ number ].limit = fibSequence (number)
     }
-    let rank = buckets[ number ].tally(item)
-    if (rank >= buckets[ number ].limit) {
-      rank = this.promote(number, number + 1, item)
+    if (buckets[ number ].tally(item) >= buckets[ number ].limit) {
+      this.promote(number, number + 1, item)
+      return true
     }
-    return rank
+    return false
   }
 
   remove (item) {
@@ -117,7 +119,7 @@ module.exports = class FibonacciSieve {
 
   get max () {
     let buckets = _buckets.get(this)
-    return buckets.length
+    return buckets.length - 1
   }
 
   number (item) {
@@ -129,6 +131,17 @@ module.exports = class FibonacciSieve {
       }
     }
     return 0
+  }
+
+  countAtNumber (number) {
+    if (!Number.isInteger(rank)) {
+      throw new TypeError("Invalid Number")
+    }
+    if (number > this.max || number < 0) {
+      return 0
+    }
+    let buckets = _buckets.get(this)
+    return buckets[ number ].count
   }
 
   toJSON () {

@@ -8,11 +8,10 @@ let _max = new WeakMap()
 let _cutPoint = new WeakMap()
 let _tuppleBytes = new WeakMap()
 let _blockSize = new WeakMap()
-let _blockCache = new WeakMap()
 const _tupleSize = config.tupleSize
 
 module.exports = class Descriptor {
-  constructor (blockSize, blockCache, streamLength) {
+  constructor (blockSize, streamLength) {
     if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
     }
@@ -24,7 +23,6 @@ module.exports = class Descriptor {
     _blockSize.set(this, blockSize)
     _data.set(this, new Buffer(0))
     _blockArr.set(this, [])
-    _blockCache.set(this, blockCache)
     _max.set(this, Math.floor(blockSize / _descriptorPad) * _descriptorPad)
   }
 
@@ -40,9 +38,8 @@ module.exports = class Descriptor {
         throw new TypeError('Invalid Tuple')
       }
       let data = _data.get(this)
-      let blockCache = _blockCache.get(this)
       for (let block of blocks) {
-        blockCache.local.add(block.key)
+        //TODO Store files to keep local?
         data = Buffer.concat([ data, block.hash ])
       }
       _data.set(this, data)
@@ -58,7 +55,6 @@ module.exports = class Descriptor {
   blocks () {
     let blockArr = _blockArr.get(this)
     let blockSize = _blockSize.get(this)
-    let blockCache = _blockCache.get(this)
     let tuppleBytes = _tuppleBytes.get(this)
     let data = _data.get(this)
     let cutPoint = _cutPoint.get(this)
@@ -84,7 +80,7 @@ module.exports = class Descriptor {
           prior = null
         }
         let descBlock = new Block(descBlocks[ i ], blockSize)
-        blockCache.local.add(descBlock.key)
+        //TODO Store files to keep local?
         prior = descBlock.hash
         let lasthash = descBlock.data.slice(0, cutPoint).slice((cutPoint - _descriptorPad), cutPoint)
         blockArr.unshift(descBlock)

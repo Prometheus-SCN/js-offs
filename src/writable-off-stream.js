@@ -1,5 +1,4 @@
 'use strict'
-const CuckooFilter = require('cuckoo-filter').ScalableCuckooFilter
 const blocker = require('block-stream2')
 const Writable = require('readable-stream').Writable;
 const BlockCache = require('./block-cache')
@@ -14,7 +13,6 @@ const streamifier = require('streamifier')
 const OffUrl = require('./off-url')
 const _tupleSize = config.tupleSize
 const _blockSize = new WeakMap()
-let _path = new WeakMap()
 let _blockCache = new WeakMap()
 let _hasher = new WeakMap()
 let _descriptor = new WeakMap()
@@ -22,8 +20,8 @@ let _accumulator = new WeakMap()
 let _url = new WeakMap()
 let _size = new WeakMap()
 let _count = new WeakMap()
-let _usageFilter = new WeakMap()
-let _items = new WeakMap()
+let _randomList = new WeakMap()
+let _writer = new WeakMap()
 
 module.exports = class WritableOffStream extends Writable {
   constructor (blockSize, opts) {
@@ -48,29 +46,118 @@ module.exports = class WritableOffStream extends Writable {
       _url.set(this, opts.url)
     }
 
-    if (opts.url.streamLength) {
-      let blocks = Math.ceil(opts.url.streamLength / blockSize)
-      _usageFilter.set(this, new CuckooFilter(blocks, config.bucketSize, config.fingerprintSize, config.scale))
-    } else {
-      _usageFilter.set(this, new CuckooFilter(200, config.bucketSize, config.fingerprintSize, config.scale))
-    }
     _blockSize.set(this, blockSize)
     _blockCache.set(this, opts.bc)
-    _descriptor.set(this, new Descriptor(blockSize, opts.bc, opts.url.streamLength))
+    _descriptor.set(this, new Descriptor(blockSize, opts.url.streamLength))
     _accumulator.set(this, new Buffer(0))
     _hasher.set(this, util.hasher())
     _size.set(this, 0)
     _count.set(this, 0)
-    this.on('finish', ()=> {
+
+    // this is the private function that does all the work of writing a block
+    let writer = (buf, enc, nxt) => {
+      //hash the original data
+      let hasher = _hasher.get(this)
+      hasher.update(buf)
+      _hasher.set(this, hasher)
+
+      let bc = _blockCache.get(this)
+      let randomList = _randomList.get(this)
+      let url = _url.get(this)
+      let randoms = []
+
+      //gather the randoms from the cache
+      let gather = () => {
+        let i = -1
+        let randomList = _randomList.get(this)
+        let next = (err, block) => {
+          if (err) {
+            return this.emit('error', err)
+          }
+          if (block) {
+            randoms.push(block)
+          }
+          i++
+          if (i < (_tupleSize - 1)) {
+            let random = randomList.shift()
+            bc.get(random, next)
+          } else {
+            return process()
+          }
+        }
+        next()
+      }
+
+      //process the randoms into a tuple
+      let process = () => {
+        //create off block from accumulated buffer
+        let count = _count.get(this)
+        let offBlock = new Block(buf, blockSize)
+        if (count === 0) {
+          url.hash = offBlock.key
+          _url.set(this, url)
+        }
+
+        let descriptor = _descriptor.get(this)
+        let tuple = []
+        for (let i = 0; i < randoms.length; i++) {
+          offBlock = offBlock.parity(randoms[ i ])
+          tuple.push(randoms[ i ])
+        }
+        // Save the first three off blocks as part of the url
+        if (count < 3) {
+          let url = _url.get(this)
+          url[ 'tupleBlock' + (count + 1) ] = offBlock.key
+          _url.set(this, url)
+        }
+        // TODO: Count may not be neccessary
+        count++
+        _count.set(this, count)
+
+        tuple.unshift(offBlock)
+        descriptor.tuple(tuple)
+        _descriptor.set(this, descriptor)
+
+        //save resultant off block
+        bc.put(offBlock, (err)=> {
+          if (err) {
+            this.emit('error', err)
+            return
+          }
+          return nxt()
+        })
+        //Save block to network
+        bc.emit('block', offBlock)
+      }
+      //Get the keys of all the randoms needed for writing this file's representations
+      if (!randomList) {
+        bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (_tupleSize - 1)), (err, randoms) => {
+          if (err) {
+            return this.emit('error', err)
+          }
+          randomList = randoms
+          _randomList.set(this, randomList)
+          gather()
+        })
+      } else {
+        gather()
+      }
+
+    }
+    _writer.set(this, writer)
+
+    // This is the finish event that closes out the stream and produces the final url
+    this.on('finish', () => {
       let accumulator = _accumulator.get(this)
       let bc = _blockCache.get(this)
 
       //callback to help close out the stream with a url
-      let genURL = ()=> {
+      // Store each descriptor block
+      let genURL = () => {
         let descriptor = _descriptor.get(this)
         let dBlocks = descriptor.blocks()
         let i = -1
-        let next = (err)=> {
+        let next = (err) => {
           if (err) {
             this.emit('error', err)
             return
@@ -78,12 +165,14 @@ module.exports = class WritableOffStream extends Writable {
           i++
           if (i < dBlocks.length) {
             let block = dBlocks[ i ]
-            bc.put(block, (err)=> {
+            bc.put(block, (err) => {
               if (err) {
-                return process.nextTick(()=> {next(err)})
+                return next(err)
               }
-              return process.nextTick(()=> {next(err)})
+              return next(err)
             })
+            //Save block to network
+            bc.emit('block', block)
           } else {
             let hasher = _hasher.get(this)
             let url = _url.get(this)
@@ -112,146 +201,33 @@ module.exports = class WritableOffStream extends Writable {
 
         //Start Chunking and processing chunks into blocks
         bufStream.pipe(blocker({ size: blockSize, zeroPadding: false }))
-          .pipe(through((buf, enc, nxt)=> {
-            let bc = _blockCache.get(this)
-            let items = _items.get(this)
-            let usageFilter = _usageFilter.get(this)
-
-            bc.randomBlocks((_tupleSize - 1), usageFilter, items, (err, items, randoms)=> {
-              if (err) {
-                this.emit('error', err)
-                return
-              }
-              _items.set(this, items)
-              //create off block from
-              let count = _count.get(this)
-              let offBlock = new Block(buf, blockSize)
-              if (count === 0) {
-                let url = _url.get(this)
-                url.hash = offBlock.key
-                _url.set(this, url)
-              }
-              let descriptor = _descriptor.get(this)
-              let tuple = []
-              for (let i = 0; i < randoms.length; i++) {
-                offBlock = offBlock.parity(randoms[ i ])
-                tuple.push(randoms[ i ])
-              }
-              if (count < _tupleSize) {
-                let url = _url.get(this)
-                url[ 'tupleBlock' + (count + 1) ] = offBlock.key
-                _url.set(this, url)
-              }
-
-              count++
-              _count.set(this, count)
-              tuple.unshift(offBlock)
-
-              for (let i; i < tuple.length; i++) {
-                usageFilter.add(tuple[ i ].key)
-              }
-
-              descriptor.tuple(tuple)
-              _descriptor.set(this, descriptor)
-
-              bc.put(offBlock, (err)=> {
-                if (err) {
-                  this.emit('error', err)
-                  return
-                }
-                return process.nextTick(()=> {nxt(null, buf)})
-              })
-              bc.emit('block', offBlock)
-            })
-          }))//hash original file
-          .pipe(through((buf, enc, nxt)=> {
-            let hasher = _hasher.get(this)
-            hasher.update(buf)
-            _hasher.set(this, hasher)
-            return process.nextTick(()=> {nxt()})
-          }))
+          .pipe(through(writer))
           .on('finish', genURL)
       } else {
-        process.nextTick(genURL)
+        genURL()
       }
     })
   }
 
-  get path () {
-    return _path.get(this)
-  }
-
-  _write (buf, enc, next) {
+  _write (buf, enc, nxt) {
     // we need to accumulate when the bufs are tiny
     let blockSize = _blockSize.get(this)
     let accumulator = _accumulator.get(this)
     let size = _size.get(this)
     size += buf.length
     _size.set(this, size)
+
     accumulator = Buffer.concat([ accumulator, buf ])
     _accumulator.set(this, accumulator)
     if (accumulator.length < blockSize) {
-      return next()
+      return nxt()
     } else {
-      buf = accumulator.slice(0, blockSize)
+      let writer = _writer.get(this)
+      //Break off a chunk from the accumulated data
+      let buf = accumulator.slice(0, blockSize)
       accumulator = accumulator.slice(blockSize)
       _accumulator.set(this, accumulator)
-      let hasher = _hasher.get(this)
-      hasher.update(buf)
-      _hasher.set(this, hasher)
-      let bc = _blockCache.get(this)
-      let usageFilter = _usageFilter.get(this)
-      let items = _items.get(this)
-      bc.randomBlocks((_tupleSize - 1), usageFilter, items, (err, items, randoms)=> {
-        if (err) {
-          this.emit('error', err)
-          return
-        }
-        _items.set(this, items)
-        //create off block from
-        let count = _count.get(this)
-        let offBlock = new Block(buf, blockSize)
-        if (count === 0) {
-          let url = _url.get(this)
-          url.hash = offBlock.key
-          _url.set(this, url)
-        }
-
-        let descriptor = _descriptor.get(this)
-        let tuple = []
-        for (let i = 0; i < randoms.length; i++) {
-          offBlock = offBlock.parity(randoms[ i ])
-          tuple.push(randoms[ i ])
-        }
-
-        if (count < 3) {
-          let url = _url.get(this)
-          url[ 'tupleBlock' + (count + 1) ] = offBlock.key
-          _url.set(this, url)
-        }
-
-        count++
-        _count.set(this, count)
-
-        tuple.unshift(offBlock)
-
-        for (let i; i < tuple.length; i++) {
-          usageFilter.add(tuple[ i ].key)
-        }
-
-        descriptor.tuple(tuple)
-        _descriptor.set(this, descriptor)
-
-        //save resultant off block
-        bc.put(offBlock, (err)=> {
-          if (err) {
-            this.emit('error', err)
-            return
-          }
-          return process.nextTick(next)
-        })
-        bc.emit('block', offBlock)
-      })
+      writer(buf, enc, nxt)
     }
   }
 

@@ -181,7 +181,6 @@ module.exports = class FibonacciBucket {
       }
       return process.nextTick(()=> {cb(err)})
     })
-
   }
 
   save (cb) {
