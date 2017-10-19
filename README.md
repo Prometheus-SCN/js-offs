@@ -13,10 +13,8 @@ Very much like a physical key, an off-system URL grants acccess to content to an
 This can be considered a completely redeveloped version of the off-system and is not compatible with older versions. This version features the following:
 * New URL format
 * New REST API's for storing and accessing content
-* New Storage algorithms for optimizing block cache hits
 * Static Website Hosting
 * New Altruistic network algorithm for optimizing block cache hits
-* Block popularity tracking
 * Content Representation Recycling
 
 ## Efficiency
