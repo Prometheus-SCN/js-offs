@@ -12,6 +12,7 @@ const Peer = require('./peer')
 const Bucket = require('./bucket')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Scheduler = require('./scheduler')
+const pth = require('path')
 
 let _bc = new WeakMap()
 let _mc = new WeakMap()
@@ -22,6 +23,9 @@ let _self = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
   constructor (path, peer) {
+    if (typeof path !== 'string') {
+      throw new TypeError('Invalid Path')
+    }
     if (!(peer instanceof Peer)) {
       throw new TypeError('Invalid Peer')
     }
@@ -29,9 +33,9 @@ module.exports = class BlockRouter extends EventEmitter {
     let bucket = new Bucket(peer.id, config.bucketSize)
     let rpc = new RPC(peer, bucket, this.rpcInterface())
     _rpc.set(this, rpc)
-    let bc = new BlockCache(path + config.blockPath, config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
-    let mc = new BlockCache(path + config.miniPath, config.miniBlockSize, config.miniBlockCacheSize, this.cacheInterface(config.mini))
-    let nc = new BlockCache(path + config.nanoPath, config.nanoBlockSize, config.nanoBlockCacheSize, this.cacheInterface(config.nano))
+    let bc = new BlockCache(pth.join(path, config.blockPath), config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
+    let mc = new BlockCache(pth.join(path, config.miniPath), config.miniBlockSize, config.miniBlockCacheSize, this.cacheInterface(config.mini))
+    let nc = new BlockCache(pth.join(path, config.nanoPath), config.nanoBlockSize, config.nanoBlockCacheSize, this.cacheInterface(config.nano))
     let scheduler = new Scheduler(rpc, bucket, bc, mc, nc)
     _bc.set(this, bc)
     _mc.set(this, mc)
@@ -40,36 +44,21 @@ module.exports = class BlockRouter extends EventEmitter {
     _self.set(this, peer)
 
     bc.on('block', (block)=> {
-      rpc.store(block.hash, config.block, block.data, 1, ()=> {})
+      rpc.store(block.hash, config.block, block.data, () => {})
     })
     mc.on('block', (block)=> {
-      rpc.store(block.hash, config.mini, block.data, 1, ()=> {})
+      rpc.store(block.hash, config.mini, block.data, () => {})
     })
     nc.on('block', (block)=> {
-      rpc.store(block.hash, config.nano, block.data, 1, ()=> {})
+      rpc.store(block.hash, config.nano, block.data, () => {})
     })
-    bc.on('promote', (block, number)=> {
-      process.nextTick(()=> {
-        rpc.promote(block.hash, number, config.block, ()=> {})
-      })
-    })
-    mc.on('promote', (block, number)=> {
-      process.nextTick(()=> {
-        rpc.promote(block.hash, number, config.mini, ()=> {})
-      })
-    })
-    nc.on('promote', (block, number)=> {
-      process.nextTick(()=> {
-        rpc.promote(block.hash, number, config.nano, ()=> {})
-      })
-    })
-    bc.on('full', ()=> {
+    bc.on('full', () => {
       this.emit('full', config.block)
     })
-    mc.on('full', ()=> {
+    mc.on('full', () => {
       this.emit('full', config.mini)
     })
-    nc.on('full', ()=> {
+    nc.on('full', () => {
       this.emit('full', config.nano)
     })
     bc.on('capacity', (capacity)=> {
@@ -123,7 +112,7 @@ module.exports = class BlockRouter extends EventEmitter {
 
   rpcInterface () {
     let rpc = {}
-    rpc.storeValueAt = (value, number, type, cb)=> {
+    rpc.storeValue = (value, type, cb)=> {
       let bc
       let block
       switch (type) {
@@ -140,7 +129,7 @@ module.exports = class BlockRouter extends EventEmitter {
           block = new Block(value, config.nanoBlockSize)
           break;
       }
-      bc.storeBlockAt(block, number, cb)
+      bc.put(block, cb)
     }
     rpc.getValue = (hash, type, cb) => {
       let bc
@@ -156,18 +145,14 @@ module.exports = class BlockRouter extends EventEmitter {
           break;
       }
       let key = bs58.encode(hash)
-      bc.get(key, (err, block, number)=> {
+      bc.get(key, (err, block) => {
         if (err) {
-          return process.nextTick(()=> {
             return cb(err)
-          })
         }
-        return process.nextTick(()=> {
-          return cb(err, block.data, number)
-        })
+        return cb(err, block.data)
       })
     }
-    rpc.getRandomAt = (number, filter, hash, type, cb) => {
+    rpc.closestBlock = (number, filter, hash, type, cb) => {
       let bc
       switch (type) {
         case 1:
@@ -181,9 +166,9 @@ module.exports = class BlockRouter extends EventEmitter {
           break;
       }
       let key = bs58.encode(hash)
-      bc.closestBlockAt(number, key, filter, cb)
+      bc.closestBlock(number, key, filter, cb)
     }
-    rpc.containsValue = (hash, type)=> {
+    rpc.containsValue = (hash, type, cb)=> {
       let bc
       switch (type) {
         case 1:
@@ -197,70 +182,7 @@ module.exports = class BlockRouter extends EventEmitter {
           break;
       }
       let key = bs58.encode(hash)
-      return bc.contains(key)
-    }
-    rpc.promoteValue = (hash, number, type, cb)=> {
-      let bc
-      switch (type) {
-        case 1:
-          bc = _bc.get(this)
-          break;
-        case 2:
-          bc = _mc.get(this)
-          break;
-        case 3:
-          bc = _nc.get(this)
-          break;
-      }
-      let key = bs58.encode(hash)
-      if (bc.contains(key)) {
-        bc.get(key, (err, block, num)=> {
-          if (err) {
-            return process.nextTick(()=> {
-              return cb(err)
-            })
-          }
-          bc.storeBlockAt(block, number, cb)
-        })
-      } else {
-        if (bc.number < number) {
-          return process.nextTick(()=> {
-            return cb('Find this block')
-          })
-        }
-        process.nextTick(cb)
-      }
-    }
-    rpc.containsValueAt = (number, hash, type) => {
-      let bc
-      switch (type) {
-        case 1:
-          bc = _bc.get(this)
-          break;
-        case 2:
-          bc = _mc.get(this)
-          break;
-        case 3:
-          bc = _nc.get(this)
-          break;
-      }
-      let key = bs58.encode(hash)
-      return bc.containsAt(number, key)
-    }
-    rpc.closestValueAt = (number, key, filter, type, cb) => {
-      let bc
-      switch (type) {
-        case 1:
-          bc = _bc.get(this)
-          break;
-        case 2:
-          bc = _mc.get(this)
-          break;
-        case 3:
-          bc = _nc.get(this)
-          break;
-      }
-      bc.closestBlockAt(number, key, filter, cb)
+      return bc.contains(key, cb)
     }
     rpc.storageCapacity = (type) => {
       let bc
@@ -310,7 +232,7 @@ module.exports = class BlockRouter extends EventEmitter {
           })
         }
       }
-      next()
+      process.nextTick(next)
       return flightBox
     }
     return cache

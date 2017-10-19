@@ -3,7 +3,6 @@ const EventEmitter = require('events').EventEmitter
 const pth = require('path')
 const mkdirp = require('mkdirp')
 const config = require('./config')
-const FibonacciSieve = require('./fibonacci-sieve')
 const Block = require('./block')
 const util = require('./utility')
 const fs = require('fs')
@@ -12,7 +11,6 @@ let _cacheInterface = new WeakMap()
 let _path = new WeakMap()
 let _dirty = new WeakMap()
 let _blockSize = new WeakMap()
-let _fibonacciSieve = new WeakMap()
 let _contentFilter = new WeakMap()
 let _sizeTimer = new WeakMap()
 let _size = new WeakMap()
@@ -42,18 +40,6 @@ module.exports =
       _dirty.set(this, false)
       mkdirp.sync(path)
       _path.set(this, path)
-
-      // Load Fibonacci Sieve
-      let fc = pth.join(path, '.sieve')
-      let fibonacciSieve
-      try {
-        let contCBOR = fs.readFileSync(fc)
-        fibonacciSieve = FibonacciSieve.fromCBOR(contCBOR)
-      } catch (ex) {
-        fibonacciSieve = new FibonacciSieve(config.filterSize, config.bucketSize, config.fingerprintSize, config.scale)
-        this.dirty = true
-      }
-      _fibonacciSieve.set(this, fibonacciSieve)
 
       // TODO: Possibly deasync this call
       // Get the current size of the cache
@@ -98,25 +84,6 @@ module.exports =
       return _dirty.get(this)
     }
 
-    //  Dirty triggers a debounced save of the fibonacci sieve
-    set dirty (value) {
-      if (value === true) {
-        _dirty.set(this, true)
-        if (_contentFilter.has(this)) {
-          _contentFilter.delete(this)
-        }
-        let dirtyTimer = _dirtyTimer.get(this)
-        clearTimeout(dirtyTimer)
-        dirtyTimer = setTimeout(()=> {
-          this.save(()=> {
-          })
-        }, 500)
-        _dirtyTimer.set(this, dirtyTimer)
-      } else {
-        _dirty.set(this, false)
-      }
-    }
-
     updateSize () {
       let sizeTimer = _sizeTimer.get(this)
       clearTimeout(sizeTimer)//dodge trip to fs when continuously writing or removing
@@ -150,11 +117,6 @@ module.exports =
 
       fs.writeFile(fd, block.data, (err)=> {
         if (!err) {
-          let fibonacciSieve = _fibonacciSieve.get(this)
-          if (fibonacciSieve.tally(block.key)) {
-            this.emit('promote', block, fibonacciSieve.number(block.key))
-          }
-          this.dirty = true
           // used as a size approximation whilst dodging i/o to fs
           _size.set(this, (this.size + block.length))
           this.updateSize()
@@ -170,12 +132,7 @@ module.exports =
           return cb(err)
         } else {
           let blockSize = _blockSize.get(this)
-          let fibonacciSieve = _fibonacciSieve.get(this)
           let block = new Block(buf, blockSize)
-          if (fibonacciSieve.tally(block.key)) {
-            this.emit('promote', block, fibonacciSieve.number(block.key))
-          }
-          this.dirty = true
           return cb(null, block)
         }
       })
@@ -185,9 +142,6 @@ module.exports =
       let fd = util.sanitize(key, this.path)
       fs.unlink(fd, (err) => {
         if (!err) {
-          let fibonacciSieve = _fibonacciSieve.get(this)
-          fibonacciSieve.remove(key)
-          this.dirty = true
           let blockSize = _blockSize.get(this)
           //approximation of size whilst dodging i/o to fs
           _size.set(this, (this.size - blockSize))
@@ -197,28 +151,15 @@ module.exports =
       })
     }
 
-    save (cb) {
-      let path = _path.get(this)
-      let fibonacciSieve = _fibonacciSieve.get(this)
-      let fd = pth.join(path, '.sieve')
-      fs.writeFile(fd, fibonacciSieve.toCBOR(), (err)=> {
-        if (err) {
-          return cb(err)
-        }
-        this.dirty = false
-        return cb()
-      })
+    contains(key, cb) {
+      let fd = util.sanitize(key, this.path)
+      fs.exists(fd, cb)
     }
 
     content (cb) {
-      fs.readdir(this.path, (err, items)=> {
+      fs.readdir(this.path, (err, items) => {
         if (err) {
           return cb(err)
-        }
-        //remove the fibonacci sieve from the results
-        let index = items.findIndex((item) => item === '.sieve')
-        if (index !== -1) {
-          items.splice(index, 1)
         }
         return cb(err, items)
       })
@@ -240,29 +181,19 @@ module.exports =
 
     randomBlockList (number, cb) {
       let blockSize = _blockSize.get(this)
-      let fibonacciSieve = _fibonacciSieve.get(this)
       this.content((err, content) => {
         if (err) {
           return cb(err)
         }
-        let buckets = []
-        content.forEach((key) => {
-          let number = fibonacciSieve.number(key)
-          if (!buckets[ number ]) {
-            buckets[ number ] = []
-          }
-          buckets[ number ].push(key)
-        })
+
         let randoms = []
-        for (let i = buckets.length - 1; i >= 0; i--) {
-          let bucket = buckets[ i ] || []
-          while (bucket.length) {
-            randoms.push(bucket.splice(util.getRandomInt(0, bucket.length - 1), 1)[ 0 ])
-            if (randoms.length >= number) {
-              return cb(null, randoms)
-            }
+        while (content.length) {
+          randoms.push(content.splice(util.getRandomInt(0, content.length - 1), 1)[ 0 ])
+          if (randoms.length >= number) {
+            return cb(null, randoms)
           }
         }
+
 
         if (randoms.length < number) {
           let i = -1
@@ -276,7 +207,7 @@ module.exports =
                 if (err) {
                   return cb(err)
                 }
-                randoms.push(block)
+                randoms.push(block.key)
                 return next()
               })
             } else {
@@ -288,66 +219,27 @@ module.exports =
       })
     }
 
-    storeBlockAt (block, number, cb) {
-      let fibonacciSieve = _fibonacciSieve.get(this)
-      this.put(block, (err) => {
-        if (err) {
-          return cb(err)
-        }
-        fibonacciSieve.promote(fibonacciSieve.number(block.key), number)
-        return cb()
-      })
-    }
-
-    contains (key) {
-      let fibonacciSieve = _fibonacciSieve.get(this)
-      return !!fibonacciSieve.number(key)
-    }
-
-    closestBlockAt (number, key, usageFilter, cb) {
-      if (!usageFilter) {
+    closestBlock(key, filter, cb) {
+      if (!filter) {
         return cb(new Error("Invalid usage filter"))
       }
-      let fibonacciSieve = _fibonacciSieve.get(this)
-      if (number > fibonacciSieve.max) {
-        return cb(new Error("Bucket number exceeds number of buckets"))
-      }
-      if (number < 1) { // if it is zero then pull from the largest bucket since 0 is not a valid number
-        number = buckets.length
-      }
 
-      let blockSize = _blockSize.get(this)
       this.content((err, content) => {
         if (err) {
           return cb(err)
         }
-        let buckets = []
         let hash = new Buffer(bs58.decode(key))
-        content.forEach((key) => {
-          let number = fibonacciSieve.number(key)
-          if (!buckets[ number ]) {
-            buckets[ number ] = []
-          }
-          if (!usageFilter.contains(key)) {
-            buckets[ number ].push(key)
-          }
-        })
+        content = content.filter((key) => !filter.contains(key))
+        if(!content.length) {
+          return cb(new Error('Cache has no new blocks'))
+        }
         let sort = (a, b)=> {
           let hashA = new Buffer(bs58.decode(a))
           let hashB = new Buffer(bs58.decode(b))
           return hamming(hashA, hash) - hamming(hashB, hash)
         }
-        if (buckets[ number ].length) {
-          buckets[ number ].sort(sort)
-          return this.get(buckets[ 0 ], cb)
-        }
-        for (let i = buckets.length; i <= 0; i--) {
-          if (buckets[ i ].length) {
-            buckets[ i ].sort(sort)
-            return this.get(buckets[ 0 ], cb)
-          }
-        }
-        return cb(new Error('Cache has no new blocks'))
+        content.sort(sort)
+        return this.get(content[ 0 ], cb)
       })
     }
   }

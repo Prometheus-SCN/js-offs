@@ -1,3 +1,4 @@
+'use strict'
 const Readable = require('readable-stream').Readable;
 const BlockCache = require('./block-cache')
 const OffUrl = require('./off-url')
@@ -35,7 +36,6 @@ module.exports = class ReadableOffStream extends Readable {
     _blockSize.set(this, blockSize)
   }
 
-// TODO make this DRY
   _read () {
     let url = _url.get(this)
     let size = _size.get(this)
@@ -78,7 +78,7 @@ module.exports = class ReadableOffStream extends Readable {
       }
 
       let i = -1
-      let next = (err, block)=> {
+      let next = (err, block) => {
         if (err) {
           this.emit('error', err)
           return
@@ -93,22 +93,24 @@ module.exports = class ReadableOffStream extends Readable {
           let doNext = () => {
             bc.get(key, next)
           }
-          if (!bc.contains(key)) {
-            if (flightBox && flightBox.filter.contains(key)) {
-              flightBox.emitter.on(key, doNext)
+          bc.contains(key, (contains) => {
+            if (!contains) {
+              if (flightBox && flightBox.filter.contains(key)) {
+                flightBox.emitter.on(key, doNext)
+              } else {
+                let flightBox = bc.load([ key ])
+                flightBox.emitter.once(key, doNext)
+                flightBox.emitter.once('error', (err) => {
+                  this.emit('error', err)
+                })
+                _flightBox.set(this, flightBox)
+              }
             } else {
-              let flightBox = bc.load([ key ])
-              flightBox.emitter.on(key, doNext)
-              flightBox.emitter.on('error', (err)=> {
-                this.emit('error', err)
-              })
-              _flightBox.set(this, flightBox)
+              doNext()
             }
-          } else {
-            doNext()
-          }
+          })
         } else {
-          return process.nextTick(()=> {yieldBlock()})
+          return yieldBlock()
         }
       }
       next()
@@ -152,39 +154,44 @@ module.exports = class ReadableOffStream extends Readable {
             return getDesc()
           } else {
             moveToOffset()
-            process.nextTick(getBlock)
+            return getBlock()
           }
         } else {
           if (descriptor.length < descKeys) {
             let nextDesc = descriptor.pop()
-            if (bc.contains(nextDesc)) {
-              bc.get(nextDesc, getDesc)
-            } else {
-              let flightBox = bc.load([ nextDesc ])
-              flightBox.emitter.on(nextDesc, () => {
+            bc.contains(url.descriptorHash, (contains) => {
+              if (contains) {
                 bc.get(nextDesc, getDesc)
-              })
-              flightBox.emitter.on('error', (err)=> {
-                this.emit('error', err)
-              })
-            }
+              } else {
+                let flightBox = bc.load([ nextDesc ])
+                flightBox.emitter.once(nextDesc, () => {
+                  bc.get(nextDesc, getDesc)
+                })
+                flightBox.emitter.once('error', (err) => {
+                  this.emit('error', err)
+                })
+              }
+            })
           } else {
             moveToOffset()
-            process.nextTick(getBlock)
+            return getBlock()
           }
         }
       }
-      if (bc.contains(url.descriptorHash)) {
-        bc.get(url.descriptorHash, getDesc)
-      } else {
-        let flightBox = bc.load([ url.descriptorHash ])
-        flightBox.emitter.on(url.descriptorHash, () => {
+      bc.contains(url.descriptorHash, (contains) => {
+        if (contains) {
           bc.get(url.descriptorHash, getDesc)
-        })
-        flightBox.emitter.on('error', (err)=> {
-          this.emit('error', err)
-        })
-      }
+        } else {
+
+          let flightBox = bc.load([ url.descriptorHash ])
+          flightBox.emitter.once(url.descriptorHash, () => {
+            bc.get(url.descriptorHash, getDesc)
+          })
+          flightBox.emitter.once('error', (err)=> {
+            this.emit('error', err)
+          })
+        }
+      })
     } else {
       if (descriptor.length === 0 || size === url.streamLength) {
         return this.push(null)

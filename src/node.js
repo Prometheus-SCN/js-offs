@@ -29,11 +29,11 @@ module.exports = class Node extends EventEmitter {
       _platformPath.set(this, pth)
     } else {
       if (/^win/.test(process.platform)) {
-        _platformPath.set(this, path.join(process.env[ 'SystemDrive' ], '/ProgramData/'))
+        _platformPath.set(this, path.join(process.env[ 'SystemDrive' ], 'ProgramData', '.offs'))
       } else if (/^darwin/.test(process.platform)) {
         _platformPath.set(this, '/Library/Application Support/')
       } else {
-        _platformPath.set(this, path.join(process.env[ 'HOME' ], '/'))
+        _platformPath.set(this, path.join(process.env[ 'HOME' ], '.offs'))
       }
     }
     let appFolder = path.join(_platformPath.get(this), applicationName)
@@ -59,9 +59,9 @@ module.exports = class Node extends EventEmitter {
             let id = util.hash(pk)
             let peerInfo = new Peer(id, ip, port)
             _peerInfo.set(this, peerInfo)
-            let blockRouter = new BlockRouter('~/.offs/', peerInfo)
+            let blockRouter = new BlockRouter(this.path, peerInfo)
             _blockRouter.set(this, blockRouter)
-            let server = Server(blockRouter)
+            let server = Server(blockRouter, this.emit.bind(this))
             _server.set(this, server)
             server.listen(23402, () => {
               this.emit('listening')
@@ -146,6 +146,9 @@ module.exports = class Node extends EventEmitter {
 
   get peerInfo () {
     return _peerInfo.get(this)
+  }
+  get path () {
+    return _platformPath.get(this)
   }
 
 }

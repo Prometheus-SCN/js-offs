@@ -13,19 +13,19 @@ if (/^win/.test(process.platform)) {
   basename = pth.posix.basename
 }
 let ofdCache = new Map()
-module.exports = function (br) {
+module.exports = function (br, emit) {
   let off = express()
   off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
     (req, res) => {
       let start = 0
       let end = parseInt(req.params[ 1 ])
       /*
-      if (req.headers.range) {
-        let range = req.headers.range
-        let positions = range.replace(/bytes=/, "").split("-")
-        start = positions[ 0 ] ? parseInt(positions[ 0 ]) : null
-        end = positions[ 1 ] ? parseInt(positions[ 1 ]) : req.params[ 1 ]
-      }*/
+       if (req.headers.range) {
+       let range = req.headers.range
+       let positions = range.replace(/bytes=/, "").split("-")
+       start = positions[ 0 ] ? parseInt(positions[ 0 ]) : null
+       end = positions[ 1 ] ? parseInt(positions[ 1 ]) : req.params[ 1 ]
+       }*/
       let url = new OffUrl()
       url.contentType = req.params[ 0 ]
       url.streamOffset = start
@@ -37,24 +37,27 @@ module.exports = function (br) {
       let rs
       try {
         rs = br.createReadStream(url)
-      } catch(ex) {
-       return res.status(500).send(ex.message)
+      } catch (ex) {
+        emit('error', ex)
+        return res.status(500).send(ex.message)
       }
       if (url.contentType === 'offsystem/directory') {
         let handleFolder = function (ofd) {
           let stats = parse(url.fileName) //This is where we figure out if it is for the base directory or some file or directory withi
           if (stats.ext === '.ofd') {
-            let index = ofd['index.html']
+            let index = ofd[ 'index.html' ]
             if (index) {
               url = OffUrl.parse(index)
               let rs
               try {
                 rs = br.createReadStream(url)
-              } catch(ex) {
+              } catch (ex) {
+                emit('error', ex)
                 return res.status(500).send(ex.message)
               }
-              rs.on('error', (err)=> {
-                res.status(500).send(err)
+              rs.once('error', (err) => {
+                emit('error', err)
+                res.status(500).send()
                 res.end()
               })
               res.type(url.contentType)
@@ -64,17 +67,19 @@ module.exports = function (br) {
               res.end()
             }
           } else {
-            let file = ofd[url.fileName]
+            let file = ofd[ url.fileName ]
             if (file) {
               url = OffUrl.parse(file)
               let rs
               try {
                 rs = br.createReadStream(url)
-              } catch(ex) {
-                return res.status(500).send(ex.message)
+              } catch (ex) {
+                emit('error', ex)
+                return res.status(500).send()
               }
-              rs.on('error', (err)=> {
-                res.status(500).send(err)
+              rs.once('error', (err) => {
+                emit('error', err)
+                res.status(500).send()
                 res.end()
               })
               res.type(url.contentType)
@@ -90,7 +95,8 @@ module.exports = function (br) {
         } else {
           collect(rs, (err, data) => {
             if (err) {
-              res.status(500).send("Server Error")
+              emit('error', err)
+              return res.status(500).send("Server Error")
             }
             let ofd = JSON.parse(data.toString('utf8'))
             ofdCache.set(url.fileHash, ofd)
@@ -98,20 +104,26 @@ module.exports = function (br) {
           })
         }
       } else {
-       /* if (req.headers.range) {
-          let length = end - start
-          let code = (length === url.streamLength ? 200 : 206)
-          res.writeHead(code, {
-            "Content-Range": "bytes " + start + "-" + end + "/" + req.params[ 1 ],
-            "Accept-Ranges": "bytes",
-            "Content-Type": url.contentType
-          })
-        } else {*/
-          res.writeHead(200, {
-            "Content-Type": url.contentType
-          })
+        /* if (req.headers.range) {
+         let length = end - start
+         let code = (length === url.streamLength ? 200 : 206)
+         res.writeHead(code, {
+         "Content-Range": "bytes " + start + "-" + end + "/" + req.params[ 1 ],
+         "Accept-Ranges": "bytes",
+         "Content-Type": url.contentType
+         })
+         } else {*/
+        res.writeHead(200, {
+          "Content-Type": url.contentType
+        })
         //}
+        rs.once('error', (err) => {
+          emit('error', err)
+          res.status(500).send()
+          res.end()
+        })
         rs.pipe(res)
+
       }
     })
 
@@ -122,8 +134,13 @@ module.exports = function (br) {
     url.fileName = req.get('file-name')
     url.streamLength = parseInt(req.get('stream-length'))
     let ws = br.createWriteStream(url)
-    ws.on('url', (url)=> {
+    ws.once('url', (url)=> {
       res.write(url.toString())
+      res.end()
+    })
+    ws.once('error', (err) => {
+      emit('error', err)
+      res.status(500).send()
       res.end()
     })
     req.pipe(ws)

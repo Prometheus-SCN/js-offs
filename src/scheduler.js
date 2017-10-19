@@ -62,17 +62,14 @@ module.exports = class Scheduler {
                   console.log(err)
                   //TODO: Decide what to do when this fails
                 }
-                console.log('happened')
-                return process.nextTick(cb)
+                return cb()
               })
             }
             i++
             if (i < peers.length) {
               return rpc.pingValue(peers[ i ].id, hash, type, next)
             } else {
-              return process.nextTick(()=> {
-                return cb(new Error("Insufficient Peer Redundancy"))
-              })
+              return cb(new Error("Insufficient Peer Redundancy"))
             }
           }
           next()
@@ -100,7 +97,7 @@ module.exports = class Scheduler {
                 if (err) {
                   return next(err)  //TODO: Figure out what to do when it fails
                 }
-                rpc.store(block.hash, type, block.data, number, (err)=> {
+                rpc.store(block.hash, type, block.data, (err)=> {
                   if (err) {
                     return next(err)  //TODO: Figure out what to do when it fails
                   }
@@ -133,44 +130,6 @@ module.exports = class Scheduler {
           }
           next()
         }
-        /*
-         let stop = bc.number
-         let i = 0
-         //Loop through all block buckets
-         let next = (err, content)=> {
-         //increment the loop and get next bucket's content
-         let increment = ()=> {
-         console.log(stop)
-         i++
-         if (i <= stop) {
-         console.log(bc)
-         return bc.contentAt(i, next)
-         }
-         else {
-         // if the capacity  is  above 50% still
-         // then go through the redistribution list and try to store at other nodes
-         return redistributeBlocks()
-         }
-         }
-         if (err) {
-         //TODO: Figure out WTF to do when this fails
-         }
-         //ping bucket contacts until 30% of contacts respond with a value
-         if (content) {
-         loopContent(content, ()=> {
-         //cleared enough space
-         if (bc.capacity <= 50) {
-         isCleaning = false
-         return
-         } else {
-         return increment()
-         }
-         })
-         } else {
-         return increment()
-         }
-         }
-         next()*/
         bc.content(loopContent)
       }
       let isRunningCapacity = false
@@ -183,7 +142,7 @@ module.exports = class Scheduler {
         }
         if (capacity >= 50) {
           fillRate = config.maxFillRate
-          if (capacity >= 80) { //TODO: Figure out what to do at 80%
+          if (capacity >= 80) {
             if (isCleaning) { //if process has begun do not restart it
               return
             }
@@ -209,7 +168,7 @@ module.exports = class Scheduler {
               console.log(err)
               return //TODO: Decide what happens when this fails
             }
-            rpc.random(0, 1, type, contentFilter, ()=> {
+            rpc.random(1, type, contentFilter, () => {
               isRunningCapacity = false
             })
           })

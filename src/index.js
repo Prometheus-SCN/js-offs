@@ -5,19 +5,9 @@ const Node = require('./node')
 const config = require('./config')
 const { ipcMain } = require('electron')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
+const log = require('js-logging').console()
 let win
 let node
-/*
- let opts = {}
- opts.dir = path.join(__dirname, 'electron')
- opts.width = 500
- opts.height = 226
- opts.icon = path.join(__dirname, 'electron','images', 'off-logo.png')
- let mb = menubar()
- mb.on('ready', function ready () {
- console.log('app is ready')
- // your app code here
- })*/
 
 const shouldQuit = app.makeSingleInstance((commandLine, workingDirectory) => {
   if (win) {
@@ -31,34 +21,14 @@ if (shouldQuit) {
 }
 
 function createWindow () {
-  //win = new BrowserWindow({width:900, height: 226})
-  let windowPosition = (process.platform === 'win32') ? 'trayBottomCenter' : 'trayCenter'
-  node = new Node('OFFSYSTEM', '../offsystem')
-  node.on('error', console.log)
-  node.on('bootstrapped',() => console.log('boostrapped'))
+  node = new Node('OFFSYSTEM')
+  node.on('error', log.error)
+  node.on('bootstrapped', () => log.debug('boostrapped'))
+  node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
   node.once('ready', () => {
-    let statusWin
-    let hideStatusWin = () => {
-      statusWin.hide()
-    }
-    let createStatusWin = () => {
-      statusWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
-      statusWin.on('blur', hideStatusWin)
-      statusWin.loadURL(`file://${path.join(__dirname, 'electron','views','status', 'index.html')}`)
-    }
-    let openStatusWin = () => {
-      if (statusWin) {
-        statusWin.show()
-      } else {
-        createStatusWin()
-      }
-    }
     let importWin
-    let hideImportWin = () => {
-      importWin.hide()
-    }
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 530, height: 270, icon: icon})
+      importWin = new BrowserWindow({ width: 530, height: 270, icon: icon })
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
@@ -81,7 +51,7 @@ function createWindow () {
     let createExportWin = () => {
       exportWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
       exportWin.on('blur', hideExportWin)
-      exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'export','export.html')}`)
+      exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'export', 'export.html')}`)
     }
     let openExportWin = () => {
       if (exportWin) {
@@ -97,7 +67,7 @@ function createWindow () {
     let createConnectWin = () => {
       connectWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
       connectWin.on('blur', hideConnectWin)
-      connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect','connect.html')}`)
+      connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect', 'connect.html')}`)
     }
 
     let openConnectWin = () => {
@@ -140,8 +110,7 @@ function createWindow () {
     })
     let importItem = new MenuItem({ label: 'Import', type: 'normal', click: () => openImportWin() })
     let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: () => openExportWin() })
-    let cacheItem = new MenuItem({ label: 'Cache Status', type: 'normal', click: () => openStatusWin() })
-    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: () => openConnectWin() })
+    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: () => openConfigurationWin })
     let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: () => openConnectWin() })
     let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => app.exit() })
     let contextMenu = new Menu()
@@ -153,7 +122,6 @@ function createWindow () {
     contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
     contextMenu.append(importItem)
     contextMenu.append(exportItem)
-    contextMenu.append(cacheItem)
     contextMenu.append(configItem)
     contextMenu.append(connectItem)
     contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
@@ -181,6 +149,7 @@ function createWindow () {
     }
 
     node.blockRouter.on('capacity', rebuildMenu)
+    //TODO Create full notification
     node.blockRouter.on('full', (cache) => {
       switch (cache) {
         case config.block:
@@ -195,13 +164,6 @@ function createWindow () {
       }
     })
   })
-  /*
-   win.on('closed', () => {
-   win = null
-   node = null
-   })
-   win.webContents.openDevTools()
-   */
 }
 
 app.on('ready', createWindow)
