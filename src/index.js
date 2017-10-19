@@ -5,7 +5,19 @@ const Node = require('./node')
 const config = require('./config')
 const { ipcMain } = require('electron')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
-const log = require('js-logging').console()
+const log = require('js-logging')
+  .console({
+    filters: {
+      debug: 'white',
+      info: 'yellow',
+      notice: 'green',
+      warning: 'blue',
+      error: 'red',
+      critical: 'red',
+      alert: 'cyan',
+      emergency: 'magenta'
+    }
+  })
 let win
 let node
 
@@ -23,8 +35,9 @@ if (shouldQuit) {
 function createWindow () {
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
-  node.on('bootstrapped', () => log.debug('boostrapped'))
+  node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
   node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
+  node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
   node.once('ready', () => {
     let importWin
     let createImportWin = () => {

@@ -63,8 +63,8 @@ module.exports = class Node extends EventEmitter {
             _blockRouter.set(this, blockRouter)
             let server = Server(blockRouter, this.emit.bind(this))
             _server.set(this, server)
-            server.listen(23402, () => {
-              this.emit('listening')
+            server.listen(config.httpPort, () => {
+              this.emit('listening', config.httpPort)
             })
             blockRouter.listen()
             process.nextTick(() => {
@@ -77,7 +77,7 @@ module.exports = class Node extends EventEmitter {
               let peerInfo = _peerInfo.get(this)
               client.portUnmapping({ public: peerInfo.port })
             })
-            this.blockRouter.bootstrap(() => this.emit('bootstrapped'))
+            this.blockRouter.bootstrap(() => this.emit('bootstrapped', blockRouter.connections))
           }
 
           let port = config.startPort - 1

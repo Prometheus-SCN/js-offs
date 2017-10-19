@@ -2,7 +2,7 @@ const kb = 1000
 const mb = 1000000
 const gb = 1000000000
 let defaults = {
-  blockPath:'.block-cache',
+  blockPath: '.block-cache',
   miniPath: '.mini-cache',
   nanoPath: '.nano-cache',
   blockCacheSize: 200 * gb,
@@ -21,11 +21,12 @@ let defaults = {
   fingerprintSize: 8,
   hitBoxSize: 100,
   bucketSize: 4,
+  httpPort: 23402,
   startPort: 8200,
-  numPortTries : 2,// how long to wait on a rpc response
+  numPortTries: 2,// how long to wait on a rpc response
   packetSize: 512, // message size in bytes
   nodeCount: 10, // how many nodes to find in or query in total
-  concurrency:3, // how many nodes to query simultaneously
+  concurrency: 3, // how many nodes to query simultaneously
   kbucketSize: 20, // size of each k bucket
   storeCount: 1, // how many nodes to store new data at
   maxFillRate: 72, // in hours
@@ -52,6 +53,7 @@ let _filterSize = new WeakMap()
 let _fingerprintSize = new WeakMap()
 let _hitBoxSize = new WeakMap()
 let _bucketSize = new WeakMap()
+let _httpPort = new WeakMap()
 let _startPort = new WeakMap()
 let _numPortTries = new WeakMap()
 let _nodeCount = new WeakMap()
@@ -63,10 +65,11 @@ let _redundancy = new WeakMap()
 let _batchConcurrency = new WeakMap()
 let _bootstrap = new WeakMap()
 class Config {
-  constructor(){
+  constructor () {
     this.loadDefaults()
   }
-  loadDefaults(){
+
+  loadDefaults () {
     _blockPath.set(this, defaults.blockPath)
     _miniPath.set(this, defaults.miniPath)
     _nanoPath.set(this, defaults.nanoPath)
@@ -86,6 +89,7 @@ class Config {
     _fingerprintSize.set(this, defaults.fingerprintSize)
     _hitBoxSize.set(this, defaults.hitBoxSize)
     _bucketSize.set(this, defaults.bucketSize)
+    _httpPort.set(this, defaults.httpPort)
     _startPort.set(this, defaults.startPort)
     _numPortTries.set(this, defaults.numPortTries)
     _nodeCount.set(this, defaults.packetSize)
@@ -97,100 +101,136 @@ class Config {
     _batchConcurrency.set(this, defaults.batchConcurrency)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
   }
-  get blockPath(){
+
+  get blockPath () {
     return _blockPath.get(this)
   }
-  get miniPath(){
+
+  get miniPath () {
     return _miniPath.get(this)
   }
-  get miniPath(){
+
+  get miniPath () {
     return _miniPath.get(this)
   }
-  get blockPath(){
+
+  get blockPath () {
     return _blockPath.get(this)
   }
-  get miniPath(){
+
+  get miniPath () {
     return _miniPath.get(this)
   }
-  get nanoPath(){
+
+  get nanoPath () {
     return _nanoPath.get(this)
   }
-  get blockCacheSize(){
+
+  get blockCacheSize () {
     return _blockCacheSize.get(this)
   }
-  get miniBlockCacheSize(){
+
+  get miniBlockCacheSize () {
     return _miniBlockCacheSize.get(this)
   }
-  get nanoBlockCacheSize(){
+
+  get nanoBlockCacheSize () {
     return _nanoBlockCacheSize.get(this)
   }
-  get nano(){
+
+  get nano () {
     return _nano.get(this)
   }
-  get block(){
+
+  get block () {
     return _block.get(this)
   }
-  get mini(){
+
+  get mini () {
     return _mini.get(this)
   }
-  get tupleSize(){
+
+  get tupleSize () {
     return _tupleSize.get(this)
   }
-  get blockSize(){
+
+  get blockSize () {
     return _blockSize.get(this)
   }
-  get miniBlockSize(){
+
+  get miniBlockSize () {
     return _miniBlockSize.get(this)
   }
-  get nanoBlockSize(){
+
+  get nanoBlockSize () {
     return _nanoBlockSize.get(this)
   }
-  get descriptorPad(){
+
+  get descriptorPad () {
     return _descriptorPad.get(this)
   }
-  get scale(){
+
+  get scale () {
     return _scale.get(this)
   }
-  get filterSize(){
+
+  get filterSize () {
     return _filterSize.get(this)
   }
-  get fingerprintSize(){
+
+  get fingerprintSize () {
     return _fingerprintSize.get(this)
   }
-  get hitBoxSize(){
+
+  get hitBoxSize () {
     return _hitBoxSize.get(this)
   }
-  get bucketSize(){
+
+  get bucketSize () {
     return _bucketSize.get(this)
   }
-  get startPort(){
+
+  get httpPort () {
+    return _httpPort.get(this)
+  }
+
+  get startPort () {
     return _startPort.get(this)
   }
-  get numPortTries(){
+
+  get numPortTries () {
     return _numPortTries.get(this)
   }
-  get nodeCount(){
+
+  get nodeCount () {
     return _nodeCount.get(this)
   }
-  get concurrency(){
+
+  get concurrency () {
     return _concurrency.get(this)
   }
-  get kbucketSize(){
+
+  get kbucketSize () {
     return _kbucketSize.get(this)
   }
-  get storeCount(){
+
+  get storeCount () {
     return _storeCount.get(this)
   }
-  get maxFillRate(){
+
+  get maxFillRate () {
     return _maxFillRate.get(this)
   }
-  get redundancy(){
+
+  get redundancy () {
     return _redundancy.get(this)
   }
-  get batchConcurrency(){
+
+  get batchConcurrency () {
     return _redundancy.get(this)
   }
-  get bootstrap() {
+
+  get bootstrap () {
     return _bootstrap.get(this).slice(0)
   }
 }

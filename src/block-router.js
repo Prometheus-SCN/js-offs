@@ -20,6 +20,7 @@ let _nc = new WeakMap()
 let _rpc = new WeakMap()
 let _scheduler = new WeakMap()
 let _self = new WeakMap()
+let _bucket = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
   constructor (path, peer) {
@@ -31,6 +32,7 @@ module.exports = class BlockRouter extends EventEmitter {
     }
     super()
     let bucket = new Bucket(peer.id, config.bucketSize)
+    _bucket.set(this, bucket)
     let rpc = new RPC(peer, bucket, this.rpcInterface())
     _rpc.set(this, rpc)
     let bc = new BlockCache(pth.join(path, config.blockPath), config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
@@ -279,6 +281,11 @@ module.exports = class BlockRouter extends EventEmitter {
   get nanoCapacity(){
     let nc = _nc.get(this)
     return nc.capacity
+  }
+
+  get connections () {
+    let bucket = _bucket.get(this)
+    return bucket.count
   }
 
 }
