@@ -5,6 +5,8 @@ const Node = require('./node')
 const config = require('./config')
 const { ipcMain } = require('electron')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
+const Exporter = require('./exporter').mainExporter
+let Responder = require('electron-ipc-responder')
 const log = require('js-logging')
   .console({
     filters: {
@@ -41,14 +43,14 @@ function createWindow () {
   node.once('ready', () => {
     let importWin
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 530, height: 270, icon: icon })
+      importWin = new BrowserWindow({ width: 530, height: 255, icon: icon, autoHideMenuBar:true, resizable: true })
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
       })
-      // importWin.setResizable(false)
+      importWin.setResizable(false)
       importWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'import', 'index.html')}`)
-      // importWin.webContents.openDevTools({})
+      //importWin.webContents.openDevTools({})
     }
     let openImportWin = () => {
       if (importWin) {
@@ -58,29 +60,40 @@ function createWindow () {
       }
     }
     let exportWin
+    let exporter
     let hideExportWin = () => {
-      hideExportWin.hide()
+      exportWin.hide()
     }
+
     let createExportWin = () => {
-      exportWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
-      exportWin.on('blur', hideExportWin)
-      exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'export', 'export.html')}`)
+      exportWin = new BrowserWindow({ width: 525, height: 128, icon: icon, autoHideMenuBar:true, resizable: false})
+      exportWin.on('close', (e) => {
+        e.preventDefault()
+        exportWin.hide()
+      })
+      //exportWin.on('blur', hideExportWin)
+      //exportWin.webContents.openDevTools({})
     }
     let openExportWin = () => {
       if (exportWin) {
         exportWin.show()
       } else {
         createExportWin()
+        exporter =  new Exporter(exportWin.webContents, ipcMain)
       }
+      exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'export', 'index.html')}`)
     }
     let connectWin
-    let hideConnectWin = () => {
-      hideConnectWin.hide()
-    }
+    let connector
     let createConnectWin = () => {
       connectWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
-      connectWin.on('blur', hideConnectWin)
-      connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect', 'connect.html')}`)
+      connectWin.on('close', (e) => {
+        e.preventDefault()
+        connectWin.hide()
+      })
+      connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect', 'index.html')}`)
+      connectWin.webContents.openDevTools({})
+      connector = new Responder(connectWin.webContent.send.bind(connectWin.webContent), connectWin.webContent.on.bind(connectWin.webContent))
     }
 
     let openConnectWin = () => {
@@ -109,6 +122,7 @@ function createWindow () {
 
     tray = new Tray(icon)
     let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal' })
+    let connectionsItem = new MenuItem({ label: `Connections: ${node.blockRouter.connections}`, type: 'normal' })
     let blockCapacityItem = new MenuItem({
       label: `Block Cache Capacity: ${node.blockRouter.blockCapacity}%`,
       type: 'normal'
@@ -128,6 +142,7 @@ function createWindow () {
     let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => app.exit() })
     let contextMenu = new Menu()
     contextMenu.append(nodeItem)
+    contextMenu.append(connectionsItem)
     contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
     contextMenu.append(blockCapacityItem)
     contextMenu.append(miniCapacityItem)

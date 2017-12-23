@@ -2,9 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Off System: Exporter</title>
+    <link rel="stylesheet" href="../../stylesheets/index.css">
+    <link rel="stylesheet" href="../../stylesheets/progressjs.css">
+    <link rel="stylesheet" href="../../stylesheets/bulma.css"/>
+    <link rel="stylesheet" href="../../stylesheets/font-awesome.css"/>
+    <link rel="image_src" href="/images/off-logo.gif"/>
 </head>
-<body>
 
+<body style="overflow:hidden;">
+<div id="app" style="overflow:hidden;"></div>
+<script>
+    const {dialog, shell} = require('electron').remote
+    const OffUrl = require('../../../off-url')
+    const fs = require('fs')
+    const http = require('http')
+    const path = require('path')
+    const URL = require('url')
+    const collect = require('collect-stream')
+    const mkdirp = require('mkdirp')
+    const ipcRenderer = require('electron').ipcRenderer
+    const Exporter = require('../../../exporter').rendererExporter
+</script>
+<script src="../../scripts/progress.js"></script>
+<script src="index.js"></script>
 </body>
+<style>
+    html {
+        overflow: hidden;
+    }
+</style>
 </html>

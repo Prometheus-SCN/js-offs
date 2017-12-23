@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div id="container" style="overflow:hidden;">
+    <div id="container">
       <div id="dropzone" ref="dropzone">
         <h3 id="uploadMessage">{{message}}</h3>
         <img id="uploadIcon" ref="icon" src="../../images/upload.svg" class="upload">

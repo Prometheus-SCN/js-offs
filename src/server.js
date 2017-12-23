@@ -91,17 +91,45 @@ module.exports = function (br, emit) {
         }
         if (ofdCache.has(url.fileHash)) {
           let ofd = ofdCache.get(url.fileHash)
-          handleFolder(ofd)
-        } else {
-          collect(rs, (err, data) => {
-            if (err) {
+          if(req.query.ofd === 'raw') {
+            res.writeHead(200, {
+              "Content-Type": 'text/json'
+            })
+            //}
+            rs.once('error', (err) => {
               emit('error', err)
-              return res.status(500).send("Server Error")
-            }
-            let ofd = JSON.parse(data.toString('utf8'))
-            ofdCache.set(url.fileHash, ofd)
+              res.status(500).send()
+              res.end()
+            })
+            rs.pipe(res)
+
+          } else {
             handleFolder(ofd)
-          })
+          }
+        } else {
+          if(req.query.ofd === 'raw') {
+            res.writeHead(200, {
+              "Content-Type": 'text/json'
+            })
+            //}
+            rs.once('error', (err) => {
+              emit('error', err)
+              res.status(500).send()
+              res.end()
+            })
+            rs.pipe(res)
+
+          } else {
+            collect(rs, (err, data) => {
+              if (err) {
+                emit('error', err)
+                return res.status(500).send("Server Error")
+              }
+              let ofd = JSON.parse(data.toString('utf8'))
+              ofdCache.set(url.fileHash, ofd)
+              handleFolder(ofd)
+            })
+          }
         }
       } else {
         /* if (req.headers.range) {
