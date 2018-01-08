@@ -6,6 +6,9 @@ const config = require('./config')
 const { ipcMain } = require('electron')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
 const Exporter = require('./exporter').mainExporter
+const Connector = require('./connector').mainConnector
+const Peer = require('./peer')
+const bs58 = require('bs58')
 let Responder = require('electron-ipc-responder')
 const log = require('js-logging')
   .console({
@@ -66,7 +69,7 @@ function createWindow () {
     }
 
     let createExportWin = () => {
-      exportWin = new BrowserWindow({ width: 525, height: 128, icon: icon, autoHideMenuBar:true, resizable: false})
+      exportWin = new BrowserWindow({ width: 525, height: 180, icon: icon, autoHideMenuBar:true, resizable: false})
       exportWin.on('close', (e) => {
         e.preventDefault()
         exportWin.hide()
@@ -86,14 +89,13 @@ function createWindow () {
     let connectWin
     let connector
     let createConnectWin = () => {
-      connectWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
+      connectWin = new BrowserWindow({ width: 800, height: 126, icon: icon, autoHideMenuBar:true, resizable: false})
       connectWin.on('close', (e) => {
         e.preventDefault()
         connectWin.hide()
       })
       connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect', 'index.html')}`)
-      connectWin.webContents.openDevTools({})
-      connector = new Responder(connectWin.webContent.send.bind(connectWin.webContent), connectWin.webContent.on.bind(connectWin.webContent))
+      //connectWin.webContents.openDevTools({})
     }
 
     let openConnectWin = () => {
@@ -101,6 +103,24 @@ function createWindow () {
         connectWin.show()
       } else {
         createConnectWin()
+        connector = new Connector(connectWin.webContents, ipcMain , (payload) => {
+          return new Promise((resolve, reject) => {
+            let peer
+            try {
+              payload.id = new Buffer(bs58.decode(payload.id))
+              let peer = Peer.fromJSON(payload)
+              node.blockRouter.connect(peer, (err) => {
+                if (err){
+                  return reject(err)
+                } else{
+                  return resolve()
+                }
+              })
+            } catch (ex) {
+              reject(ex)
+            }
+          })
+        })
       }
     }
     let configurationWin

@@ -8408,18 +8408,37 @@ exports.default = {
       ipaddress: null,
       port: null,
       nodeIdRegEx: new RegExp(/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{43})/),
-      ipRegEx: new RegExp(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)
+      ipRegEx: new RegExp(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/),
+      connector: null,
+      connectErr: null,
+      success: false,
+      connecting: false
     };
+  },
+  mounted: function mounted() {
+    var _this = this;
+
+    this.connector = new Connector(ipcRenderer, function (err) {
+      _this.connectErr = err;
+    });
   },
 
   methods: {
-    connect: function connect() {
+    connect: async function connect() {
+      this.connectErr = null;
       this.nodeidErr = !this.nodeIdRegEx.test(this.nodeid);
       this.ipaddressErr = !this.ipRegEx.test(this.ipaddress);
       this.portErr = !(0, _isInteger2.default)(+this.port) || this.port < 1 || this.port > 65535;
-      console.log((0, _isInteger2.default)(+this.port), this.port < 1, this.port > 65535);
       if (this.nodeidErr || this.portErr || this.portErr) {
         return;
+      }
+      try {
+        this.connecting = true;
+        this.success = await this.connector.connect(this.nodeid, this.ipaddress, this.port);
+        this.connecting = false;
+      } catch (ex) {
+        this.connectErr = ex;
+        this.connecting = false;
       }
     }
   }
@@ -8428,8 +8447,8 @@ exports.default = {
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)
 if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
-__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('form',{on:{"submit":function($event){$event.preventDefault();_vm.connect($event)}}},[_c('div',{staticClass:"columns"},[_c('div',{staticClass:"column"}),_vm._v(" "),_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Node ID")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.nodeid),expression:"nodeid"}],staticClass:"input is-success",attrs:{"type":"text","name":"nodeid"},domProps:{"value":(_vm.nodeid)},on:{"input":function($event){if($event.target.composing){ return; }_vm.nodeid=$event.target.value}}}),_vm._v(" "),_vm._m(0)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.nodeidErr),expression:"nodeidErr"}],staticClass:"help is-danger"},[_vm._v("Invalid Node ID")])])]),_vm._v(" "),_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("IP Address")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.ipaddress),expression:"ipaddress"}],staticClass:"input is-success",attrs:{"type":"text","placeholder":"0.0.0.0","name":"ipaddress"},domProps:{"value":(_vm.ipaddress)},on:{"input":function($event){if($event.target.composing){ return; }_vm.ipaddress=$event.target.value}}}),_vm._v(" "),_vm._m(1)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.ipaddressErr),expression:"ipaddressErr"}],staticClass:"help is-danger"},[_vm._v("Invalid IP Address")])])]),_vm._v(" "),_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Port")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.port),expression:"port"}],staticClass:" input is-success",attrs:{"type":"text","placeholder":"#","name":"port"},domProps:{"value":(_vm.port)},on:{"input":function($event){if($event.target.composing){ return; }_vm.port=$event.target.value}}}),_vm._v(" "),_vm._m(2)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.portErr),expression:"portErr"}],staticClass:"help is-danger"},[_vm._v("Invalid Port")])]),_vm._v(" "),_vm._m(3)]),_vm._v(" "),_c('div',{staticClass:"column"})])])}
-__vue__options__.staticRenderFns = [function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-id-card-o"})])},function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-sitemap"})])},function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-space-shuttle"})])},function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"control"},[_c('input',{staticClass:"button is-primary",staticStyle:{"float":"right"},attrs:{"type":"submit","value":"Connect"}})])}]
+__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('form',{on:{"submit":function($event){$event.preventDefault();_vm.connect($event)}}},[_c('div',{staticClass:"columns"},[_c('div',{staticClass:"column"}),_vm._v(" "),_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Node ID")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.nodeid),expression:"nodeid"}],staticClass:"input is-success",attrs:{"type":"text","name":"nodeid"},domProps:{"value":(_vm.nodeid)},on:{"input":function($event){if($event.target.composing){ return; }_vm.nodeid=$event.target.value}}}),_vm._v(" "),_vm._m(0)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.nodeidErr),expression:"nodeidErr"}],staticClass:"help is-danger"},[_vm._v("Invalid Node ID")])])]),_vm._v(" "),_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("IP Address")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.ipaddress),expression:"ipaddress"}],staticClass:"input is-success",attrs:{"type":"text","placeholder":"0.0.0.0","name":"ipaddress"},domProps:{"value":(_vm.ipaddress)},on:{"input":function($event){if($event.target.composing){ return; }_vm.ipaddress=$event.target.value}}}),_vm._v(" "),_vm._m(1)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.ipaddressErr),expression:"ipaddressErr"}],staticClass:"help is-danger"},[_vm._v("Invalid IP Address")])])]),_vm._v(" "),_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Port")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.port),expression:"port"}],staticClass:" input is-success",attrs:{"type":"text","placeholder":"#","name":"port"},domProps:{"value":(_vm.port)},on:{"input":function($event){if($event.target.composing){ return; }_vm.port=$event.target.value}}}),_vm._v(" "),_vm._m(2)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.portErr),expression:"portErr"}],staticClass:"help is-danger"},[_vm._v("Invalid Port")])]),_vm._v(" "),_c('div',{staticClass:"control"},[(_vm.success)?_c('span',{staticClass:"message is-sucess"},[_vm._v("Success")]):_vm._e(),_vm._v(" "),(_vm.connectErr)?_c('span',{staticClass:"message is-danger"},[_vm._v(_vm._s(_vm.connectErr))]):_vm._e(),_vm._v(" "),_c('input',{staticClass:"button is-primary",staticStyle:{"float":"right"},attrs:{"type":"submit","disabled":_vm.connecting,"value":"Connect"}})])]),_vm._v(" "),_c('div',{staticClass:"column"})])])}
+__vue__options__.staticRenderFns = [function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-id-card-o"})])},function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-sitemap"})])},function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-space-shuttle"})])}]
 if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
   if (!hotAPI.compatible) return

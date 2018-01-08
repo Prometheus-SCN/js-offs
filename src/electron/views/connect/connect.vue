@@ -38,7 +38,9 @@
           <p v-show="portErr"  class="help is-danger">Invalid Port</p>
         </div>
         <div class="control">
-          <input type="submit" class="button is-primary" style="float:right" value="Connect">
+          <span class="message is-sucess" v-if="success">Success</span>
+          <span class="message is-danger" v-if="connectErr">{{connectErr}}</span>
+          <input type="submit" class="button is-primary" :disabled="connecting" style="float:right" value="Connect">
         </div>
       </div>
       <div class="column"></div>
@@ -59,17 +61,34 @@
         ipaddress: null,
         port: null,
         nodeIdRegEx: new RegExp(/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{43})/),
-        ipRegEx: new RegExp(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)
+        ipRegEx: new RegExp(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/),
+        connector: null,
+        connectErr: null,
+        success: false,
+        connecting: false
       }
     },
+    mounted () {
+      this.connector = new Connector(ipcRenderer, (err) => {
+        this.connectErr = err
+      })
+    },
     methods: {
-      connect() {
+      async connect() {
+        this.connectErr= null
         this.nodeidErr = !this.nodeIdRegEx.test(this.nodeid)
         this.ipaddressErr = !this.ipRegEx.test(this.ipaddress)
         this.portErr = (!Number.isInteger(+this.port)) || (this.port < 1) || (this.port > 65535)
-        console.log((Number.isInteger( +this.port)),  (this.port < 1), (this.port > 65535) )
         if (this.nodeidErr || this.portErr || this.portErr) {
           return
+        }
+        try {
+          this.connecting= true
+          this.success = await this.connector.connect(this.nodeid, this.ipaddress, this.port)
+          this.connecting= false
+        } catch (ex) {
+          this.connectErr = ex
+          this.connecting= false
         }
       }
     }

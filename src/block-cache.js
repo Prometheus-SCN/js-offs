@@ -7,6 +7,7 @@ const Block = require('./block')
 const util = require('./utility')
 const fs = require('fs')
 const getSize = require('get-folder-size')
+const CuckooFilter = require('cuckoo-filter').CuckooFilter
 let _cacheInterface = new WeakMap()
 let _path = new WeakMap()
 let _dirty = new WeakMap()
@@ -15,7 +16,7 @@ let _contentFilter = new WeakMap()
 let _sizeTimer = new WeakMap()
 let _size = new WeakMap()
 let _maxSize = new WeakMap()
-let _dirtyTimer = new WeakMap()
+
 
 module.exports =
   class BlockCache extends EventEmitter {
@@ -172,7 +173,11 @@ module.exports =
       } else {
         this.content((err, content) => {
           if (!err) {
-            _contentFilter.set(this, content)
+            contentFilter = new CuckooFilter(content.length, config.bucketSize, config.fingerprintSize)
+            for (let key of content){
+              contentFilter.add(key)
+            }
+            _contentFilter.set(this, contentFilter)
           }
           return cb(err, content)
         })

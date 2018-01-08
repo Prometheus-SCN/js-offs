@@ -245,6 +245,7 @@ module.exports = class BlockRouter extends EventEmitter {
     let rpc = _rpc.get(this)
     rpc.connect(peer, cb)
   }
+
   bootstrap (cb) {
     let i = -1
     let next = (err) => {
@@ -263,6 +264,7 @@ module.exports = class BlockRouter extends EventEmitter {
     }
     next()
   }
+
   listen () {
     let rpc = _rpc.get(this)
     rpc.listen()
