@@ -160,6 +160,7 @@ module.exports = class Bucket extends EventEmitter {
     let bucket = _bucket.get(this)
     if (bucket) {
       bucket = bucket.filter((known)=> { return known.id.compare(peer.id) !== 0})
+      _bucket.set(this, bucket)
       let root = _root.get(this)
       root.emit('removed', peer)
     } else {

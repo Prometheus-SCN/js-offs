@@ -61,6 +61,7 @@ module.exports = class Node extends EventEmitter {
             _peerInfo.set(this, peerInfo)
             let blockRouter = new BlockRouter(this.path, peerInfo)
             _blockRouter.set(this, blockRouter)
+            blockRouter.on('error', (err) => this.emit('error', err))
             let server = Server(blockRouter, this.emit.bind(this))
             _server.set(this, server)
             server.listen(config.httpPort, () => {

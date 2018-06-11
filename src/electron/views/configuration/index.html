@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Off System: Importer</title>
+  <title>Off System: Configuration</title>
   <link rel="stylesheet" href="../../stylesheets/index.css">
   <link rel="stylesheet" href="../../stylesheets/progressjs.css">
   <link rel="stylesheet" href="../../stylesheets/bulma.css"/>
@@ -10,8 +10,12 @@
   <link rel="image_src" href="/images/off-logo.gif"/>
 </head>
 
-<body style="overflow:hidden;">
-  <div id="app" style="overflow:hidden;"></div>
+<body>
+  <div id="app"></div>
+  <script>
+    const ipcRenderer = require('electron').ipcRenderer
+    const Configurator = require('../../../configurator').rendererConfigurator
+  </script>
   <script src="index.js"></script>
 </body>
 </html>

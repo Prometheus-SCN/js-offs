@@ -3,7 +3,7 @@
     src: url('../font/Odin%20Rounded%20-%20Bold.otf');
 }
 
-html, body, #container, #dropzone {
+html, body, #container {
     height: 100%;
     width: 100%;
 }
@@ -24,6 +24,8 @@ h1, h2, h3 {
 }
 
 #dropzone {
+    height: 304px;
+    width: 100%;
     font-family: Odin;
     background-color: #edf0f2;
     padding: 0;

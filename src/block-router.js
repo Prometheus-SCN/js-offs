@@ -72,6 +72,12 @@ module.exports = class BlockRouter extends EventEmitter {
     nc.on('capacity', (capacity)=> {
       this.emit('capacity', config.nano, capacity)
     })
+    bucket.on('removed', (peer)=> {
+      this.emit('connection', bucket.count)
+    })
+    bucket.on('added', (capacity)=> {
+      this.emit('connection', bucket.count)
+    })
   }
 
   createReadStream (url) {
@@ -254,12 +260,14 @@ module.exports = class BlockRouter extends EventEmitter {
       }
       i++
       if (i < config.bootstrap.length){
-        let peer = Peer.fromJSON(config.bootstrap[i])
+        let obj = config.bootstrap[i]
+        obj.id = new Buffer(bs58.decode(obj.id))
+        let peer = Peer.fromJSON(obj)
         this.connect(peer, next)
-      } else {
+      } else { //Fill routing table with the closet nodes to themselves
         let rpc = _rpc.get(this)
         let self = _self.get(this)
-        rpc.findNode(self, cb)
+        rpc.findNode(self.id, cb)
       }
     }
     next()
@@ -270,17 +278,17 @@ module.exports = class BlockRouter extends EventEmitter {
     rpc.listen()
   }
 
-  get blockCapacity(){
+  get blockCapacity () {
     let bc = _bc.get(this)
     return bc.capacity
   }
 
-  get miniCapacity(){
+  get miniCapacity () {
     let mc = _mc.get(this)
     return mc.capacity
   }
 
-  get nanoCapacity(){
+  get nanoCapacity () {
     let nc = _nc.get(this)
     return nc.capacity
   }

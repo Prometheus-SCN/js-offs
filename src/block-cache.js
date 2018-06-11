@@ -61,7 +61,7 @@ module.exports =
     }
 
     get capacity () {
-      return 100 * (this.size / this.maxSize)
+      return 100 * ((this.size || 0) / this.maxSize)
     }
 
     get full () {
@@ -179,7 +179,7 @@ module.exports =
             }
             _contentFilter.set(this, contentFilter)
           }
-          return cb(err, content)
+          return cb(err, contentFilter)
         })
       }
     }

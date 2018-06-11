@@ -1,3 +1,4 @@
+const extend = require('util')._extend
 const kb = 1000
 const mb = 1000000
 const gb = 1000000000
@@ -32,7 +33,9 @@ let defaults = {
   maxFillRate: 72, // in hours
   redundancy: .30, //30% network redundancy target
   batchConcurrency: 10,
-  bootstrap: []
+  bootstrap: [
+    {id: '2A4hXmV7rUk5r3LqGhAY3xbV2GkWubf2Q7QxGLBNy89q', ip: '192.168.1.2', port: 30 }
+  ]
 }
 let _blockPath = new WeakMap()
 let _miniPath = new WeakMap()
@@ -231,7 +234,19 @@ class Config {
   }
 
   get bootstrap () {
-    return _bootstrap.get(this).slice(0)
+    let peers = []
+    _bootstrap.get(this).forEach((peer) => {
+      let cpy = {}
+      extend(cpy, peer)
+      peers.push(cpy)
+    })
+    return peers
+  }
+  set bootstrap (value) {
+    if (!Array.isArray(value)){
+      throw new TypeError("Invalid Boostsrap Peer Array")
+    }
+    _bootstrap.set(this, value)
   }
 }
 module.exports = new Config()

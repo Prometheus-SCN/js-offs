@@ -7,6 +7,7 @@ const { ipcMain } = require('electron')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
 const Exporter = require('./exporter').mainExporter
 const Connector = require('./connector').mainConnector
+const Configurator = require('./configurator').mainConfigurator
 const Peer = require('./peer')
 const bs58 = require('bs58')
 let Responder = require('electron-ipc-responder')
@@ -46,12 +47,11 @@ function createWindow () {
   node.once('ready', () => {
     let importWin
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 530, height: 255, icon: icon, autoHideMenuBar:true, resizable: true })
+      importWin = new BrowserWindow({ width: 530, height: 304, icon: icon, autoHideMenuBar:true, resizable: false })
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
       })
-      importWin.setResizable(false)
       importWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'import', 'index.html')}`)
       //importWin.webContents.openDevTools({})
     }
@@ -69,7 +69,7 @@ function createWindow () {
     }
 
     let createExportWin = () => {
-      exportWin = new BrowserWindow({ width: 525, height: 180, icon: icon, autoHideMenuBar:true, resizable: false})
+      exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar:true, resizable: false})
       exportWin.on('close', (e) => {
         e.preventDefault()
         exportWin.hide()
@@ -94,6 +94,7 @@ function createWindow () {
         e.preventDefault()
         connectWin.hide()
       })
+
       connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect', 'index.html')}`)
       //connectWin.webContents.openDevTools({})
     }
@@ -124,13 +125,18 @@ function createWindow () {
       }
     }
     let configurationWin
-    let hideConfigurationWin = () => {
-      configurationWin.hide()
-    }
+    let configurator
     let createConfigurationWin = () => {
-      configurationWin = new BrowserWindow({ width: 900, height: 226, icon: icon })
-      configurationWin.on('blur', hideConfigurationWin)
-      configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'configuration', 'configuration.html')}`)
+      configurationWin = new BrowserWindow({ width: 900, height: 900, icon: icon, autoHideMenuBar:true })
+      configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'configuration', 'index.html')}`)
+      //configurationWin.webContents.openDevTools({})
+      let setHandler = async (payload) => {
+        config[payload.key] = payload.value
+      }
+      let getHandler = async (payload) => {
+        return config[payload.key]
+      }
+      configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler)
     }
     let openConfigurationWin = () => {
       if (configurationWin) {
@@ -157,7 +163,7 @@ function createWindow () {
     })
     let importItem = new MenuItem({ label: 'Import', type: 'normal', click: () => openImportWin() })
     let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: () => openExportWin() })
-    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: () => openConfigurationWin })
+    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: () => openConfigurationWin() })
     let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: () => openConnectWin() })
     let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => app.exit() })
     let contextMenu = new Menu()
@@ -179,13 +185,13 @@ function createWindow () {
     let rebuildMenu = (cache, capacity)=> {
       switch (cache) {
         case config.block:
-          contextMenu.items[ 2 ].label = `Block Cache Capacity: ${capacity.toPrecision(3)}%`
+          contextMenu.items[ 3 ].label = `Block Cache Capacity: ${capacity.toPrecision(3)}%`
           break;
         case config.mini:
-          contextMenu.items[ 3 ].label = `Mini Cache Capacity: ${capacity.toPrecision(3)}%`
+          contextMenu.items[ 4 ].label = `Mini Cache Capacity: ${capacity.toPrecision(3)}%`
           break;
         case config.nano:
-          contextMenu.items[ 4 ].label = `Nano Cache Capacity: ${capacity.toPrecision(3)}%`
+          contextMenu.items[ 5].label = `Nano Cache Capacity: ${capacity.toPrecision(3)}%`
           break;
       }
       let tempMenu = new Menu()
@@ -196,7 +202,18 @@ function createWindow () {
       tray.setContextMenu(contextMenu)
     }
 
+    let rebuildMenuConnection = (connections)=> {
+      contextMenu.items[ 1 ].label = `Connections: ${connections}`
+      let tempMenu = new Menu()
+      contextMenu.items.forEach((item)=> {
+        tempMenu.append(item)
+      })
+      contextMenu = tempMenu
+      tray.setContextMenu(contextMenu)
+    }
+
     node.blockRouter.on('capacity', rebuildMenu)
+    node.blockRouter.on('connection', rebuildMenuConnection)
     //TODO Create full notification
     node.blockRouter.on('full', (cache) => {
       switch (cache) {

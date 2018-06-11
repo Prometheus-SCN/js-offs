@@ -272,21 +272,22 @@ module.exports = class RPC extends EventEmitter {
     let findnodepb = {}
     findnodepb.id = id
     findnodepb.count = config.nodeCount
+
     let payload = new FindNodeRequest(findnodepb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    let nodes = bucket.closest(hash, bucket.count)
+    let nodes = bucket.closest(id, bucket.count)
     let nodeBucket = new Bucket(peer.id, config.kbucketSize)
     for (let i = 0; i < nodes.length; i++) {
       nodeBucket.add(nodes[ i ])
     }
-    let queried = ScalableCuckoo(config.filterSize, config.bucketSize, config.fingerprintSize, config.scale)
+    let queried = new ScalableCuckoo(config.filterSize, config.bucketSize, config.fingerprintSize, config.scale)
     let i = 0
     let next = ()=> {
       if (nodeBucket.count > 0 && i < config.nodeCount) {
-        let to = nodeBucket.closest(hash, 1).shift()
-        queried.add(node.id)
-        nodeBucket.remove(node)
+        let to = nodeBucket.closest(id, 1).shift()
+        queried.add(to.id)
+        nodeBucket.remove(to)
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, ()=> {
           collect(socket, (err, msg)=> {
             if (err) {
@@ -563,6 +564,8 @@ module.exports = class RPC extends EventEmitter {
     bucket.add(peer)
     this.ping(peer.id, (err)=> {
       if (err) {
+        bucket.remove(peer)
+        console.log(bucket.count)
         return cb(new Error('Failed to connect'))
       }
       return cb()
