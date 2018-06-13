@@ -7,6 +7,11 @@
             Bootstrap
           </router-link>
         </li>
+        <li>
+          <router-link to="/network" :class="$router.currentRoute.path.startsWith('/network')  ? 'active' : ''" >
+            Network
+          </router-link>
+        </li>
       </ul>
     </nav>
     <router-view/>
@@ -41,8 +46,8 @@ ul.navigation li {
   padding:0 5px 0 5px;
   height: 100%;
 }
-ul.navigation li:hover {
-  background: #56574f;
+ul.navigation li:hover a {
+  border-bottom: solid 2px #fc9e56;
 }
 ul.navigation li a {
   display: block;

@@ -1,5 +1,6 @@
 var VueRouter = require('vue-router')
 var Bootstrap = require('./bootstrap.vue')
+var Network = require('./network.vue')
 module.exports = new VueRouter({
   routes: [
     {
@@ -11,6 +12,11 @@ module.exports = new VueRouter({
       path: '/bootstrap',
       name: 'Boostrap',
       component: Bootstrap
+    },
+    {
+      path: '/network',
+      name: 'Network',
+      component: Network
     }
   ]
 })

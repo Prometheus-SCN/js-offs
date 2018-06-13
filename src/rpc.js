@@ -565,7 +565,6 @@ module.exports = class RPC extends EventEmitter {
     this.ping(peer.id, (err)=> {
       if (err) {
         bucket.remove(peer)
-        console.log(bucket.count)
         return cb(new Error('Failed to connect'))
       }
       return cb()

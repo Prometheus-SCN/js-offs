@@ -128,6 +128,10 @@ function createWindow () {
     let configurator
     let createConfigurationWin = () => {
       configurationWin = new BrowserWindow({ width: 900, height: 900, icon: icon, autoHideMenuBar:true })
+      configurationWin.on('close', (e) => {
+        e.preventDefault()
+        configurationWin.hide()
+      })
       configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'configuration', 'index.html')}`)
       //configurationWin.webContents.openDevTools({})
       let setHandler = async (payload) => {

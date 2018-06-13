@@ -1,4 +1,6 @@
 const extend = require('util')._extend
+const fs = require('fs')
+const path = require('path')
 const kb = 1000
 const mb = 1000000
 const gb = 1000000000
@@ -24,8 +26,7 @@ let defaults = {
   bucketSize: 4,
   httpPort: 23402,
   startPort: 8200,
-  numPortTries: 2,// how long to wait on a rpc response
-  packetSize: 512, // message size in bytes
+  numPortTries: 2,
   nodeCount: 10, // how many nodes to find in or query in total
   concurrency: 3, // how many nodes to query simultaneously
   kbucketSize: 20, // size of each k bucket
@@ -67,11 +68,60 @@ let _maxFillRate = new WeakMap()
 let _redundancy = new WeakMap()
 let _batchConcurrency = new WeakMap()
 let _bootstrap = new WeakMap()
+let _path = new WeakMap()
 class Config {
   constructor () {
-    this.loadDefaults()
   }
-
+  save (pth) {
+    if (!pth) {
+      pth = _path.get(this)
+    }
+    _path.set(this, pth)
+    fs.writeFile(path.join(pth, 'config'), JSON.stringify(this.toJSON()), (err) => {
+      if (err) {
+       console.error(err)
+       //TODO Dunno what to do with this error
+      }
+    })
+  }
+  load (pth) {
+    try {
+      let config = JSON.parse(fs.readFileSync(path.join(pth, 'config')))
+      _path.set(this, pth)
+      _blockPath.set(this, config.blockPath)
+      _miniPath.set(this, config.miniPath)
+      _nanoPath.set(this, config.nanoPath)
+      _blockCacheSize.set(this, config.blockCacheSize)
+      _miniBlockCacheSize.set(this, config.miniBlockCacheSize)
+      _nanoBlockCacheSize.set(this, config.nanoBlockCacheSize)
+      _nano.set(this, config.nano)
+      _block.set(this, config.block)
+      _mini.set(this, config.mini)
+      _tupleSize.set(this, config.tupleSize)
+      _blockSize.set(this, config.blockSize)
+      _miniBlockSize.set(this, config.miniBlockSize)
+      _nanoBlockSize.set(this, config.nanoBlockSize)
+      _descriptorPad.set(this, config.descriptorPad)
+      _scale.set(this, config.scale)
+      _filterSize.set(this, config.filterSize)
+      _fingerprintSize.set(this, config.fingerprintSize)
+      _hitBoxSize.set(this, config.hitBoxSize)
+      _bucketSize.set(this, config.bucketSize)
+      _httpPort.set(this, config.httpPort)
+      _startPort.set(this, config.startPort)
+      _numPortTries.set(this, config.numPortTries)
+      _nodeCount.set(this, config.nodeCount)
+      _concurrency.set(this, config.concurrency)
+      _kbucketSize.set(this, config.kbucketSize)
+      _storeCount.set(this, config.storeCount)
+      _maxFillRate.set(this, config.maxFillRate)
+      _redundancy.set(this, config.redundancy)
+      _batchConcurrency.set(this, config.batchConcurrency)
+      _bootstrap.set(this, config.bootstrap.slice(0))
+    } catch (ex) {
+      return ex
+    }
+  }
   loadDefaults () {
     _blockPath.set(this, defaults.blockPath)
     _miniPath.set(this, defaults.miniPath)
@@ -95,7 +145,7 @@ class Config {
     _httpPort.set(this, defaults.httpPort)
     _startPort.set(this, defaults.startPort)
     _numPortTries.set(this, defaults.numPortTries)
-    _nodeCount.set(this, defaults.packetSize)
+    _nodeCount.set(this, defaults.nodeCount)
     _concurrency.set(this, defaults.concurrency)
     _kbucketSize.set(this, defaults.kbucketSize)
     _storeCount.set(this, defaults.storeCount)
@@ -197,12 +247,36 @@ class Config {
     return _httpPort.get(this)
   }
 
+  set httpPort (value) {
+    if (!Number.isInteger(value)){
+      throw new TypeError("Invalid HTTP Port")
+    }
+    _startPort.set(this, value)
+    this.save()
+  }
+
   get startPort () {
     return _startPort.get(this)
   }
 
+  set startPort (value) {
+    if (!Number.isInteger(value)){
+      throw new TypeError("Invalid Port Number")
+    }
+    _startPort.set(this, value)
+    this.save()
+  }
+
   get numPortTries () {
     return _numPortTries.get(this)
+  }
+
+  set numPortTries (value) {
+    if (!Number.isInteger(value)){
+      throw new TypeError("Invalid Number of Port Tries")
+    }
+    _startPort.set(this, value)
+    this.save()
   }
 
   get nodeCount () {
@@ -247,6 +321,41 @@ class Config {
       throw new TypeError("Invalid Boostsrap Peer Array")
     }
     _bootstrap.set(this, value)
+    this.save()
+  }
+  toJSON () {
+    return {
+      blockPath: this.blockPath,
+      miniPath: this.miniPath,
+      nanoPath: this.nanoPath,
+      blockCacheSize: this.blockCacheSize,
+      miniBlockCacheSize: this.miniBlockCacheSize,
+      nanoBlockCacheSize: this.nanoBlockCacheSize,
+      nano: this.nano,
+      block: this.block,
+      mini: this.mini,
+      tupleSize: this.tupleSize,
+      blockSize: this.blockSize,
+      miniBlockSize: this.miniBlockSize,
+      nanoBlockSize: this.nanoBlockSize,
+      descriptorPad: this.descriptorPad,
+      scale: this.scale,
+      filterSize: this.filterSize,
+      fingerprintSize: this.fingerprintSize,
+      hitBoxSize: this.hitBoxSize,
+      bucketSize: this.bucketSize,
+      httpPort: this.httpPort,
+      startPort: this.startPort,
+      numPortTries: this.numPortTries,
+      nodeCount: this.nodeCount,
+      concurrency: this.concurrency,
+      kbucketSize: this.kbucketSize,
+      storeCount: this.storeCount,
+      maxFillRate: this.maxFillRate,
+      redundancy: this.redundancy,
+      batchConcurrency: this.batchConcurrency,
+      bootstrap: this.bootstrap
+    }
   }
 }
 module.exports = new Config()

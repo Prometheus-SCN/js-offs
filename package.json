@@ -1,7 +1,7 @@
 {
   "name": "js-offs",
   "version": "0.0.1",
-  "description": "",
+  "description": "Owner Free File System",
   "main": "src/index.js",
   "appname": "offs",
   "scripts": {

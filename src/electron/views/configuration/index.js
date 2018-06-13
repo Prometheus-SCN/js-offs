@@ -11146,7 +11146,7 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   }
 })()}
 },{"babel-runtime/core-js/number/is-integer":1,"vue":23,"vue-hot-reload-api":21}],26:[function(require,module,exports){
-var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".notifbar {\n  display: grid;\n  height: 15px;\n  padding: 5px;\n  justify-items: right;\n  align-items: right;\n }\n .navbar {\n  position: relative;\n  display: grid;\n  border-top: 2px solid #ebe3de;\n  height: 40px;\n  justify-items: center;\n  align-items: center;\n }\nul.navigation {\n  height: 100%;\n  list-style-type: none;\n  margin: 0;\n  padding: 0;\n  position: relative;\n}\nul.navigation li {\n  display: inline-block;\n  margin: 0 5px 0 5px;\n  padding:0 5px 0 5px;\n  height: 100%;\n}\nul.navigation li:hover {\n  background: #56574f;\n}\nul.navigation li a {\n  display: block;\n  padding-top: 7px;\n  height: 34px;\n}\nul.navigation li a:hover {\n  //border-bottom: 2px solid #ebe3de\n}\nul.navigation li a.active {\n  border-bottom: solid 2px #00d1b2;\n}")
+var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".notifbar {\n  display: grid;\n  height: 15px;\n  padding: 5px;\n  justify-items: right;\n  align-items: right;\n }\n .navbar {\n  position: relative;\n  display: grid;\n  border-top: 2px solid #ebe3de;\n  height: 40px;\n  justify-items: center;\n  align-items: center;\n }\nul.navigation {\n  height: 100%;\n  list-style-type: none;\n  margin: 0;\n  padding: 0;\n  position: relative;\n}\nul.navigation li {\n  display: inline-block;\n  margin: 0 5px 0 5px;\n  padding:0 5px 0 5px;\n  height: 100%;\n}\nul.navigation li:hover a {\n  border-bottom: solid 2px #fc9e56;\n}\nul.navigation li a {\n  display: block;\n  padding-top: 7px;\n  height: 34px;\n}\nul.navigation li a:hover {\n  //border-bottom: 2px solid #ebe3de\n}\nul.navigation li a.active {\n  border-bottom: solid 2px #00d1b2;\n}")
 ;(function(){
 "use strict";
 
@@ -11158,7 +11158,7 @@ exports.default = {};
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)
 if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
-__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',[_c('nav',{staticClass:"navbar"},[_c('ul',{staticClass:"navigation"},[_c('li',[_c('router-link',{class:_vm.$router.currentRoute.path.startsWith('/bootstrap')  ? 'active' : '',attrs:{"to":"/bootstrap"}},[_vm._v("\n          Bootstrap\n        ")])],1)])]),_vm._v(" "),_c('router-view')],1)}
+__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',[_c('nav',{staticClass:"navbar"},[_c('ul',{staticClass:"navigation"},[_c('li',[_c('router-link',{class:_vm.$router.currentRoute.path.startsWith('/bootstrap')  ? 'active' : '',attrs:{"to":"/bootstrap"}},[_vm._v("\n          Bootstrap\n        ")])],1),_vm._v(" "),_c('li',[_c('router-link',{class:_vm.$router.currentRoute.path.startsWith('/network')  ? 'active' : '',attrs:{"to":"/network"}},[_vm._v("\n          Network\n        ")])],1)])]),_vm._v(" "),_c('router-view')],1)}
 __vue__options__.staticRenderFns = []
 if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
@@ -11185,9 +11185,80 @@ new Vue({
     return createElement(App)
   }
 })
-},{"./configuration.vue":26,"./router":28,"vue":23,"vue-router":22}],28:[function(require,module,exports){
+},{"./configuration.vue":26,"./router":29,"vue":23,"vue-router":22}],28:[function(require,module,exports){
+;(function(){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = {
+  mounted: function mounted() {
+    var _this = this;
+
+    this.configurator = new Configurator(ipcRenderer, function (err) {
+      _this.error = err;
+    });
+    this.configurator.get('startPort').then(function (port) {
+      _this.startPort = port;
+    });
+    this.configurator.get('numPortTries').then(function (retry) {
+      _this.portRetries = retry;
+    });
+    this.configurator.get('httpPort').then(function (port) {
+      _this.httpPort = port;
+    });
+  },
+  data: function data() {
+    return {
+      startPort: 0,
+      httpPort: 0,
+      numPortTries: 0,
+      error: null,
+      configurator: null,
+      success: null
+    };
+  },
+
+  methods: {
+    save: async function save() {
+      this.success = null;
+      var ok = await this.configurator.set('startPort', this.startPort);
+      if (!ok) {
+        return;
+      }
+      ok = await this.configurator.set('numPortTries', this.httpPort);
+      if (!ok) {
+        return;
+      }
+      ok = await this.configurator.set('httpPort', this.numPortTries);
+      if (!ok) {
+        return;
+      }
+      this.success = 'Saved';
+    }
+  }
+};
+})()
+if (module.exports.__esModule) module.exports = module.exports.default
+var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)
+if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
+__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',[_c('div',{staticClass:"columns"},[_c('div',{staticClass:"column"}),_vm._v(" "),_c('div',{staticClass:"column"},[_c('form',{on:{"submit":function($event){$event.preventDefault();_vm.save($event)}}},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Node Port")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.startPort),expression:"startPort"}],staticClass:"input is-success",attrs:{"type":"text","name":"startPort"},domProps:{"value":(_vm.startPort)},on:{"input":function($event){if($event.target.composing){ return; }_vm.startPort=$event.target.value}}}),_vm._v(" "),_c('span',{staticClass:"icon is-small is-left"},[_vm._v("\n              #\n            ")])])]),_vm._v(" "),_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Port Retries")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.numPortTries),expression:"numPortTries"}],staticClass:"input is-success",attrs:{"type":"text","name":"numPortTries"},domProps:{"value":(_vm.numPortTries)},on:{"input":function($event){if($event.target.composing){ return; }_vm.numPortTries=$event.target.value}}}),_vm._v(" "),_c('span',{staticClass:"icon is-small is-left"},[_vm._v("\n              #\n            ")])])]),_vm._v(" "),_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("HTTP Port")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.httpPort),expression:"httpPort"}],staticClass:"input is-success",attrs:{"type":"text","name":"httpPort"},domProps:{"value":(_vm.httpPort)},on:{"input":function($event){if($event.target.composing){ return; }_vm.httpPort=$event.target.value}}}),_vm._v(" "),_c('span',{staticClass:"icon is-small is-left"},[_vm._v("\n              #\n            ")])])]),_vm._v(" "),_c('div',{staticClass:"control"},[(_vm.success)?_c('span',{staticClass:"message is-sucess"},[_vm._v(_vm._s(_vm.success))]):_vm._e(),_vm._v(" "),(_vm.error)?_c('span',{staticClass:"message is-danger"},[_vm._v(_vm._s(_vm.error))]):_vm._e(),_vm._v(" "),_c('input',{staticClass:"button is-primary",staticStyle:{"float":"right"},attrs:{"type":"submit","value":"Save"}})])])]),_vm._v(" "),_c('div',{staticClass:"column"})])])}
+__vue__options__.staticRenderFns = []
+if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), true)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-23566114", __vue__options__)
+  } else {
+    hotAPI.reload("data-v-23566114", __vue__options__)
+  }
+})()}
+},{"vue":23,"vue-hot-reload-api":21}],29:[function(require,module,exports){
 var VueRouter = require('vue-router')
 var Bootstrap = require('./bootstrap.vue')
+var Network = require('./network.vue')
 module.exports = new VueRouter({
   routes: [
     {
@@ -11199,7 +11270,12 @@ module.exports = new VueRouter({
       path: '/bootstrap',
       name: 'Boostrap',
       component: Bootstrap
+    },
+    {
+      path: '/network',
+      name: 'Network',
+      component: Network
     }
   ]
 })
-},{"./bootstrap.vue":25,"vue-router":22}]},{},[27]);
+},{"./bootstrap.vue":25,"./network.vue":28,"vue-router":22}]},{},[27]);

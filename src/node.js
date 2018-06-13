@@ -37,13 +37,18 @@ module.exports = class Node extends EventEmitter {
       }
     }
     let appFolder = path.join(_platformPath.get(this), applicationName)
+    let err = config.load(appFolder)
+    if (err) {
+      config.loadDefaults()
+      config.save(appFolder)
+    }
     mkdirp(appFolder, (err)=> {
       if (err) {
         return this.emit(err)
       }
       let keyPair
       let node = fs.readFile(path.join(appFolder, 'node'), (err, node)=> {
-        let getNetwork = (err)=> {
+        let getNetwork = (err) => {
           if (err) {
             return this.emit('error', err)
           }
@@ -68,9 +73,6 @@ module.exports = class Node extends EventEmitter {
               this.emit('listening', config.httpPort)
             })
             blockRouter.listen()
-            process.nextTick(() => {
-              this.emit('ready', peerInfo)
-            })
 
             this.emit('ready',  peerInfo)
             process.on('exit', ()=> {
