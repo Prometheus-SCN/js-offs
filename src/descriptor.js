@@ -2,13 +2,11 @@
 const Block = require('./block')
 const config = require('./config')
 let _data = new WeakMap()
-const _descriptorPad = config.descriptorPad
 let _blockArr = new WeakMap()
 let _max = new WeakMap()
 let _cutPoint = new WeakMap()
 let _tuppleBytes = new WeakMap()
 let _blockSize = new WeakMap()
-const _tupleSize = config.tupleSize
 
 module.exports = class Descriptor {
   constructor (blockSize, streamLength) {
@@ -16,14 +14,14 @@ module.exports = class Descriptor {
       throw new Error('Block size must be an integer')
     }
     let blocks = Math.ceil(streamLength / blockSize) //total number of source blocks
-    let cutPoint = ((Math.floor(blockSize / _descriptorPad) ) * _descriptorPad)// maximum length of a descriptor in bytes
+    let cutPoint = ((Math.floor(blockSize / config.descriptorPad) ) * config.descriptorPad)// maximum length of a descriptor in bytes
     _cutPoint.set(this, cutPoint)
-    let tuppleBytes = blocks * _descriptorPad * _tupleSize // total size of all tupple descriptions
+    let tuppleBytes = blocks * config.descriptorPad * config.tupleSize // total size of all tupple descriptions
     _tuppleBytes.set(this, tuppleBytes)
     _blockSize.set(this, blockSize)
     _data.set(this, new Buffer(0))
     _blockArr.set(this, [])
-    _max.set(this, Math.floor(blockSize / _descriptorPad) * _descriptorPad)
+    _max.set(this, Math.floor(blockSize / config.descriptorPad) * config.descriptorPad)
   }
 
   //once blocks have been created the descriptor is sealed
@@ -34,7 +32,7 @@ module.exports = class Descriptor {
   //variadic function and it does expect input
   tuple (blocks) {
     if (!this.sealed) {
-      if (!(Array.isArray(blocks) && blocks.length === _tupleSize)) {
+      if (!(Array.isArray(blocks) && blocks.length === config.tupleSize)) {
         throw new TypeError('Invalid Tuple')
       }
       let data = _data.get(this)
@@ -65,7 +63,7 @@ module.exports = class Descriptor {
       let descBlocks = []
       while (data.length > cutPoint) {
         //cut out a descriptor block with spaces for the next blocks hash
-        let divider = cutPoint - _descriptorPad
+        let divider = cutPoint - config.descriptorPad
         let desc = data.slice(0, divider)
         data = data.slice(divider, data.length)
         descBlocks.push(desc)
@@ -82,7 +80,7 @@ module.exports = class Descriptor {
         let descBlock = new Block(descBlocks[ i ], blockSize)
         //TODO Store files to keep local?
         prior = descBlock.hash
-        let lasthash = descBlock.data.slice(0, cutPoint).slice((cutPoint - _descriptorPad), cutPoint)
+        let lasthash = descBlock.data.slice(0, cutPoint).slice((cutPoint - config.descriptorPad), cutPoint)
         blockArr.unshift(descBlock)
       }
       return blockArr

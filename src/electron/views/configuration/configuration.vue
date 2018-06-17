@@ -12,6 +12,11 @@
             Network
           </router-link>
         </li>
+        <li>
+          <router-link to="/storage" :class="$router.currentRoute.path.startsWith('/storage')  ? 'active' : ''" >
+            Storage
+          </router-link>
+        </li>
       </ul>
     </nav>
     <router-view/>

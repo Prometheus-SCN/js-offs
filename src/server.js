@@ -167,6 +167,7 @@ module.exports = function (br, emit) {
       res.end()
     })
     ws.once('error', (err) => {
+      console.error(err)
       emit('error', err)
       res.status(500).send()
       res.end()

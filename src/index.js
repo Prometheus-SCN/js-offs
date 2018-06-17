@@ -11,6 +11,8 @@ const Configurator = require('./configurator').mainConfigurator
 const Peer = require('./peer')
 const bs58 = require('bs58')
 let Responder = require('electron-ipc-responder')
+const clipboardy = require('clipboardy')
+
 const log = require('js-logging')
   .console({
     filters: {
@@ -47,7 +49,7 @@ function createWindow () {
   node.once('ready', () => {
     let importWin
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 530, height: 304, icon: icon, autoHideMenuBar:true, resizable: false })
+      importWin = new BrowserWindow({ width: 530, height: 304, icon: icon, autoHideMenuBar:true, resizable: false})
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
@@ -149,9 +151,12 @@ function createWindow () {
         createConfigurationWin()
       }
     }
+    let copyNodeId = () => {
+      clipboardy.writeSync(node.peerInfo.key)
+    }
 
     tray = new Tray(icon)
-    let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal' })
+    let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal', click: copyNodeId })
     let connectionsItem = new MenuItem({ label: `Connections: ${node.blockRouter.connections}`, type: 'normal' })
     let blockCapacityItem = new MenuItem({
       label: `Block Cache Capacity: ${node.blockRouter.blockCapacity}%`,
@@ -165,10 +170,10 @@ function createWindow () {
       label: `Nano Cache Capacity: ${node.blockRouter.nanoCapacity}%`,
       type: 'normal'
     })
-    let importItem = new MenuItem({ label: 'Import', type: 'normal', click: () => openImportWin() })
-    let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: () => openExportWin() })
-    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: () => openConfigurationWin() })
-    let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: () => openConnectWin() })
+    let importItem = new MenuItem({ label: 'Import', type: 'normal', click: openImportWin })
+    let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: openExportWin })
+    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: openConfigurationWin })
+    let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: openConnectWin })
     let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => app.exit() })
     let contextMenu = new Menu()
     contextMenu.append(nodeItem)

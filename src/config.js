@@ -8,9 +8,9 @@ let defaults = {
   blockPath: '.block-cache',
   miniPath: '.mini-cache',
   nanoPath: '.nano-cache',
-  blockCacheSize: 200 * gb,
-  miniBlockCacheSize: 100 * mb,
-  nanoBlockCacheSize: 200 * mb,
+  blockCacheSize: 10 * gb,
+  miniBlockCacheSize: 10 * gb,
+  nanoBlockCacheSize: 10 * gb,
   nano: 3,
   block: 1,
   mini: 2,
@@ -35,7 +35,7 @@ let defaults = {
   redundancy: .30, //30% network redundancy target
   batchConcurrency: 10,
   bootstrap: [
-    {id: '2A4hXmV7rUk5r3LqGhAY3xbV2GkWubf2Q7QxGLBNy89q', ip: '192.168.1.2', port: 30 }
+    {id: 'LeW7AX2UhTypMKywe7EHiiAGLnd1tTeqGJ1b7VpLWMr', ip: '73.135.22.132', port: 8200 }
   ]
 }
 let _blockPath = new WeakMap()
@@ -183,12 +183,54 @@ class Config {
     return _blockCacheSize.get(this)
   }
 
+  set blockCacheSize (value) {
+    if (!Number.isInteger(+value)) {
+      throw new TypeError("Invalid Block Cache Size")
+    }
+    if (value < 300) {
+      throw new TypeError("Block Cache Size Is Too Small")
+    }
+    if (value > (1000000 * mb)) {
+      throw new TypeError("Block Cache Size Is Too Large")
+    }
+    _blockCacheSize.set(this, value)
+    this.save()
+  }
+
   get miniBlockCacheSize () {
     return _miniBlockCacheSize.get(this)
   }
 
+  set miniBlockCacheSize (value) {
+    if (!Number.isInteger(+value)) {
+      throw new TypeError("Invalid Mini Block Cache Size")
+    }
+    if (value < 300) {
+      throw new TypeError("Mini Block Cache Size Is Too Small")
+    }
+    if (value > (1000000 * mb)) {
+      throw new TypeError("Mini Block Cache Size Is Too Large")
+    }
+    _miniBlockCacheSize.set(this, value)
+    this.save()
+  }
+
   get nanoBlockCacheSize () {
     return _nanoBlockCacheSize.get(this)
+  }
+
+  set nanoBlockCacheSize (value) {
+    if (!Number.isInteger(+value)) {
+      throw new TypeError("Invalid Nano Block Cache Size")
+    }
+    if (value < 300) {
+      throw new TypeError("Nano Block Cache Size Is Too Small")
+    }
+    if (value > (1000000 * mb)) {
+      throw new TypeError("Nano Block Cache Size Is Too Large")
+    }
+    _nanoBlockCacheSize.set(this, value)
+    this.save()
   }
 
   get nano () {
@@ -248,10 +290,10 @@ class Config {
   }
 
   set httpPort (value) {
-    if (!Number.isInteger(value)){
+    if (!Number.isInteger(+value)){
       throw new TypeError("Invalid HTTP Port")
     }
-    _startPort.set(this, value)
+    _httpPort.set(this, value)
     this.save()
   }
 
@@ -260,7 +302,7 @@ class Config {
   }
 
   set startPort (value) {
-    if (!Number.isInteger(value)){
+    if (!Number.isInteger(+value)){
       throw new TypeError("Invalid Port Number")
     }
     _startPort.set(this, value)
@@ -272,10 +314,10 @@ class Config {
   }
 
   set numPortTries (value) {
-    if (!Number.isInteger(value)){
+    if (!Number.isInteger(+value)){
       throw new TypeError("Invalid Number of Port Tries")
     }
-    _startPort.set(this, value)
+    _numPortTries.set(this, value)
     this.save()
   }
 

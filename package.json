@@ -14,7 +14,8 @@
     "build-linux-x64": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=x64",
     "build-linux-ia36": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=ia36",
     "build-windows-x64": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=x64",
-    "build-windows-ia36": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=ia36"
+    "build-windows-ia36": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=ia36",
+    "build-darwin-x64": "./node_modules/.bin/electron-packager ./ --platform=darwin --arch=x64"
   },
   "author": "Victor Morrow <vijayee.kulkaa@hushmail.com>",
   "license": "GPL-3.0",
@@ -24,6 +25,7 @@
     "buffer-split": "1.0.0",
     "buffer-xor": "2.0.1",
     "clipboard": "1.6.1",
+    "clipboardy": "^1.2.3",
     "collect-stream": "1.1.1",
     "cron": "1.1.1",
     "cuckoo-filter": "1.0.3",

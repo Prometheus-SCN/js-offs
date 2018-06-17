@@ -11,8 +11,7 @@ let _size = new WeakMap()
 let _offsetStart = new WeakMap()
 let _blockSize = new WeakMap()
 let _flightBox = new WeakMap()
-const _descriptorPad = config.descriptorPad
-const _tupleSize = config.tupleSize
+
 module.exports = class ReadableOffStream extends Readable {
   constructor (url, blockSize, opts) {
     if (!(url instanceof OffUrl)) {
@@ -87,7 +86,7 @@ module.exports = class ReadableOffStream extends Readable {
         if (block) {
           tuple.push(block)
         }
-        if (i < _tupleSize) {
+        if (i < config.tupleSize) {
           key = descriptor.shift()
           _descriptor.set(this, descriptor)
           let doNext = () => {
@@ -121,7 +120,7 @@ module.exports = class ReadableOffStream extends Readable {
     let moveToOffset = () => {
       if (url.streamOffset) {
         let offset = Math.floor(url.streamOffset / config.blockSize)
-        for (let i = 0; i < (offset * _tupleSize); i++) {
+        for (let i = 0; i < (offset * config.tupleSize); i++) {
           size = size + config.blockSize
           descriptor.shift()
         }
@@ -135,8 +134,8 @@ module.exports = class ReadableOffStream extends Readable {
       descriptor = []
       let blockSize = _blockSize.get(this)
       let blocks = Math.ceil(url.streamLength / blockSize) //total number of source blocks
-      let cutPoint = ((Math.floor(blockSize / _descriptorPad) ) * _descriptorPad)// maximum length of a descriptor in bytes
-      let descKeys = blocks * _tupleSize//total number of keys for all blocks in descriptor
+      let cutPoint = ((Math.floor(blockSize / config.descriptorPad) ) * config.descriptorPad)// maximum length of a descriptor in bytes
+      let descKeys = blocks * config.tupleSize//total number of keys for all blocks in descriptor
       let keybuf
       let getDesc = (err, block)=> {
         if (err) {
@@ -148,9 +147,9 @@ module.exports = class ReadableOffStream extends Readable {
         }
         if (keybuf.length > 0) {
           if (descriptor.length < descKeys) {
-            let key = bs58.encode(keybuf.slice(0, _descriptorPad))
+            let key = bs58.encode(keybuf.slice(0, config.descriptorPad))
             descriptor.push(key)
-            keybuf = keybuf.slice(_descriptorPad, keybuf.length)
+            keybuf = keybuf.slice(config.descriptorPad, keybuf.length)
             return getDesc()
           } else {
             moveToOffset()
