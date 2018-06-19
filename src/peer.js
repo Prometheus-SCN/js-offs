@@ -3,6 +3,7 @@ const isIP = require('is-ip')
 const bs58 = require('bs58')
 const fs = require('fs')
 const path = require('path')
+const net = require('net')
 let _port = new WeakMap()
 let _ip = new WeakMap()
 let _id = new WeakMap()
@@ -13,7 +14,7 @@ module.exports = class Peer {
     if (!Buffer.isBuffer(id)) {
       throw new Error('Id is not a buffer')
     }
-    if (!isIP(ip)) {
+    if (!net.isIP(ip)) {
       throw new Error('Ip is not a valid address')
     }
     if (isNaN(port)) {

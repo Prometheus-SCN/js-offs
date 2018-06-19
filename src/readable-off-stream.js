@@ -92,10 +92,13 @@ module.exports = class ReadableOffStream extends Readable {
           let doNext = () => {
             bc.get(key, next)
           }
-          bc.contains(key, (contains) => {
+          let testContents = (contains) => {
             if (!contains) {
               if (flightBox && flightBox.filter.contains(key)) {
-                flightBox.emitter.on(key, doNext)
+                flightBox.emitter.on(key, () => {
+                  console.log(key)
+                  bc.contains(key, testContents)
+                })
               } else {
                 let flightBox = bc.load([ key ])
                 flightBox.emitter.once(key, doNext)
@@ -107,7 +110,8 @@ module.exports = class ReadableOffStream extends Readable {
             } else {
               doNext()
             }
-          })
+          }
+          bc.contains(key, testContents)
         } else {
           return yieldBlock()
         }

@@ -7,6 +7,8 @@ const Block = require('./block')
 const util = require('./utility')
 const fs = require('fs')
 const getSize = require('get-folder-size')
+const bs58 = require('bs58')
+const hamming = require('hamming-distance')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
 let _cacheInterface = new WeakMap()
 let _path = new WeakMap()
@@ -103,9 +105,6 @@ module.exports =
     }
 
     load (keys) {
-      keys = keys.filter((key)=> {
-        return !this.contains(key)
-      })
       let cacheInterface = _cacheInterface.get(this)
       return cacheInterface.load(keys)
     }

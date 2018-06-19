@@ -160,7 +160,7 @@ module.exports = class BlockRouter extends EventEmitter {
         return cb(err, block.data)
       })
     }
-    rpc.closestBlock = (number, filter, hash, type, cb) => {
+    rpc.closestBlock = (hash, filter, type, cb) => {
       let bc
       switch (type) {
         case 1:
@@ -174,7 +174,7 @@ module.exports = class BlockRouter extends EventEmitter {
           break;
       }
       let key = bs58.encode(hash)
-      bc.closestBlock(number, key, filter, cb)
+      bc.closestBlock(key, filter, cb)
     }
     rpc.containsValue = (hash, type, cb)=> {
       let bc

@@ -35,7 +35,7 @@ let defaults = {
   redundancy: .30, //30% network redundancy target
   batchConcurrency: 10,
   bootstrap: [
-    {id: 'LeW7AX2UhTypMKywe7EHiiAGLnd1tTeqGJ1b7VpLWMr', ip: '73.135.22.132', port: 8200 }
+    {id: '8fHecNZCiTxavnfnskySbeAYCd1bcv1SAVyi1mcZqurH', ip: '73.135.22.132', port: 8200 }
   ]
 }
 let _blockPath = new WeakMap()
