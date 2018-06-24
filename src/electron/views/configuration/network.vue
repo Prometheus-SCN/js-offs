@@ -55,7 +55,6 @@
       })
       this.configurator.get('startPort')
         .then((port) => {
-          console.log(port)
           this.startPort = port
         })
       this.configurator.get('numPortTries')

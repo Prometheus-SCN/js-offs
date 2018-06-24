@@ -53,7 +53,7 @@ function createWindow () {
       let height
       if (/^win/.test(process.platform)) {
         width = 530
-        height = 380
+        height = 330
       } else {
         width = 530
         height = 304

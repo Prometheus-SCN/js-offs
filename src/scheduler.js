@@ -157,7 +157,7 @@ module.exports = class Scheduler {
         }
         let then = Math.ceil(fillRate * 60 * 60 * 1000)
         then = then < 0 ? 1000 : then
-        then = then < 2000 ? 2000 : then
+        then = then < 10000 ? 10000 : then
         let job = ()=> {
           if (isRunningCapacity) {
             return

@@ -43,7 +43,6 @@ module.exports = class ReadableOffStream extends Readable {
 
     let getBlock = () => {
       let tuple = []
-      let key
       let flightBox = _flightBox.get(this)
 
       let yieldBlock = () => { // does actual calculation of the original block
@@ -87,7 +86,7 @@ module.exports = class ReadableOffStream extends Readable {
           tuple.push(block)
         }
         if (i < config.tupleSize) {
-          key = descriptor.shift()
+          let key = descriptor.shift()
           _descriptor.set(this, descriptor)
           let doNext = () => {
             bc.get(key, next)
@@ -95,10 +94,7 @@ module.exports = class ReadableOffStream extends Readable {
           let testContents = (contains) => {
             if (!contains) {
               if (flightBox && flightBox.filter.contains(key)) {
-                flightBox.emitter.on(key, () => {
-                  console.log(key)
-                  bc.contains(key, testContents)
-                })
+                flightBox.emitter.on(key, next)
               } else {
                 let flightBox = bc.load([ key ])
                 flightBox.emitter.once(key, doNext)

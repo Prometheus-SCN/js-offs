@@ -153,7 +153,7 @@ module.exports =
 
     contains(key, cb) {
       let fd = util.sanitize(key, this.path)
-      fs.exists(fd, cb)
+      fs.access(fd, (err) => cb(!err))
     }
 
     content (cb) {
