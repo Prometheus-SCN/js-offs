@@ -11,7 +11,6 @@ const through = require('through2')
 const isStream = require('isstream')
 const streamifier = require('streamifier')
 const OffUrl = require('./off-url')
-const _tupleSize = config.tupleSize
 const _blockSize = new WeakMap()
 let _blockCache = new WeakMap()
 let _hasher = new WeakMap()
@@ -78,11 +77,8 @@ module.exports = class WritableOffStream extends Writable {
             randoms.push(block)
           }
           i++
-          if (i < (_tupleSize - 1)) {
+          if (i < (config.tupleSize - 1)) {
             let random = randomList.shift()
-            if (typeof random !== 'string') {
-              console.log(random)
-            }
             bc.get(random, next)
           } else {
             return process()
@@ -134,7 +130,7 @@ module.exports = class WritableOffStream extends Writable {
       }
       //Get the keys of all the randoms needed for writing this file's representations
       if (!randomList) {
-        bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (_tupleSize - 1)), (err, randoms) => {
+        bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (config.tupleSize - 1)), (err, randoms) => {
           if (err) {
             return this.emit('error', err)
           }

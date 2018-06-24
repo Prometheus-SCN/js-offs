@@ -11,6 +11,8 @@ const Configurator = require('./configurator').mainConfigurator
 const Peer = require('./peer')
 const bs58 = require('bs58')
 let Responder = require('electron-ipc-responder')
+const clipboardy = require('clipboardy')
+
 const log = require('js-logging')
   .console({
     filters: {
@@ -47,7 +49,16 @@ function createWindow () {
   node.once('ready', () => {
     let importWin
     let createImportWin = () => {
-      importWin = new BrowserWindow({ width: 530, height: 304, icon: icon, autoHideMenuBar:true, resizable: false })
+      let width
+      let height
+      if (/^win/.test(process.platform)) {
+        width = 530
+        height = 330
+      } else {
+        width = 530
+        height = 304
+      }
+      importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar:true, resizable: false})
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
@@ -89,7 +100,16 @@ function createWindow () {
     let connectWin
     let connector
     let createConnectWin = () => {
-      connectWin = new BrowserWindow({ width: 800, height: 126, icon: icon, autoHideMenuBar:true, resizable: false})
+      let width
+      let height
+      if (/^win/.test(process.platform)) {
+        width = 800
+        height = 186
+      } else {
+        width = 800
+        height = 126
+      }
+      connectWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar:true, resizable: false})
       connectWin.on('close', (e) => {
         e.preventDefault()
         connectWin.hide()
@@ -133,7 +153,7 @@ function createWindow () {
         configurationWin.hide()
       })
       configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'configuration', 'index.html')}`)
-      //configurationWin.webContents.openDevTools({})
+     // configurationWin.webContents.openDevTools({})
       let setHandler = async (payload) => {
         config[payload.key] = payload.value
       }
@@ -149,9 +169,12 @@ function createWindow () {
         createConfigurationWin()
       }
     }
+    let copyNodeId = () => {
+      clipboardy.writeSync(node.peerInfo.key)
+    }
 
     tray = new Tray(icon)
-    let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal' })
+    let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal', click: copyNodeId })
     let connectionsItem = new MenuItem({ label: `Connections: ${node.blockRouter.connections}`, type: 'normal' })
     let blockCapacityItem = new MenuItem({
       label: `Block Cache Capacity: ${node.blockRouter.blockCapacity}%`,
@@ -165,10 +188,10 @@ function createWindow () {
       label: `Nano Cache Capacity: ${node.blockRouter.nanoCapacity}%`,
       type: 'normal'
     })
-    let importItem = new MenuItem({ label: 'Import', type: 'normal', click: () => openImportWin() })
-    let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: () => openExportWin() })
-    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: () => openConfigurationWin() })
-    let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: () => openConnectWin() })
+    let importItem = new MenuItem({ label: 'Import', type: 'normal', click: openImportWin })
+    let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: openExportWin })
+    let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: openConfigurationWin })
+    let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: openConnectWin })
     let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => app.exit() })
     let contextMenu = new Menu()
     contextMenu.append(nodeItem)

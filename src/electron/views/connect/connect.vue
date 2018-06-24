@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="connect">
+  <form @submit.prevent="connect" style="overflow:hidden;">
     <div class="columns">
       <div class="column"></div>
       <div class="column">

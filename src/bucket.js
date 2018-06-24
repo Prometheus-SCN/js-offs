@@ -107,10 +107,16 @@ module.exports = class Bucket extends EventEmitter {
     if (!(peer instanceof Peer)) {
       throw new Error('Invalid Peer')
     }
+    if (!(peer.id)) {
+      throw new Error('Invalid Peer')
+    }
+    const nodeId = _nodeId.get(this)
+    if (nodeId.equals(peer.id)) {
+      return
+    }
     if (!index) {
       index = 0
     }
-
     if (isNaN(index)) {
       throw new Error('Invalid index')
     }

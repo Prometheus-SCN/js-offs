@@ -143,7 +143,7 @@
 </style>
 <script>
   let progressbar = require('./progressbar.vue')
-
+  let urldecode = require('urldecode')
   function getRandomInt (min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
@@ -188,7 +188,7 @@
         .then((ok) => {
           if (!ok) return
           let url = OffUrl.parse(this.url)
-          let filename = path.join(this.location, url.fileName)
+          let filename = path.join(this.location, urldecode(url.fileName))
           let streamLength = url.streamLength
           let percent = 0
           let size = 0

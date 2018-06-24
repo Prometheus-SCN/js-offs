@@ -62,16 +62,14 @@ export default {
       this.startLoader()
       for (var i = 0; i < e.dataTransfer.items.length; i++) {
         var entry = e.dataTransfer.items[ i ].webkitGetAsEntry();
-        // dropzone.removeFile(e.dataTransfer.items[ i ].getAsFile())
         this.importer(entry, this.complete)
       }
     })
     dropzone.on('addedfile', (file) => {
-      if (this.isDropped) {
-        return
+      if (!this.isDropped && (file instanceof File)) {
+        this.startLoader()
+        this.uploadFile(file, this.complete)
       }
-      this.importer(file, this.complete)
-      // dropzone.removeFile(file)
     })
   },
   data: function () {
