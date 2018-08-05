@@ -1,9 +1,9 @@
 <template>
   <div ref="container">
     <div ref="fileStatus">
-      <div  class="file-status" v-for="(file, index) in files">
+      <div class="file-status" v-for="(file, index) in files" v-show="file.show">
         <div class="icontainer">
-          <img class="loader-icon" :src="file.icon" @click="openLocation(index)" >
+          <img :class="file.error ? 'loader-icon error' : 'loader-icon'" :src="file.icon" @click="openLocation(index)" >
         </div>
         <div class="file-info">
           <table>
@@ -15,7 +15,7 @@
             </tr>
             <tr>
               <td>
-                <progressbar :percent="file.percent"></progressbar>
+                <progressbar :error="file.error" :percent="file.percent"></progressbar>
               </td>
             </tr>
           </table>
@@ -79,6 +79,9 @@
     background-color: #3273dc;
     border-radius: 10px;
     margin: 5px;
+  }
+  .loader-icon.error {
+    background-color: transparent;
   }
   .loader-icon {
     background-color: white;
@@ -175,12 +178,32 @@
         })
       },
       onError (err) {
-        console.log(err)
+        this.files[err.id].error = err.err
+        this.files[err.id].icon = '../../images/error.svg'
       },
       onPercent(payload) {
         this.files[payload.id].percent = payload.percent
         if (payload.percent >= 100) {
           this.files[payload.id].icon = '../../images/folder.svg'
+        }
+      },
+      resize () {
+        let heightOffset = window.outerHeight - window.innerHeight
+        let widthOffset = window.outerWidth - window.innerWidth
+        let height = this.$refs.container.clientHeight + heightOffset
+        let width = this.$refs.container.clientWidth + widthOffset
+        if (!this.isExpandable || height >= (.80 * window.screen.height)) {
+          document.body.style.overflowY = 'scroll'
+          //this.$refs.fileStatus.style.overflowY = 'scroll'
+          //stop resizing window after the first time
+          if(this.isExpandable) {
+            this.isExpandable = false
+            //this.$refs.fileStatus.style.maxHeight = this.$refs.fileStatus.offsetHeight
+          }
+        } else {
+          //this.$refs.fileStatus.style.overflowY = "auto"
+          //this.$refs.fileStatus.style.height = "auto"
+          window.resizeTo(width, height)
         }
       },
       exporter () {
@@ -193,29 +216,12 @@
           let percent = 0
           let size = 0
           let icon = `../../images/Preloader_${ getRandomInt(1, 7) }.gif`
-          let file = {filename, percent, size, streamLength, icon}
+          let show = true
+          let error = null
+          let file = {filename, percent, size, streamLength, icon, show, error}
 
           // Resize Window to fit
-          let fileStatus = this.$refs.fileStatus
-          setTimeout(() => {
-            let heightOffset = window.outerHeight - window.innerHeight
-            let widthOffset = window.outerWidth - window.innerWidth
-            let height = this.$refs.container.clientHeight + heightOffset
-            let width = this.$refs.container.clientWidth + widthOffset
-            if (!this.isExpandable || height >= (.80 * window.screen.height)) {
-              document.body.style.overflowY = 'scroll'
-              //this.$refs.fileStatus.style.overflowY = 'scroll'
-              //stop resizing window after the first time
-              if(this.isExpandable) {
-                this.isExpandable = false
-                //this.$refs.fileStatus.style.maxHeight = this.$refs.fileStatus.offsetHeight
-              }
-            } else {
-              //this.$refs.fileStatus.style.overflowY = "auto"
-              //this.$refs.fileStatus.style.height = "auto"
-              window.resizeTo(width, height)
-            }
-          }, 100)
+          setTimeout(this.resize, 100)
           let id = this.files.length
           this.files.push(file)
           this.Exporter.exporter(this.location, this.url, id)
@@ -234,6 +240,10 @@
       openLocation (index) {
         if (this.files[index].percent >= 100) {
           shell.showItemInFolder(this.files[index].filename)
+        }
+        if (this.files[index].error) {
+          this.files[index].show = false
+          setTimeout(this.resize, 100)
         }
       }
     }

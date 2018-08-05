@@ -11,10 +11,13 @@ class rendererConfigurator extends responder {
   async get (key) {
     return await this.ask('get', {key})
   }
+  async restart () {
+     return this.ask('restart')
+  }
 }
 
 class mainConfigurator extends responder {
-  constructor (webContents, ipcMain, getHandler, setHandler) {
+  constructor (webContents, ipcMain, getHandler, setHandler, restartHandler) {
     super(webContents.send.bind(webContents), ipcMain.on.bind(ipcMain))
     this.registerTopic('set', (payload) => {
       return  new Promise(async (resolve) => {
@@ -38,6 +41,12 @@ class mainConfigurator extends responder {
           this.tell('error', ex.message)
           resolve(fa)
         }
+      })
+    })
+    this.registerTopic('restart', () => {
+      return new Promise((resolve) => {
+        resolve()
+        restartHandler()
       })
     })
   }

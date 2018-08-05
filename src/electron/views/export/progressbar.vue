@@ -1,13 +1,22 @@
 <template>
-  <progress class="progress-bar" :value="percent" max="100">{{percent}}</progress>
+  <span>
+    <span class="error">{{error}}</span>
+    <progress :class="error ? 'progress-bar error' : 'progress-bar'" :value="percent" max="100">{{percent}}</progress>
+  </span>
 </template>
-<style>
+<style scoped>
    .progress-bar {
     display: block;
     height: 50px;
     width: 300px;
     background-color: #ced3cc;
     border-radius: 10px;
+  }
+  .error {
+    color: #b24a4a;
+  }
+  .progress-bar.error::-webkit-progress-bar {
+    background-color: #b24a4a;
   }
   /*
   .progress-bar::after {
@@ -32,6 +41,6 @@
 </style>
 <script>
   export default {
-    props: ['percent']
+    props: ['percent', 'error']
   }
 </script>

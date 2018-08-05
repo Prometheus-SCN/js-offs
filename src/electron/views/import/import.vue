@@ -19,7 +19,7 @@
               <input class="input" id="link" type="text" v-model="link">
             </p>
             <p class="control">
-              <a class="button is-info" id="copy" data-clipboard-target="#link">
+              <a class="button is-info" id="copy" data-clipboard-target="#link"  @click="copyLink">
                 <span class="icon is-small">
                   <i class="fa fa-clipboard"></i>
                 </span>
@@ -44,13 +44,11 @@
 <script>
 window.$ = require('../../scripts/jquery-3.1.1.min.js')
 var Dropzone = require('./../../scripts/dropzone')
-var Clipboard = require('clipboard')
 function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 export default {
   mounted () {
-    new Clipboard('#copy')
     var dropzone = new Dropzone(this.$refs.dropzone , {
       url: 'http://localhost:23402/offsystem',
       previewsContainer: this.$refs.dztrash,
@@ -89,6 +87,9 @@ export default {
       } else {
         $(this.$refs.completeModal).addClass('is-active')
       }
+    },
+    copyLink() {
+      clipboard.writeText(this.link)
     },
     uploadFile (file, name, type, cb) {
       if (typeof type === 'function') {

@@ -34,8 +34,10 @@ let defaults = {
   maxFillRate: 72, // in hours
   redundancy: .30, //30% network redundancy target
   batchConcurrency: 10,
+  cacheLocation: null,
   bootstrap: [
-    {id: '8fHecNZCiTxavnfnskySbeAYCd1bcv1SAVyi1mcZqurH', ip: '73.135.22.132', port: 8200 }
+    {id: '8fHecNZCiTxavnfnskySbeAYCd1bcv1SAVyi1mcZqurH', ip: '73.135.22.132', port: 8200 },
+    {id: 'GgA9QwCDRgKt9tKLQVjyjnv9wvt7FaeAJo91JWWWmXuK', ip: '73.135.22.132', port: 8201 }
   ]
 }
 let _blockPath = new WeakMap()
@@ -67,6 +69,7 @@ let _storeCount = new WeakMap()
 let _maxFillRate = new WeakMap()
 let _redundancy = new WeakMap()
 let _batchConcurrency = new WeakMap()
+let _cacheLocation = new WeakMap()
 let _bootstrap = new WeakMap()
 let _path = new WeakMap()
 class Config {
@@ -117,6 +120,7 @@ class Config {
       _maxFillRate.set(this, config.maxFillRate)
       _redundancy.set(this, config.redundancy)
       _batchConcurrency.set(this, config.batchConcurrency)
+      _cacheLocation.set(this, config.cacheLocation)
       _bootstrap.set(this, config.bootstrap.slice(0))
     } catch (ex) {
       return ex
@@ -152,6 +156,7 @@ class Config {
     _maxFillRate.set(this, defaults.maxFillRate)
     _redundancy.set(this, defaults.redundancy)
     _batchConcurrency.set(this, defaults.batchConcurrency)
+    _cacheLocation.set(this, defaults.cacheLocation)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
   }
 
@@ -349,6 +354,15 @@ class Config {
     return _redundancy.get(this)
   }
 
+  get cacheLocation  () {
+    return _cacheLocation.get(this)
+  }
+
+  set cacheLocation (value) {
+    _cacheLocation.set(this, value)
+    this.save()
+  }
+
   get bootstrap () {
     let peers = []
     _bootstrap.get(this).forEach((peer) => {
@@ -396,6 +410,7 @@ class Config {
       maxFillRate: this.maxFillRate,
       redundancy: this.redundancy,
       batchConcurrency: this.batchConcurrency,
+      cacheLocation: this.cacheLocation,
       bootstrap: this.bootstrap
     }
   }

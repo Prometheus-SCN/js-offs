@@ -1,4 +1,4 @@
-const { app, Menu, MenuItem, Tray, BrowserWindow } = require('electron')
+const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard } = require('electron')
 const path = require('path')
 const url = require('url')
 const Node = require('./node')
@@ -10,8 +10,8 @@ const Connector = require('./connector').mainConnector
 const Configurator = require('./configurator').mainConfigurator
 const Peer = require('./peer')
 const bs58 = require('bs58')
+const devTools = require('vue-devtools')
 let Responder = require('electron-ipc-responder')
-const clipboardy = require('clipboardy')
 
 const log = require('js-logging')
   .console({
@@ -41,6 +41,9 @@ if (shouldQuit) {
 }
 
 function createWindow () {
+  if (process.env.NODE_ENV !== 'production') {
+    devTools.install()
+  }
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
@@ -53,7 +56,7 @@ function createWindow () {
       let height
       if (/^win/.test(process.platform)) {
         width = 530
-        height = 330
+        height = 332
       } else {
         width = 530
         height = 304
@@ -80,7 +83,7 @@ function createWindow () {
     }
 
     let createExportWin = () => {
-      exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar:true, resizable: false})
+      exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar:true, resizable: true})
       exportWin.on('close', (e) => {
         e.preventDefault()
         exportWin.hide()
@@ -160,7 +163,11 @@ function createWindow () {
       let getHandler = async (payload) => {
         return config[payload.key]
       }
-      configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler)
+      let resetHandler = () => {
+        app.relaunch()
+        app.exit(0)
+      }
+      configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler, resetHandler)
     }
     let openConfigurationWin = () => {
       if (configurationWin) {
@@ -170,7 +177,7 @@ function createWindow () {
       }
     }
     let copyNodeId = () => {
-      clipboardy.writeSync(node.peerInfo.key)
+      clipboard.writeText(node.peerInfo.key)
     }
 
     tray = new Tray(icon)

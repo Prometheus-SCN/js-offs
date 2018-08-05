@@ -59,7 +59,7 @@
         })
       this.configurator.get('numPortTries')
         .then((retry) => {
-          this.portRetries = retry
+          this.numPortTries = retry
         })
       this.configurator.get('httpPort')
         .then((port) => {

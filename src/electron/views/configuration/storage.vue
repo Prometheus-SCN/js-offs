@@ -4,6 +4,17 @@
       <div class="column"></div>
       <div class="column">
         <form @submit.prevent="save">
+          <label class="label">Cache Location</label>
+          <div class="field has-addons">
+            <div class="control">
+              <input class="input" disabled name="location" type="text" placeholder="Select a Cache Location" v-model="cacheLocation">
+            </div>
+            <div class="control">
+              <a class="button is-info" @click="choose">
+                Choose
+              </a>
+            </div>
+          </div>
           <div class="field">
             <label class="label">Block Cache Storage Size(MB)</label>
             <div class="control has-icons-left has-icons-right">
@@ -42,6 +53,19 @@
         </form>
       </div>
       <div class="column"></div>
+      <div ref="restartModal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+          <div class="notification is-rounded has-text-centered">
+            <h1 id="title" class="title">
+              A node restart is required.
+            </h1>
+            <a class="button is-danger" @click="modalNo">No</a>
+            <a class="button is-success" @click="modalYes">Yes</a>
+          </div>
+        </div>
+        <div class="modal-close" @click="modalNo"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -54,6 +78,10 @@
       this.configurator = new Configurator(ipcRenderer, (err) => {
        this.error = err
       })
+      this.configurator.get('cacheLocation')
+        .then((location) => {
+          this.cacheLocation = location
+        })
       this.configurator.get('blockCacheSize')
         .then((size) => {
           this.blockCacheSize = size / mb
@@ -75,12 +103,45 @@
         error: null,
         configurator: null,
         success: null,
+        cacheLocation: null,
+        dirty: false,
+        yes: null,
+        no: null
       }
     },
     methods: {
+      choose () {
+        dialog.showOpenDialog({properties: [ 'openDirectory' ]}, (filePaths) => {
+         if (Array.isArray(filePaths)) {
+           this.cacheLocation = filePaths[0]
+           this.dirty = true;
+         }
+        })
+      },
+      toggleModal () {
+        this.$refs.restartModal.classList.toggle('is-active')
+      },
+      modalYes () {
+        this.yes()
+      },
+      modalNo () {
+        this.toggleModal()
+        this.no()
+      },
       async save () {
         this.success = null
         let ok = await this.$validator.validateAll()
+        if (!ok) {
+          return
+        }
+        if (this.dirty) {
+          await new Promise((resolve, reject) => {
+            this.yes = resolve
+            this.no = reject
+            this.toggleModal()
+          })
+        }
+        ok = await this.configurator.set('cacheLocation', this.cacheLocation)
         if (!ok) {
           return
         }
@@ -95,6 +156,9 @@
         ok = await this.configurator.set('nanoBlockCacheSize', (this.nanoBlockCacheSize * mb))
         if (!ok) {
           return
+        }
+        if (this.dirty) {
+          await this.configurator.restart()
         }
         this.success = 'Saved'
       }

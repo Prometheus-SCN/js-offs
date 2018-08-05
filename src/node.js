@@ -42,6 +42,10 @@ module.exports = class Node extends EventEmitter {
       config.loadDefaults()
       config.save(appFolder)
     }
+    // To keep release versions consistent
+    if (!config.cacheLocation) {
+        config.cacheLocation = appFolder
+    }
     mkdirp(appFolder, (err)=> {
       if (err) {
         return this.emit(err)
@@ -64,7 +68,7 @@ module.exports = class Node extends EventEmitter {
             let id = util.hash(pk)
             let peerInfo = new Peer(id, ip, port)
             _peerInfo.set(this, peerInfo)
-            let blockRouter = new BlockRouter(this.path, peerInfo)
+            let blockRouter = new BlockRouter(config.cacheLocation, peerInfo)
             _blockRouter.set(this, blockRouter)
             blockRouter.on('error', (err) => this.emit('error', err))
             let server = Server(blockRouter, this.emit.bind(this))

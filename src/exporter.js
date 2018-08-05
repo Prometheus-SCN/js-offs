@@ -41,7 +41,7 @@ class mainExporter extends responder {
       let cb = (response) => {
         collect(response, async (err, data) => {
           if (err) {
-            return console.log(err)
+            return this.tell('error', {id: payload.id, err})
           }
           let dir= url.fileName.replace('.ofd', '')
           mkdirp.sync(path.join(payload.location, dir))
@@ -76,12 +76,12 @@ class mainExporter extends responder {
                   return next()
                 })
                 ws.on('error', (err) => {
-                  this.tell('error', err)
+                  this.tell('error', {id: payload.id, err})
                 })
                 response.pipe(ws)
               }
               http.get(value, cb).on('error', (err) => {
-                this.tell('error', err)
+                this.tell('error', {id: payload.id, err})
               })
             }
           }
@@ -89,13 +89,13 @@ class mainExporter extends responder {
         })
       }
       http.get(`${payload.url}?ofd=raw`, cb).on('error', (err) => {
-        this.tell('error', err)
+        this.tell('error', {id: payload.id, err})
       })
     } else {
       let cb = (response) => {
         let ws = fs.createWriteStream(filename)
         ws.on('error', (err) => {
-          this.tell('error', err)
+          this.tell('error', {id: payload.id, err})
         })
         response.on('data', (chunk) => {
           file.size += chunk.length
@@ -105,7 +105,7 @@ class mainExporter extends responder {
         response.pipe(ws)
       }
       http.get(payload.url, cb).on('error', (err) => {
-        this.tell('error', err)
+        this.tell('error', {id: payload.id, err})
       })
     }
   }

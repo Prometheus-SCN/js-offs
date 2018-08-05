@@ -13656,7 +13656,7 @@ exports.insert = function (css) {
 }
 
 },{}],8:[function(require,module,exports){
-var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert("strong {\n  font-family: Odin;\n}\n.button {\n  font-family: Odin;\n}\n.file-status {\n  border-bottom: 2px solid #ced3cc;\n}\n.icontainer {\n  display: flex;\n  min-height: 100px;\n  min-width: 100px;\n  height: 100px;\n  width: 100px;\n  background-color: #3273dc;\n  border-radius: 10px;\n  margin: 5px;\n}\n.loader-icon {\n  background-color: white;\n  border-radius: 10px;\n  height: 80px;\n  width: 80px;\n  margin: 50% 50%;\n  transform: translate(-50%, -50%);\n}\n.form-container {\n  max-height: 128px;\n  max-width: 500px;\n  min-height: 128px;\n  min-width: 500px;\n  height: 128px;\n  width: 500px;\n}\n.file-info {\n  display: flex;\n}\n.file-status {\n  display: flex;\n  flex-direction: row;\n  margin: 5px;\n}\n\n.download-button {\n  height: 100%;\n  width: auto;\n  min-width: 100px;\n  font-family: Odin;\n  background-color: #edf0f2;\n  padding: 0;\n  display: flex;\n  border-color: #878787;\n  border-style: dotted;\n  border-width: 10px;\n  padding: 3px;\n  color: #878787;\n  outline: 5px solid #edf0f2;\n  margin: 5px;\n  font-family: Odin;\n  align-self: center;\n  align-content: center;\n  justify-content: center;\n  flex-direction: column;\n}\n.download {\n  width: 40px;\n  height: 40px;\n  margin: 0 auto 3px auto;\n}\n.download-button:hover h3 {\n  color: #878787;\n}\n.download-button:hover {\n  outline: 5px solid #878787;\n}\n.error {\n  color: red;\n}")
+var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert("strong {\n  font-family: Odin;\n}\n.button {\n  font-family: Odin;\n}\n.file-status {\n  border-bottom: 2px solid #ced3cc;\n}\n.icontainer {\n  display: flex;\n  min-height: 100px;\n  min-width: 100px;\n  height: 100px;\n  width: 100px;\n  background-color: #3273dc;\n  border-radius: 10px;\n  margin: 5px;\n}\n.loader-icon.error {\n  background-color: transparent;\n}\n.loader-icon {\n  background-color: white;\n  border-radius: 10px;\n  height: 80px;\n  width: 80px;\n  margin: 50% 50%;\n  transform: translate(-50%, -50%);\n}\n.form-container {\n  max-height: 128px;\n  max-width: 500px;\n  min-height: 128px;\n  min-width: 500px;\n  height: 128px;\n  width: 500px;\n}\n.file-info {\n  display: flex;\n}\n.file-status {\n  display: flex;\n  flex-direction: row;\n  margin: 5px;\n}\n\n.download-button {\n  height: 100%;\n  width: auto;\n  min-width: 100px;\n  font-family: Odin;\n  background-color: #edf0f2;\n  padding: 0;\n  display: flex;\n  border-color: #878787;\n  border-style: dotted;\n  border-width: 10px;\n  padding: 3px;\n  color: #878787;\n  outline: 5px solid #edf0f2;\n  margin: 5px;\n  font-family: Odin;\n  align-self: center;\n  align-content: center;\n  justify-content: center;\n  flex-direction: column;\n}\n.download {\n  width: 40px;\n  height: 40px;\n  margin: 0 auto 3px auto;\n}\n.download-button:hover h3 {\n  color: #878787;\n}\n.download-button:hover {\n  outline: 5px solid #878787;\n}\n.error {\n  color: red;\n}")
 ;(function(){
 'use strict';
 
@@ -13701,12 +13701,28 @@ exports.default = {
       });
     },
     onError: function onError(err) {
-      console.log(err);
+      this.files[err.id].error = err.err;
+      this.files[err.id].icon = '../../images/error.svg';
     },
     onPercent: function onPercent(payload) {
       this.files[payload.id].percent = payload.percent;
       if (payload.percent >= 100) {
         this.files[payload.id].icon = '../../images/folder.svg';
+      }
+    },
+    resize: function resize() {
+      var heightOffset = window.outerHeight - window.innerHeight;
+      var widthOffset = window.outerWidth - window.innerWidth;
+      var height = this.$refs.container.clientHeight + heightOffset;
+      var width = this.$refs.container.clientWidth + widthOffset;
+      if (!this.isExpandable || height >= .80 * window.screen.height) {
+        document.body.style.overflowY = 'scroll';
+
+        if (this.isExpandable) {
+          this.isExpandable = false;
+        }
+      } else {
+        window.resizeTo(width, height);
       }
     },
     exporter: function exporter() {
@@ -13720,24 +13736,11 @@ exports.default = {
         var percent = 0;
         var size = 0;
         var icon = '../../images/Preloader_' + getRandomInt(1, 7) + '.gif';
-        var file = { filename: filename, percent: percent, size: size, streamLength: streamLength, icon: icon };
+        var show = true;
+        var error = null;
+        var file = { filename: filename, percent: percent, size: size, streamLength: streamLength, icon: icon, show: show, error: error };
 
-        var fileStatus = _this2.$refs.fileStatus;
-        setTimeout(function () {
-          var heightOffset = window.outerHeight - window.innerHeight;
-          var widthOffset = window.outerWidth - window.innerWidth;
-          var height = _this2.$refs.container.clientHeight + heightOffset;
-          var width = _this2.$refs.container.clientWidth + widthOffset;
-          if (!_this2.isExpandable || height >= .80 * window.screen.height) {
-            document.body.style.overflowY = 'scroll';
-
-            if (_this2.isExpandable) {
-              _this2.isExpandable = false;
-            }
-          } else {
-            window.resizeTo(width, height);
-          }
-        }, 100);
+        setTimeout(_this2.resize, 100);
         var id = _this2.files.length;
         _this2.files.push(file);
         _this2.Exporter.exporter(_this2.location, _this2.url, id);
@@ -13756,6 +13759,10 @@ exports.default = {
       if (this.files[index].percent >= 100) {
         shell.showItemInFolder(this.files[index].filename);
       }
+      if (this.files[index].error) {
+        this.files[index].show = false;
+        setTimeout(this.resize, 100);
+      }
     }
   }
 };
@@ -13763,7 +13770,7 @@ exports.default = {
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)
 if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
-__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{ref:"container"},[_c('div',{ref:"fileStatus"},_vm._l((_vm.files),function(file,index){return _c('div',{staticClass:"file-status"},[_c('div',{staticClass:"icontainer"},[_c('img',{staticClass:"loader-icon",attrs:{"src":file.icon},on:{"click":function($event){_vm.openLocation(index)}}})]),_vm._v(" "),_c('div',{staticClass:"file-info"},[_c('table',[_c('tr',[_c('td',[_c('strong',[_vm._v("Filename:")]),_vm._v("\n              "+_vm._s(file.filename)+"\n            ")])]),_vm._v(" "),_c('tr',[_c('td',[_c('progressbar',{attrs:{"percent":file.percent}})],1)])])])])})),_vm._v(" "),_c('div',{staticClass:"form-container"},[_c('form',[_c('table',[_c('tr',[_c('td',{staticStyle:{"padding":"5px"}},[_c('div',{staticClass:"field has-addons"},[_c('div',{staticClass:"control"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.location),expression:"location"}],staticClass:"input",attrs:{"disabled":"","name":"location","type":"text","placeholder":"Select an Export Location"},domProps:{"value":(_vm.location)},on:{"input":function($event){if($event.target.composing){ return; }_vm.location=$event.target.value}}})]),_vm._v(" "),_c('div',{staticClass:"control"},[_c('a',{staticClass:"button is-info",on:{"click":_vm.choose}},[_vm._v("\n                  Choose\n                ")])])]),_vm._v(" "),_c('input',{directives:[{name:"show",rawName:"v-show",value:(false),expression:"false"},{name:"validate",rawName:"v-validate",value:({ required: true }),expression:"{ required: true }"},{name:"model",rawName:"v-model",value:(_vm.location),expression:"location"}],staticClass:"input",attrs:{"name":"location","type":"text","placeholder":"Select an Export Location"},domProps:{"value":(_vm.location)},on:{"input":function($event){if($event.target.composing){ return; }_vm.location=$event.target.value}}}),_vm._v(" "),_c('span',{directives:[{name:"show",rawName:"v-show",value:(_vm.errors.has('location')),expression:"errors.has('location')"}],staticClass:"error"},[_vm._v(_vm._s(_vm.errors.first('location')))]),_vm._v(" "),_c('div',{staticClass:"field has-addons"},[_c('div',{staticClass:"control"},[_c('input',{directives:[{name:"validate",rawName:"v-validate",value:({ required: true, regex: /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/ }),expression:"{ required: true, regex: /\\/offsystem\\/v3\\/([-+.\\w]+\\/[-+.\\w]+)\\/(\\d+)\\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\\/([^ !$`&*()+]*|\\\\[ !$`&*()+]*)+/ }"},{name:"model",rawName:"v-model",value:(_vm.url),expression:"url"}],staticClass:"input",staticStyle:{"width":"340px"},attrs:{"name":"url","type":"text","placeholder":"Enter url to export"},domProps:{"value":(_vm.url)},on:{"input":function($event){if($event.target.composing){ return; }_vm.url=$event.target.value}}})])]),_vm._v(" "),_c('span',{directives:[{name:"show",rawName:"v-show",value:(_vm.errors.has('url') && _vm.fields.url.dirty),expression:"errors.has('url') && fields.url.dirty"}],staticClass:"error"},[_vm._v(_vm._s(_vm.errors.first('url')))])]),_vm._v(" "),_c('td',[_c('a',{staticClass:"download-button",on:{"click":_vm.exporter}},[_c('h3',{attrs:{"id":"downloadMessage"}},[_vm._v("Export")]),_vm._v(" "),_c('img',{staticClass:"download",attrs:{"id":"downloadIcon","src":"../../images/download.svg"}})])])])])])])])}
+__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{ref:"container"},[_c('div',{ref:"fileStatus"},_vm._l((_vm.files),function(file,index){return _c('div',{directives:[{name:"show",rawName:"v-show",value:(file.show),expression:"file.show"}],staticClass:"file-status"},[_c('div',{staticClass:"icontainer"},[_c('img',{class:file.error ? 'loader-icon error' : 'loader-icon',attrs:{"src":file.icon},on:{"click":function($event){_vm.openLocation(index)}}})]),_vm._v(" "),_c('div',{staticClass:"file-info"},[_c('table',[_c('tr',[_c('td',[_c('strong',[_vm._v("Filename:")]),_vm._v("\n              "+_vm._s(file.filename)+"\n            ")])]),_vm._v(" "),_c('tr',[_c('td',[_c('progressbar',{attrs:{"error":file.error,"percent":file.percent}})],1)])])])])})),_vm._v(" "),_c('div',{staticClass:"form-container"},[_c('form',[_c('table',[_c('tr',[_c('td',{staticStyle:{"padding":"5px"}},[_c('div',{staticClass:"field has-addons"},[_c('div',{staticClass:"control"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.location),expression:"location"}],staticClass:"input",attrs:{"disabled":"","name":"location","type":"text","placeholder":"Select an Export Location"},domProps:{"value":(_vm.location)},on:{"input":function($event){if($event.target.composing){ return; }_vm.location=$event.target.value}}})]),_vm._v(" "),_c('div',{staticClass:"control"},[_c('a',{staticClass:"button is-info",on:{"click":_vm.choose}},[_vm._v("\n                  Choose\n                ")])])]),_vm._v(" "),_c('input',{directives:[{name:"show",rawName:"v-show",value:(false),expression:"false"},{name:"validate",rawName:"v-validate",value:({ required: true }),expression:"{ required: true }"},{name:"model",rawName:"v-model",value:(_vm.location),expression:"location"}],staticClass:"input",attrs:{"name":"location","type":"text","placeholder":"Select an Export Location"},domProps:{"value":(_vm.location)},on:{"input":function($event){if($event.target.composing){ return; }_vm.location=$event.target.value}}}),_vm._v(" "),_c('span',{directives:[{name:"show",rawName:"v-show",value:(_vm.errors.has('location')),expression:"errors.has('location')"}],staticClass:"error"},[_vm._v(_vm._s(_vm.errors.first('location')))]),_vm._v(" "),_c('div',{staticClass:"field has-addons"},[_c('div',{staticClass:"control"},[_c('input',{directives:[{name:"validate",rawName:"v-validate",value:({ required: true, regex: /\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/ }),expression:"{ required: true, regex: /\\/offsystem\\/v3\\/([-+.\\w]+\\/[-+.\\w]+)\\/(\\d+)\\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\\/([^ !$`&*()+]*|\\\\[ !$`&*()+]*)+/ }"},{name:"model",rawName:"v-model",value:(_vm.url),expression:"url"}],staticClass:"input",staticStyle:{"width":"340px"},attrs:{"name":"url","type":"text","placeholder":"Enter url to export"},domProps:{"value":(_vm.url)},on:{"input":function($event){if($event.target.composing){ return; }_vm.url=$event.target.value}}})])]),_vm._v(" "),_c('span',{directives:[{name:"show",rawName:"v-show",value:(_vm.errors.has('url') && _vm.fields.url.dirty),expression:"errors.has('url') && fields.url.dirty"}],staticClass:"error"},[_vm._v(_vm._s(_vm.errors.first('url')))])]),_vm._v(" "),_c('td',[_c('a',{staticClass:"download-button",on:{"click":_vm.exporter}},[_c('h3',{attrs:{"id":"downloadMessage"}},[_vm._v("Export")]),_vm._v(" "),_c('img',{staticClass:"download",attrs:{"id":"downloadIcon","src":"../../images/download.svg"}})])])])])])])])}
 __vue__options__.staticRenderFns = []
 if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
@@ -13811,7 +13818,7 @@ new Vue({
   }
 })
 },{"./export.vue":8,"vee-validate":4,"vue":6}],10:[function(require,module,exports){
-var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".progress-bar {\n  display: block;\n  height: 50px;\n  width: 300px;\n  background-color: #ced3cc;\n  border-radius: 10px;\n}\n/*\n.progress-bar::after {\n  content: attr(value);\n}*/\n.progress-bar::-webkit-progress-bar{\n  background-color: #ced3cc;\n  border-radius: 10px;\n}\n.progress-bar[value]::-webkit-progress-value {\n  background-color: #6cc4bd;\n  border-radius: 10px;\n}\n\n.progressjs-theme-blueOverlayRadiusWithPercentBar {\n  background-color: #ced3cc;\n}\n\n.progressjs-theme-blueOverlayRadiusWithPercentBar .progressjs-inner {\n  background-color: #6cc4bd;\n}")
+var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".progress-bar[data-v-cac42708] {\n  display: block;\n  height: 50px;\n  width: 300px;\n  background-color: #ced3cc;\n  border-radius: 10px;\n}\n.error[data-v-cac42708] {\n  color: #b24a4a;\n}\n.progress-bar.error[data-v-cac42708]::-webkit-progress-bar {\n  background-color: #b24a4a;\n}\n/*\n.progress-bar::after {\n  content: attr(value);\n}*/\n.progress-bar[data-v-cac42708]::-webkit-progress-bar{\n  background-color: #ced3cc;\n  border-radius: 10px;\n}\n.progress-bar[value][data-v-cac42708]::-webkit-progress-value {\n  background-color: #6cc4bd;\n  border-radius: 10px;\n}\n\n.progressjs-theme-blueOverlayRadiusWithPercentBar[data-v-cac42708] {\n  background-color: #ced3cc;\n}\n\n.progressjs-theme-blueOverlayRadiusWithPercentBar .progressjs-inner[data-v-cac42708] {\n  background-color: #6cc4bd;\n}")
 ;(function(){
 'use strict';
 
@@ -13819,14 +13826,15 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = {
-  props: ['percent']
+  props: ['percent', 'error']
 };
 })()
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)
 if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
-__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('progress',{staticClass:"progress-bar",attrs:{"max":"100"},domProps:{"value":_vm.percent}},[_vm._v(_vm._s(_vm.percent))])}
+__vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',[_c('span',{staticClass:"error"},[_vm._v(_vm._s(_vm.error))]),_vm._v(" "),_c('progress',{class:_vm.error ? 'progress-bar error' : 'progress-bar',attrs:{"max":"100"},domProps:{"value":_vm.percent}},[_vm._v(_vm._s(_vm.percent))])])}
 __vue__options__.staticRenderFns = []
+__vue__options__._scopeId = "data-v-cac42708"
 if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
   if (!hotAPI.compatible) return
