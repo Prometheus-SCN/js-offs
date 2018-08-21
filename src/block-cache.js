@@ -183,6 +183,18 @@ module.exports =
       }
     }
 
+    randomBlock(cb) {
+      let blockSize = _blockSize.get(this)
+      let block = Block.randomBlock(blockSize)
+      this.emit('block', block, 1)
+      this.put(block, (err) => {
+        if (err) {
+          return cb(err)
+        }
+        return cb(null, block)
+      })
+    }
+
     randomBlockList (number, cb) {
       let blockSize = _blockSize.get(this)
       this.content((err, content) => {
@@ -197,29 +209,10 @@ module.exports =
             return cb(null, randoms)
           }
         }
-
-
-        if (randoms.length < number) {
-          let i = -1
-          let stop = number - randoms.length
-          let next = () => {
-            i++
-            if (i < stop) {
-              let block = Block.randomBlock(blockSize)
-              this.emit('block', block)
-              this.put(block, (err) => {
-                if (err) {
-                  return cb(err)
-                }
-                randoms.push(block.key)
-                return next()
-              })
-            } else {
-              return cb(null, randoms)
-            }
-          }
-          next()
+        if (randoms.length > number) {
+          randoms = randoms.slice(0, number - 1)
         }
+        return cb(null, randoms)
       })
     }
 

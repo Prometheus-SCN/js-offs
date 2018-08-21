@@ -79,7 +79,11 @@ module.exports = class WritableOffStream extends Writable {
           i++
           if (i < (config.tupleSize - 1)) {
             let random = randomList.shift()
-            bc.get(random, next)
+            if (random) {
+              bc.get(random, next)
+            } else {
+              bc.randomBlock(next)
+            }
           } else {
             return process()
           }
