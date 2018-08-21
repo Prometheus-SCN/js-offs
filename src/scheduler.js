@@ -93,11 +93,11 @@ module.exports = class Scheduler {
             i++
             if (i < redistribute.length) {
               let key = redistribute[ i ]
-              bc.get(key, (err, block, number)=> {
+              bc.get(key, (err, block)=> {
                 if (err) {
                   return next(err)  //TODO: Figure out what to do when it fails
                 }
-                rpc.store(block.hash, type, block.data, (err)=> {
+                rpc.store(block.hash, type, block.data, bc.rank(block.key), (err)=> {
                   if (err) {
                     return next(err)  //TODO: Figure out what to do when it fails
                   }
@@ -163,12 +163,12 @@ module.exports = class Scheduler {
             return
           }
           isRunningCapacity = true
-          bc.contentFilter((err, contentFilter)=> {
+          bc.contentFilterCBOR((err, contentFilterCBOR)=> {
             if (err) {
               console.log(err)
               return //TODO: Decide what happens when this fails
             }
-            rpc.random(1, type, contentFilter, () => {
+            rpc.random(0, 1, type, contentFilterCBOR, () => {
               isRunningCapacity = false
             })
           })

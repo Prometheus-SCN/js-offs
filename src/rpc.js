@@ -24,6 +24,7 @@ const PingStorageResponse = RPCProto.PingStorageResponse
 const StoreRequest = RPCProto.StoreRequest
 const RandomRequest = RPCProto.RandomRequest
 const RandomResponse = RPCProto.RandomResponse
+const PromotionRequest = RPCProto.PromotionRequest
 const PingValueRequest = RPCProto.PingValueRequest
 const PingStorageRequest = RPCProto.PingStorageRequest
 const RPCType = RPCProto.RPCType
@@ -118,7 +119,7 @@ module.exports = class RPC extends EventEmitter {
       responsepb.type = pb.type
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
-      rpcInterface.storeValue(storepb.value, storepb.type, (err) => {
+      rpcInterface.storeValueAt(storepb.value, storepb.number, storepb.type, (err) => {
         if (err) {
           responsepb.status = Status.Failure
         } else {
@@ -128,6 +129,7 @@ module.exports = class RPC extends EventEmitter {
         socket.end(response)
       })
     }
+
     let randomResponse = (pb, socket) => {
       let randompb = RandomRequest.decode(pb.payload)
       sanitizeRandomRequest(randompb)
@@ -137,7 +139,7 @@ module.exports = class RPC extends EventEmitter {
       responsepb.comType = Direction.Response
       responsepb.from = peer.toJSON()
       let type = randompb.type
-      rpcInterface.closestBlock(pb.from.id, Cuckoo.fromCBOR(randompb.filter), randompb.type, (err, block)=> {
+      rpcInterface.closestBlockAt(randompb.number, Cuckoo.fromCBOR(randompb.filter), pb.from.id, randompb.type, (err, number, block) => {
         if (err) {
           responsepb.status = Status.Failure
           let response = new RPCProto.RPC(responsepb).encode().toBuffer()
@@ -151,6 +153,57 @@ module.exports = class RPC extends EventEmitter {
           socket.end(response)
         }
       })
+    }
+
+    let promotionResponse = (pb, socket) => {
+      socket.end()
+      let promotionpb = PromotionRequest.decode(pb.payload)
+      sanitizePromotionRequest(promotionpb)
+      let key = pb.id.toString('hex')
+      if (!rpcInterface.containsValueAt(promotionpb.number, promotionpb.hash, promotionpb.type)) {
+        rpcInterface.promoteValue(promotionpb.hash, promotionpb.number, promotionpb.type, (err)=> {
+          if (err) {
+            if (err === 'Find this block') {
+              this.findValue(promotionpb.hash, promotionpb.type, (err) => { //TODO:Need to determine what appropriate error response should be
+                if (err) {
+                  return
+                }
+                rpcInterface.promoteValue(promotionpb.number, promotionpb.hash, promotionpb.type, (err) => {})
+              })
+            }
+          }
+        })
+        let bucket = _bucket.get(this)
+        let nodes = bucket.toArray()
+        let filter = ScalableCuckoo.fromCBOR(promotionpb.filter)
+
+        nodes = nodes.filter((node)=> {
+          return !filter.contains(node.id)
+        })
+
+        for (let i = 0; i < nodes.length; i++) {
+          let node = nodes[ i ]
+          filter.add(node.id)
+        }
+        promotionpb.filter = filter.toCBOR()
+        let payload = new PromotionRequest(promotionpb).encode().toBuffer()
+        pb.payload = payload
+        let request = new RPCProto.RPC(pb).encode().toBuffer()
+        let i = -1
+        let next = () => {
+          i++
+          if (i < nodes.length) {
+            let to = nodes[ i ]
+            let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, () => {
+              collect(socket, () => {
+                return next()
+              })
+              socket.end(request)
+            })
+          }
+        }
+        next()
+      }
     }
     let pingValueResponse = (pb, socket) => {
       let pingvaluepb = PingValueRequest.decode(pb.payload)
@@ -213,6 +266,9 @@ module.exports = class RPC extends EventEmitter {
               break;
             case RPCType.Store :
               storeResponse(pb, socket)
+              break;
+            case RPCType.Promotion :
+              promotionResponse(pb, socket)
               break;
             case RPCType.Random :
               randomResponse(pb, socket)
@@ -434,7 +490,7 @@ module.exports = class RPC extends EventEmitter {
     })
   }
 
-  store (hash, type, value, cb) {
+  store (hash, type, value, number, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
     if (!bucket.count) {
@@ -448,6 +504,7 @@ module.exports = class RPC extends EventEmitter {
     let storepb = {}
     storepb.type = type
     storepb.value = value
+    storepb.number = number
     let payload = new StoreRequest(storepb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
@@ -495,7 +552,7 @@ module.exports = class RPC extends EventEmitter {
     next()
   }
 
-  random (count, type, filter, cb) {
+  random (number, count, type, filterCBOR, cb) {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
     if (!bucket.count) {
@@ -509,7 +566,8 @@ module.exports = class RPC extends EventEmitter {
     requestpb.from = peer.toJSON()
     let randompb = {}
     randompb.type = type
-    randompb.filter = filter.toCBOR()
+    randompb.number = number
+    randompb.filter = filterCBOR
     let payload = new RandomRequest(randompb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
@@ -517,7 +575,7 @@ module.exports = class RPC extends EventEmitter {
     let i = 0
     let next = ()=> {
       if (nodes.length > 0 && i < count) {
-        let index = util.getRandomInt(0, nodes.length - 1)// random selection of nodes to ask
+        let index = util.getRandomInt(0, nodes.length - 1)// random selection of nodes to ask NOTE: This is the randome part
         let to = nodes.splice(index, 1)[ 0 ]
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, ()=> {
           collect(socket, (err, msg)=> {
@@ -531,7 +589,7 @@ module.exports = class RPC extends EventEmitter {
                 let randompb = RandomResponse.decode(pb.payload)
                 sanitizeRandomResponse(randompb)
                 if (randompb.value) {
-                  rpcInterface.storeValue(randompb.value, randompb.type, (err) => {
+                  rpcInterface.storeValueAt(randompb.value, randompb.number, randompb.type, (err) => {
                     if (!err) {
                       i++
                     }
@@ -557,6 +615,47 @@ module.exports = class RPC extends EventEmitter {
       }
     }
     next()
+  }
+
+  promote (hash, number, type, cb) {
+    let peer = _peer.get(this)
+    let bucket = _bucket.get(this)
+    let requestpb = {}
+    requestpb.id = this.rpcid
+    requestpb.type = RPCType.Promotion
+    requestpb.comType = Direction.Request
+    requestpb.from = peer.toJSON()
+    let promotionpb = {}
+    promotionpb.hash = hash
+    promotionpb.number = number
+    promotionpb.type = type
+
+    let nodes = bucket.toArray()
+    let filter = new ScalableCuckoo(bucket.count + Math.ceil(bucket.count * .95), config.bucketSize, config.fingerprintSize)
+
+    for (let i = 0; i < nodes.length; i++) {
+      filter.add(nodes[ i ].id)
+    }
+    filter.add(peer.id)
+    promotionpb.filter = filter.toCBOR()
+    let payload = new PromotionRequest(promotionpb).encode().toBuffer()
+    requestpb.payload = payload
+    let request = new RPCProto.RPC(requestpb).encode().toBuffer()
+    let i = -1
+    let next = ()=> {
+      i++
+      if (i < nodes.length) {
+        let to = nodes[ i ]
+        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, () => {
+          socket.end(request, next)
+        })
+        socket.on('error', (err) => {
+          return next()
+        })
+      }
+    }
+    next()
+    return cb()
   }
 
   connect (peer, cb) {
@@ -690,6 +789,7 @@ function sanitizeValueResponse (value) {
   try {
     value.hash = value.hash.toBuffer()
     value.data = value.data.toBuffer()
+    value.number = value.number.toNumber()
   } catch (ex) {
 
   }
@@ -704,6 +804,7 @@ function sanitizeValueRequest (value) {
 }
 function sanitizeStoreRequest (value) {
   try {
+    value.number = value.number.toNumber()
     value.value = value.value.toBuffer()
   } catch (ex) {
 
@@ -711,6 +812,7 @@ function sanitizeStoreRequest (value) {
 }
 function sanitizeRandomRequest (value) {
   try {
+    value.number = value.number.toNumber()
     value.filter = value.filter.toBuffer()
   } catch (ex) {
 
@@ -718,7 +820,17 @@ function sanitizeRandomRequest (value) {
 }
 function sanitizeRandomResponse (value) {
   try {
+    value.number = value.number.toNumber()
     value.value = value.value.toBuffer()
+    value.filter = value.filter.toBuffer()
+  } catch (ex) {
+
+  }
+}
+function sanitizePromotionRequest (value) {
+  try {
+    value.number = value.number.toNumber()
+    value.hash = value.hash.toBuffer()
     value.filter = value.filter.toBuffer()
   } catch (ex) {
 

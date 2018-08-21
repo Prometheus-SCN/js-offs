@@ -21,6 +21,7 @@ let defaults = {
   descriptorPad: 32,
   scale: 2,
   filterSize: 20000,
+  counterSize: 1000000000,
   fingerprintSize: 8,
   hitBoxSize: 100,
   bucketSize: 4,
@@ -72,6 +73,7 @@ let _batchConcurrency = new WeakMap()
 let _cacheLocation = new WeakMap()
 let _bootstrap = new WeakMap()
 let _path = new WeakMap()
+let _counterSize = new WeakMap()
 class Config {
   constructor () {
   }
@@ -121,6 +123,7 @@ class Config {
       _redundancy.set(this, config.redundancy)
       _batchConcurrency.set(this, config.batchConcurrency)
       _cacheLocation.set(this, config.cacheLocation)
+      _counterSize.set(this, config.counterSize)
       _bootstrap.set(this, config.bootstrap.slice(0))
     } catch (ex) {
       return ex
@@ -143,6 +146,7 @@ class Config {
     _descriptorPad.set(this, defaults.descriptorPad)
     _scale.set(this, defaults.scale)
     _filterSize.set(this, defaults.filterSize)
+    _counterSize.set(this, defaults.counterSize || config.counterSize)
     _fingerprintSize.set(this, defaults.fingerprintSize)
     _hitBoxSize.set(this, defaults.hitBoxSize)
     _bucketSize.set(this, defaults.bucketSize)
@@ -278,6 +282,10 @@ class Config {
     return _filterSize.get(this)
   }
 
+  get counterSize () {
+    return _counterSize.get(this)
+  }
+
   get fingerprintSize () {
     return _fingerprintSize.get(this)
   }
@@ -397,6 +405,7 @@ class Config {
       descriptorPad: this.descriptorPad,
       scale: this.scale,
       filterSize: this.filterSize,
+      counterSize: this.counterSize,
       fingerprintSize: this.fingerprintSize,
       hitBoxSize: this.hitBoxSize,
       bucketSize: this.bucketSize,

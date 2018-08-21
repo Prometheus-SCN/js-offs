@@ -45,14 +45,23 @@ module.exports = class BlockRouter extends EventEmitter {
     _scheduler.set(this, scheduler)
     _self.set(this, peer)
 
-    bc.on('block', (block)=> {
-      rpc.store(block.hash, config.block, block.data, () => {})
+    bc.on('block', (block, rank)=> {
+      rpc.store(block.hash, config.block, block.data, rank, () => {})
     })
-    mc.on('block', (block)=> {
-      rpc.store(block.hash, config.mini, block.data, () => {})
+    mc.on('block', (block, rank) => {
+      rpc.store(block.hash, config.mini, block.data, rank, () => {})
     })
-    nc.on('block', (block)=> {
-      rpc.store(block.hash, config.nano, block.data, () => {})
+    nc.on('block', (block, rank) => {
+      rpc.store(block.hash, config.nano, block.data, rank, () => {})
+    })
+    bc.on('promote', (block, rank) => {
+      rpc.promote(block, rank, config.block, () => {})
+    })
+    mc.on('promote', (block, rank)=> {
+      rpc.promote(block, rank, config.mini, () => {})
+    })
+    nc.on('promote', (block, rank)=> {
+      rpc.promote(block, rank, config.nano, () => {})
     })
     bc.on('full', () => {
       this.emit('full', config.block)
@@ -120,7 +129,7 @@ module.exports = class BlockRouter extends EventEmitter {
 
   rpcInterface () {
     let rpc = {}
-    rpc.storeValue = (value, type, cb)=> {
+    rpc.storeValueAt = (value, rank, type, cb)=> {
       let bc
       let block
       switch (type) {
@@ -137,7 +146,7 @@ module.exports = class BlockRouter extends EventEmitter {
           block = new Block(value, config.nanoBlockSize)
           break;
       }
-      bc.put(block, cb)
+      bc.storeBlockAt(block, rank, cb)
     }
     rpc.getValue = (hash, type, cb) => {
       let bc
@@ -155,12 +164,12 @@ module.exports = class BlockRouter extends EventEmitter {
       let key = bs58.encode(hash)
       bc.get(key, (err, block) => {
         if (err) {
-            return cb(err)
+          return cb(err)
         }
         return cb(err, block.data)
       })
     }
-    rpc.closestBlock = (hash, filter, type, cb) => {
+    rpc.randomBlock = (hash, filter, type, cb) => {
       let bc
       switch (type) {
         case 1:
@@ -176,6 +185,48 @@ module.exports = class BlockRouter extends EventEmitter {
       let key = bs58.encode(hash)
       bc.closestBlock(key, filter, cb)
     }
+    rpc.promoteValue = (hash, rank, type, cb)=> {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      let key = bs58.encode(hash)
+      bc.contains(key, (ok) => {
+        if (ok) {
+          bc.promote(key, rank)
+        } else {
+          if (bc.maxRank < number) {
+            return cb('Find this block')
+          }
+          return cb()
+        }
+      })
+    }
+    rpc.closestBlockAt = (number, filter, hash, type, cb) => {
+      let bc
+      switch (type) {
+        case 1:
+          bc = _bc.get(this)
+          break;
+        case 2:
+          bc = _mc.get(this)
+          break;
+        case 3:
+          bc = _nc.get(this)
+          break;
+      }
+      let key = bs58.encode(hash)
+      bc.closestBlockAt(number, key, filter, cb)
+    }
+
     rpc.containsValue = (hash, type, cb)=> {
       let bc
       switch (type) {
@@ -259,8 +310,8 @@ module.exports = class BlockRouter extends EventEmitter {
         this.emit('error', err)
       }
       i++
-      if (i < config.bootstrap.length){
-        let obj = config.bootstrap[i]
+      if (i < config.bootstrap.length) {
+        let obj = config.bootstrap[ i ]
         obj.id = new Buffer(bs58.decode(obj.id))
         let peer = Peer.fromJSON(obj)
         this.connect(peer, next)

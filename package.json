@@ -26,8 +26,8 @@
     "buffer-xor": "2.0.1",
     "collect-stream": "1.1.1",
     "cron": "1.1.1",
-    "cuckoo-filter": "1.0.3",
-    "cuckoo-hit-counter": "0.0.1",
+    "cuckoo-filter": "^1.0.5",
+    "cuckoo-hit-counter": "^0.1.1",
     "electron": "^1.8.7",
     "electron-ipc-responder": "^1.0.4",
     "electron-positioner": "3.0.0",
@@ -71,7 +71,6 @@
     "mocha": "3.1.2",
     "random-ipv4": "1.0.2",
     "vue-devtools": "^4.1.4",
-    "vueify": "^9.4.1",
-    "vuetable-2": "^1.7.5"
+    "vueify": "^9.4.1"
   }
 }

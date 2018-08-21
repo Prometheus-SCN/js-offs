@@ -79,7 +79,11 @@ module.exports = class WritableOffStream extends Writable {
           i++
           if (i < (config.tupleSize - 1)) {
             let random = randomList.shift()
-            bc.get(random, next)
+            if (random) {
+              bc.get(random, next)
+            } else {
+              bc.randomBlock(next)
+            }
           } else {
             return process()
           }
@@ -129,6 +133,7 @@ module.exports = class WritableOffStream extends Writable {
         bc.emit('block', offBlock)
       }
       //Get the keys of all the randoms needed for writing this file's representations
+      //if the cache does not have enough we will generate randoms later
       if (!randomList) {
         bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (config.tupleSize - 1)), (err, randoms) => {
           if (err) {
