@@ -11,7 +11,6 @@ const Configurator = require('./configurator').mainConfigurator
 const Peer = require('./peer')
 const bs58 = require('bs58')
 const devTools = require('vue-devtools')
-let Responder = require('electron-ipc-responder')
 
 const log = require('js-logging')
   .console({
@@ -40,7 +39,7 @@ if (shouldQuit) {
   app.quit()
 }
 
-function createWindow () {
+function createTray () {
   if (process.env.NODE_ENV !== 'production') {
     devTools.install()
   }
@@ -265,7 +264,7 @@ function createWindow () {
   })
 }
 
-app.on('ready', createWindow)
+app.on('ready', createTray)
 
 app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the

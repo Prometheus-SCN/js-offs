@@ -1,6 +1,6 @@
 {
   "name": "js-offs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Owner Free File System",
   "main": "src/index.js",
   "appname": "offs",
@@ -13,6 +13,7 @@
     "build-native": "./node_modules/.bin/electron-packager ./",
     "build-linux-x64": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=x64 --icon=src/electron/images/off-logo.png --asar=true --overwrite && zip -FS -r js-offs-linux-x64.zip js-offs-linux-x64",
     "build-linux-ia32": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=ia32 --icon=src/electron/images/off-logo.png --asar=true --overwrite && zip -FS -r js-offs-linux-ia32.zip js-offs-linux-ia32",
+    "build-linux-armv7l": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=armv7l --icon=src/electron/images/off-logo.png --asar=true --overwrite && zip -FS -r js-offs-linux-armv7l.zip js-offs-linux-armv7l",
     "build-windows-x64": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=x64 --icon=src/electron/images/off-logo.ico --asar=true --overwrite && zip -FS -r js-offs-win32-x64.zip js-offs-win32-x64",
     "build-windows-ia32": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=ia32 --icon=src/electron/images/off-logo.ico --asar=true --overwrite && zip -FS -r js-offs-win32-ia32.zip js-offs-win32-ia32",
     "build-darwin-x64": "./node_modules/.bin/electron-packager ./ --platform=darwin --arch=x64 --icon=src/electron/images/off-logo.icns --asar=true --overwrite && zip -FS -r js-offs-darwin-x64.zip js-offs-darwin-x64"

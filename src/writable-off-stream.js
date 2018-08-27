@@ -1,6 +1,7 @@
 'use strict'
 const blocker = require('block-stream2')
 const Writable = require('readable-stream').Writable;
+const Recycler = require('./recycler')
 const BlockCache = require('./block-cache')
 const Descriptor = require('./descriptor')
 const config = require('./config')
@@ -21,20 +22,29 @@ let _size = new WeakMap()
 let _count = new WeakMap()
 let _randomList = new WeakMap()
 let _writer = new WeakMap()
+let _recycler = new WeakMap()
 
 module.exports = class WritableOffStream extends Writable {
   constructor (blockSize, opts) {
     if (!Number.isInteger(blockSize)) {
-      throw new Error('Block size must be an integer')
+      throw new TypeError('Block size must be an integer')
     }
     if (!opts) {
-      throw new Error('Invalid Options')
+      throw new TypeError('Invalid Options')
     }
     if (opts instanceof BlockCache) {
       opts = { bc: opts }
     }
     if (!opts.bc) {
-      throw new Error('Invalid Block Cache')
+      throw new TypeError('Invalid Block Cache')
+    } else if (!(opts.bc instanceof BlockCache)) {
+      throw new TypeError('Invalid Block Cache')
+    }
+    if (opts.recycler) {
+      if (!(opts.recycler instanceof Recycler)) {
+       throw new Error('Invalid recycler')
+      }
+      _recycler.set(this, opts.recycler)
     }
     opts.highWaterMark = blockSize
     super(opts)
@@ -61,7 +71,6 @@ module.exports = class WritableOffStream extends Writable {
       _hasher.set(this, hasher)
 
       let bc = _blockCache.get(this)
-      let randomList = _randomList.get(this)
       let url = _url.get(this)
       let randoms = []
 
@@ -69,20 +78,46 @@ module.exports = class WritableOffStream extends Writable {
       let gather = () => {
         let i = -1
         let randomList = _randomList.get(this)
+        let recycler = _recycler.get(this)
         let next = (err, block) => {
-          if (err) {
-            return this.emit('error', err)
+          if (err) { // Recycler is empty just continue the loop from another source keep the counter the same
+            if (err.message === 'Recycler is Empty') {
+              i--
+            } else {
+              return this.emit('error', err)
+            }
           }
           if (block) {
             randoms.push(block)
           }
           i++
           if (i < (config.tupleSize - 1)) {
-            let random = randomList.shift()
-            if (random) {
-              bc.get(random, next)
-            } else {
-              bc.randomBlock(next)
+            //Get it from the recycler if we have it
+            if (recycler && !recycler.empty){
+              return recycler.next(next)
+            }
+            // if we don't have a random list get one and start processing
+            if (!randomList) {
+              return bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (config.tupleSize - 1)), (err, randoms) => {
+                if (err) {
+                  return this.emit('error', err)
+                }
+                randomList = randoms
+                _randomList.set(this, randomList)
+                let random = randomList.shift()
+                if (random) {
+                  return bc.get(random, next)
+                } else {
+                  return bc.randomBlock(next)
+                }
+              })
+            } else { //or just process existing list
+              let random = randomList.shift()
+              if (random) {
+                return bc.get(random, next)
+              } else { //or generate new random blocks
+                return bc.randomBlock(next)
+              }
             }
           } else {
             return process()
@@ -132,19 +167,8 @@ module.exports = class WritableOffStream extends Writable {
         //Save block to network
         bc.emit('block', offBlock)
       }
-      //Get the keys of all the randoms needed for writing this file's representations
-      if (!randomList) {
-        bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (config.tupleSize - 1)), (err, randoms) => {
-          if (err) {
-            return this.emit('error', err)
-          }
-          randomList = randoms
-          _randomList.set(this, randomList)
-          gather()
-        })
-      } else {
-        gather()
-      }
+      //Start finding blocks
+      gather()
 
     }
     _writer.set(this, writer)

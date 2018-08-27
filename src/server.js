@@ -161,19 +161,31 @@ module.exports = function (br, emit) {
     url.contentType = req.get('type')
     url.fileName = req.get('file-name')
     url.streamLength = parseInt(req.get('stream-length'))
-    let ws = br.createWriteStream(url)
-    ws.once('url', (url)=> {
-      res.write(url.toString())
-      res.end()
-    })
-    ws.once('error', (err) => {
-      console.error(err)
-      emit('error', err)
+    let recycle = req.get('recycle')
+    try {
+      let ws
+      if (!recycle) {
+        ws = br.createWriteStream(url)
+      } else {
+        let urls = JSON.parse(recycle)
+        urls = urls.map(( url) => OffUrl.parse(url))
+        ws = br.createReadStreamWithRecycler(url, urls)
+      }
+      ws.once('url', (url)=> {
+        res.write(url.toString())
+        res.end()
+      })
+      ws.once('error', (err) => {
+        console.error(err)
+        emit('error', err)
+        res.status(500).send()
+        res.end()
+      })
+      req.pipe(ws)
+    } catch (ex) {
+      emit('error', ex)
       res.status(500).send()
-      res.end()
-    })
-    req.pipe(ws)
-
+    }
   })
   off.use(express.static(pth.join(__dirname, 'static')))
   return off

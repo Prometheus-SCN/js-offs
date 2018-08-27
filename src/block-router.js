@@ -5,6 +5,7 @@ const BlockCache = require('./block-cache')
 const Block = require('./block')
 const ReadableOffStream = require('./readable-off-stream')
 const WritableOffStream = require('./writable-off-stream')
+const Recycler = require('./recycler')
 const URL = require('./off-url')
 const bs58 = require('bs58')
 const RPC = require('./rpc')
@@ -78,6 +79,28 @@ module.exports = class BlockRouter extends EventEmitter {
     bucket.on('added', (capacity)=> {
       this.emit('connection', bucket.count)
     })
+  }
+
+  createReadStreamWithRecycler (url, urls) {
+    if (!(url instanceof URL)) {
+      throw new TypeError('Invalid URL')
+    }
+    if (!url.streamLength) {
+      throw new TypeError('URL must have a stream length')
+    }
+    if (url.streamLength >= config.blockSize) {
+      let bc = _bc.get(this)
+      let recycler = new Recycler(config.blockSize, urls, bc, this)
+      return new ReadableOffStream(url, config.blockSize, {bc, recycler})
+    } else if (url.streamLength >= config.miniBlockSize) {
+      let mc = _mc.get(this)
+      let recycler = new Recycler(config.miniBlockSize, urls, mc, this)
+      return new ReadableOffStream(url, config.miniBlockSize, {bc: mc, recycler})
+    } else {
+      let nc = _nc.get(this)
+      let recycler = new Recycler(config.nanoBlockSize, urls, nc, this)
+      return new ReadableOffStream(url, config.nanoBlockSize,{bc: nc, recycler})
+    }
   }
 
   createReadStream (url) {
