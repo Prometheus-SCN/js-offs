@@ -27,7 +27,7 @@
           <div class="field">
             <label class="label">HTTP Port</label>
             <div class="control has-icons-left has-icons-right">
-              <input class="input is-success" type="text" v-validate="{ required: true, numeric: true, max_value:65535, min_value: 1024 }" v-model="httpPort" name="httpPort">
+              <input class="input is-success" type="text" v-validate="{ required: true, numeric: true, max_value:65535, min_value: 1 }" v-model="httpPort" name="httpPort">
               <span class="icon is-small is-left">
                 #
               </span>

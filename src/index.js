@@ -60,13 +60,13 @@ function createTray () {
         width = 530
         height = 304
       }
-      importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar:true, resizable: false})
+      importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar:true, resizable: true})
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
       })
       importWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'import', 'index.html')}`)
-      //importWin.webContents.openDevTools({})
+      importWin.webContents.openDevTools({})
     }
     let openImportWin = () => {
       if (importWin) {

@@ -10,8 +10,9 @@ let _url = new WeakMap()
 let _size = new WeakMap()
 let _offsetStart = new WeakMap()
 let _blockSize = new WeakMap()
+let _blockRouter = new WeakMap()
 let _urls = new WeakMap()
-module.export = class Recycler {
+module.exports = class Recycler {
   constructor (blockSize, urls, blockCache, blockRouter) {
     if (!Number.isInteger(blockSize)) {
       throw new Error('Block size must be an integer')
@@ -21,7 +22,7 @@ module.export = class Recycler {
     }
     let valid = []
     for (let url of urls) {
-      if (!(url instanceof URL)) {
+      if (!(url instanceof OffUrl)) {
         continue
       }
       if (url.contentType === 'offsystem/directory') {
@@ -40,7 +41,7 @@ module.export = class Recycler {
   get empty () {
     let url = _url.get(this)
     let urls = _urls.get(this)
-    return !(url && urls.length)
+    return !url && !urls.length
   }
 
   next (cb) {
@@ -57,7 +58,6 @@ module.export = class Recycler {
           } catch (ex) {
             return cb('error', ex)
           }
-
           return collect(rs, (err, data) => {
             if (err) {
               return cb('error', err)
@@ -142,8 +142,7 @@ module.export = class Recycler {
       let keybuf
       let getDesc = (err, block)=> {
         if (err) {
-          this.emit('error', err)
-          return
+          return cb(err)
         }
         if (block) {
           keybuf = block.data.slice(0, cutPoint)
@@ -170,7 +169,7 @@ module.export = class Recycler {
                   bc.get(nextDesc, getDesc)
                 })
                 flightBox.emitter.once('error', (err) => {
-                  this.emit('error', err)
+                  return cb(err)
                 })
               }
             })
@@ -191,7 +190,7 @@ module.export = class Recycler {
             bc.get(url.descriptorHash, getDesc)
           })
           flightBox.emitter.once('error', (err)=> {
-            this.emit('error', err)
+            return cb(err)
           })
         }
       })

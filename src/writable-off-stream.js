@@ -40,19 +40,19 @@ module.exports = class WritableOffStream extends Writable {
     } else if (!(opts.bc instanceof BlockCache)) {
       throw new TypeError('Invalid Block Cache')
     }
-    if (opts.recycler) {
-      if (!(opts.recycler instanceof Recycler)) {
-       throw new Error('Invalid recycler')
-      }
-      _recycler.set(this, opts.recycler)
-    }
     opts.highWaterMark = blockSize
     super(opts)
-    if (opts.url && (opts.url instanceof OffUrl)) {
-      _url.set(this, opts.url)
-    } else {
-      opts.url = new OffUrl
-      _url.set(this, opts.url)
+    if(!opts.url || !(opts.url instanceof OffUrl)) {
+      throw new TypeError('Invalid OffUrl')
+    }
+    _url.set(this, opts.url)
+
+
+    if (opts.recycler) {
+      if (!(opts.recycler instanceof Recycler)) {
+        throw new Error('Invalid recycler')
+      }
+      _recycler.set(this, opts.recycler)
     }
 
     _blockSize.set(this, blockSize)
@@ -73,7 +73,6 @@ module.exports = class WritableOffStream extends Writable {
       let bc = _blockCache.get(this)
       let url = _url.get(this)
       let randoms = []
-
       //gather the randoms from the cache
       let gather = () => {
         let i = -1
@@ -92,8 +91,8 @@ module.exports = class WritableOffStream extends Writable {
           }
           i++
           if (i < (config.tupleSize - 1)) {
-            //Get it from the recycler if we have it
-            if (recycler && !recycler.empty){
+            // Get it from the recycler if we have it
+            if (recycler && !recycler.empty) {
               return recycler.next(next)
             }
             // if we don't have a random list get one and start processing
@@ -243,7 +242,6 @@ module.exports = class WritableOffStream extends Writable {
     let size = _size.get(this)
     size += buf.length
     _size.set(this, size)
-
     accumulator = Buffer.concat([ accumulator, buf ])
     _accumulator.set(this, accumulator)
     if (accumulator.length < blockSize) {

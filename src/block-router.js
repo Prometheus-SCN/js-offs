@@ -81,7 +81,7 @@ module.exports = class BlockRouter extends EventEmitter {
     })
   }
 
-  createReadStreamWithRecycler (url, urls) {
+  createWriteStreamWithRecycler (url, urls) {
     if (!(url instanceof URL)) {
       throw new TypeError('Invalid URL')
     }
@@ -91,15 +91,15 @@ module.exports = class BlockRouter extends EventEmitter {
     if (url.streamLength >= config.blockSize) {
       let bc = _bc.get(this)
       let recycler = new Recycler(config.blockSize, urls, bc, this)
-      return new ReadableOffStream(url, config.blockSize, {bc, recycler})
+      return new WritableOffStream(config.blockSize, {bc, url, recycler})
     } else if (url.streamLength >= config.miniBlockSize) {
       let mc = _mc.get(this)
       let recycler = new Recycler(config.miniBlockSize, urls, mc, this)
-      return new ReadableOffStream(url, config.miniBlockSize, {bc: mc, recycler})
+      return new WritableOffStream(config.miniBlockSize, {bc: mc, url, recycler})
     } else {
       let nc = _nc.get(this)
       let recycler = new Recycler(config.nanoBlockSize, urls, nc, this)
-      return new ReadableOffStream(url, config.nanoBlockSize,{bc: nc, recycler})
+      return new WritableOffStream(config.nanoBlockSize, {bc: nc, url, recycler})
     }
   }
 
