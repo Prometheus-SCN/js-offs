@@ -4,6 +4,7 @@ const OffUrl = require('./off-url')
 const collect = require('collect-stream')
 const config = require('./config')
 const through = require('through2')
+const ExpirationMap = require('./expiration-map')
 const pth = require('path')
 let basename
 let parse = pth.posix.parse
@@ -12,7 +13,7 @@ if (/^win/.test(process.platform)) {
 } else {
   basename = pth.posix.basename
 }
-let ofdCache = new Map()
+let ofdCache = new ExpirationMap(config.ofdTimeout)
 module.exports = function (br, emit) {
   let off = express()
   off.get(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
@@ -93,7 +94,7 @@ module.exports = function (br, emit) {
           let ofd = ofdCache.get(url.fileHash)
           if(req.query.ofd === 'raw') {
             res.writeHead(200, {
-              "Content-Type": 'text/json'
+              'Content-Type': 'text/json'
             })
             //}
             rs.once('error', (err) => {
@@ -108,7 +109,7 @@ module.exports = function (br, emit) {
         } else {
           if(req.query.ofd === 'raw') {
             res.writeHead(200, {
-              "Content-Type": 'text/json'
+              'Content-Type': 'text/json'
             })
             //}
             rs.once('error', (err) => {
@@ -141,7 +142,7 @@ module.exports = function (br, emit) {
          })
          } else {*/
         res.writeHead(200, {
-          "Content-Type": url.contentType
+          'Content-Type': url.contentType
         })
         //}
         rs.once('error', (err) => {

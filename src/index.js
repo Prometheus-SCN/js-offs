@@ -66,7 +66,7 @@ function createTray () {
         importWin.hide()
       })
       importWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'import', 'index.html')}`)
-      importWin.webContents.openDevTools({})
+      //importWin.webContents.openDevTools({})
     }
     let openImportWin = () => {
       if (importWin) {
