@@ -5,6 +5,7 @@ const Node = require('./node')
 const config = require('./config')
 const { ipcMain } = require('electron')
 const icon = path.join(__dirname, 'electron', 'images', 'off-logo.png')
+const trayIcon = path.join(__dirname, 'electron', 'images', 'off-logo16x16.png')
 const Exporter = require('./exporter').mainExporter
 const Connector = require('./connector').mainConnector
 const Configurator = require('./configurator').mainConfigurator
@@ -40,7 +41,7 @@ if (shouldQuit) {
 }
 
 function createTray () {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV === 'development') {
     devTools.install()
   }
   node = new Node('OFFSYSTEM')
@@ -179,7 +180,7 @@ function createTray () {
       clipboard.writeText(node.peerInfo.key)
     }
 
-    tray = new Tray(icon)
+    tray = new Tray(trayIcon)
     let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal', click: copyNodeId })
     let connectionsItem = new MenuItem({ label: `Connections: ${node.blockRouter.connections}`, type: 'normal' })
     let blockCapacityItem = new MenuItem({

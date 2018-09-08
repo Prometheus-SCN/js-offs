@@ -5,7 +5,7 @@ module.exports = class ExpirationMap {
   constructor (timeout) {
     _map.set(this, new Map())
     _timers.set(this, new Map())
-    _timeout.set(this, new Map())
+    _timeout.set(this, timeout)
   }
 
   set (key, value, timeout) {
@@ -26,8 +26,11 @@ module.exports = class ExpirationMap {
   get (key, timeout) {
     let map = _map.get(this)
     timeout = timeout || _timeout.get(this) || 0
-    let timeout = _timeout.get(this)
-    clearTimeout(timers.get(this))
+    let timers = _timers.get(this)
+    let timer = timers.get(key)
+    if (timer) {
+      clearTimeout(timer)
+    }
     timers.set(key, setTimeout(() => {
       map.delete(key)
       timers.delete(key)
