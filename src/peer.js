@@ -17,7 +17,7 @@ module.exports = class Peer {
     if (!net.isIP(ip)) {
       throw new Error('Ip is not a valid address')
     }
-    if (isNaN(port)) {
+    if (!Number.isInteger(port)) {
       throw new Error('Port is not a Number')
     }
     _ip.set(this, ip)

@@ -1,5 +1,6 @@
 'use strict'
 const EventEmitter = require('events').EventEmitter
+const ExpirationMap = require('./expiration-map')
 const pth = require('path')
 const mkdirp = require('mkdirp')
 const config = require('./config')
@@ -18,7 +19,9 @@ let _contentFilter = new WeakMap()
 let _sizeTimer = new WeakMap()
 let _size = new WeakMap()
 let _maxSize = new WeakMap()
-
+let _temporary = new WeakMap()
+let _assignedTemporary = new WeakMap()
+let _gatherTemporaries = new WeakMap()
 
 module.exports =
   class BlockCache extends EventEmitter {
@@ -43,6 +46,17 @@ module.exports =
       _dirty.set(this, false)
       mkdirp.sync(path)
       _path.set(this, path)
+      _temporary.set(this, [])
+      _assignedTemporary.set(this, new ExpirationMap(config.temporaryTimeout))
+      _gatherTemporaries.set (this, () =>{
+        let assignedTemporaries = _assignedTemporary.get(this)
+        let temporary = _temporary.get(this)
+        let temps = temporary.reduce((acc, val) => acc.concat(val), [])
+        for(let temp of assignedTemporaries.values()) {
+          temps = temps.concat(temp)
+        }
+        return temps
+      })
 
       // TODO: Possibly deasync this call
       // Get the current size of the cache
@@ -161,6 +175,9 @@ module.exports =
         if (err) {
           return cb(err)
         }
+        let gatherTemporaries = _gatherTemporaries.get(this)
+        let temps = gatherTemporaries()
+        items = items.filter((item) => !(temps.includes(item)))
         return cb(err, items)
       })
     }
@@ -238,5 +255,66 @@ module.exports =
         content.sort(sort)
         return this.get(content[ 0 ], cb)
       })
+    }
+
+    newTemporary () {
+      let temporary = _temporary.get(this)
+      let temp = []
+      temporary.push(temp)
+      return temp
+    }
+
+    assignTemporary (key, temp) {
+      let temporary = _temporary.get(this)
+      let index = temporary.findIndex((arr) => (arr === temp))
+      if (index === -1) {
+        throw new Error('Invalid Temporary')
+      }
+      temporary.splice(index, 1)
+      let assignedTemporary = _assignedTemporary.get(this)
+      assignedTemporary.set(key, temp)
+    }
+
+    releaseTemporaries(key) {
+      let assignedTemporary = _assignedTemporary.get(this)
+      let temps = assignedTemporary.get(key)
+      if (temps) {
+        i = -1
+        let next = (err, block) => {
+          if (err) {
+            this.emit('error', err)
+          }
+          if (block) {
+            this.emit('block', block)
+          }
+          i++
+          if (i < temps.length) {
+            this.get(temps[i], next)
+          }
+        }
+        next()
+      }
+      assignedTemporary.delete(key)
+    }
+
+    removeTemporaries(key, cb) {
+      let assignedTemporary = _assignedTemporary.get(this)
+      let temps = assignedTemporary.get(key)
+      if (temps) {
+        let i = -1
+        let next = (err) => {
+          if (err) {
+            return cb(err)
+          }
+          i++
+          if (i < temps.length) {
+            return this.remove(temps[i], next)
+          } else {
+            this.releaseTemporaries(key)
+            return cb()
+          }
+        }
+        next()
+      }
     }
   }

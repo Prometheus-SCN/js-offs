@@ -81,7 +81,7 @@ module.exports = class BlockRouter extends EventEmitter {
     })
   }
 
-  createWriteStreamWithRecycler (url, urls) {
+  createWriteStreamWithRecycler (url, urls, temporary) {
     if (!(url instanceof URL)) {
       throw new TypeError('Invalid URL')
     }
@@ -91,15 +91,15 @@ module.exports = class BlockRouter extends EventEmitter {
     if (url.streamLength >= config.blockSize) {
       let bc = _bc.get(this)
       let recycler = new Recycler(config.blockSize, urls, bc, this)
-      return new WritableOffStream(config.blockSize, {bc, url, recycler})
+      return new WritableOffStream(config.blockSize, { bc, url, recycler, temporary })
     } else if (url.streamLength >= config.miniBlockSize) {
       let mc = _mc.get(this)
       let recycler = new Recycler(config.miniBlockSize, urls, mc, this)
-      return new WritableOffStream(config.miniBlockSize, {bc: mc, url, recycler})
+      return new WritableOffStream(config.miniBlockSize, { bc: mc, url, recycler, temporary })
     } else {
       let nc = _nc.get(this)
       let recycler = new Recycler(config.nanoBlockSize, urls, nc, this)
-      return new WritableOffStream(config.nanoBlockSize, {bc: nc, url, recycler})
+      return new WritableOffStream(config.nanoBlockSize, { bc: nc, url, recycler, temporary })
     }
   }
 
@@ -122,7 +122,7 @@ module.exports = class BlockRouter extends EventEmitter {
     }
   }
 
-  createWriteStream (url) {
+  createWriteStream (url, temporary) {
     if (!(url instanceof URL)) {
       throw new TypeError('Invalid URL')
     }
@@ -131,13 +131,51 @@ module.exports = class BlockRouter extends EventEmitter {
     }
     if (url.streamLength >= config.blockSize) {
       let bc = _bc.get(this)
-      return new WritableOffStream(config.blockSize, { bc: bc, url: url })
+      return new WritableOffStream(config.blockSize, { bc: bc, url: url, temporary })
     } else if (url.streamLength >= config.miniBlockSize) {
       let mc = _mc.get(this)
-      return new WritableOffStream(config.miniBlockSize, { bc: mc, url: url })
+      return new WritableOffStream(config.miniBlockSize, { bc: mc, url: url, temporary })
     } else {
       let nc = _nc.get(this)
-      return new WritableOffStream(config.nanoBlockSize, { bc: nc, url: url })
+      return new WritableOffStream(config.nanoBlockSize, { bc: nc, url: url, temporary })
+    }
+  }
+
+  releaseTemporaries (url) {
+    if (!(url instanceof URL)) {
+      throw new TypeError('Invalid URL')
+    }
+    if (!url.streamLength) {
+      throw new TypeError('URL must have a stream length')
+    }
+    if (url.streamLength >= config.blockSize) {
+      let bc = _bc.get(this)
+      bc.releaseTemporaries(url.fileHash + url.descriptorHash)
+    } else if (url.streamLength >= config.miniBlockSize) {
+      let mc = _mc.get(this)
+      mc.releaseTemporaries(url.fileHash + url.descriptorHash)
+    } else {
+      let nc = _nc.get(this)
+      nc.releaseTemporaries(url.fileHash + url.descriptorHash)
+    }
+  }
+
+  removeTemporaries (url, cb) {
+    if (!(url instanceof URL)) {
+     return cb(new TypeError('Invalid URL'))
+    }
+    if (!url.streamLength) {
+      return cb(new TypeError('URL must have a stream length'))
+    }
+    if (url.streamLength >= config.blockSize) {
+      let bc = _bc.get(this)
+      bc.releaseTemporaries(url.fileHash + url.descriptorHash, cb)
+    } else if (url.streamLength >= config.miniBlockSize) {
+      let mc = _mc.get(this)
+      mc.releaseTemporaries(url.fileHash + url.descriptorHash, cb)
+    } else {
+      let nc = _nc.get(this)
+      nc.releaseTemporaries(url.fileHash + url.descriptorHash, cb)
     }
   }
 
@@ -178,7 +216,7 @@ module.exports = class BlockRouter extends EventEmitter {
       let key = bs58.encode(hash)
       bc.get(key, (err, block) => {
         if (err) {
-            return cb(err)
+          return cb(err)
         }
         return cb(err, block.data)
       })
@@ -282,8 +320,8 @@ module.exports = class BlockRouter extends EventEmitter {
         this.emit('error', err)
       }
       i++
-      if (i < config.bootstrap.length){
-        let obj = config.bootstrap[i]
+      if (i < config.bootstrap.length) {
+        let obj = config.bootstrap[ i ]
         obj.id = new Buffer(bs58.decode(obj.id))
         let peer = Peer.fromJSON(obj)
         this.connect(peer, next)

@@ -123,7 +123,7 @@ module.exports = class Bucket extends EventEmitter {
     let bucket = _bucket.get(this)
     let root = _root.get(this)
     if (bucket) {
-      let found = bucket.find((known)=> { return known.id.compare(peer.id) === 0})
+      let found = bucket.find((known)=> { return known.id.compare(peer.id) === 0}) //TODO fix double search
       if (found) {
         this.update(peer)
       } else {

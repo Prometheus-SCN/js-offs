@@ -11,7 +11,7 @@ const Connector = require('./connector').mainConnector
 const Configurator = require('./configurator').mainConfigurator
 const Peer = require('./peer')
 const bs58 = require('bs58')
-const devTools = require('vue-devtools')
+//const devTools = require('vue-devtools')
 
 const log = require('js-logging')
   .console({
@@ -41,9 +41,9 @@ if (shouldQuit) {
 }
 
 function createTray () {
-  if (process.env.NODE_ENV === 'development') {
+  /*if (process.env.NODE_ENV === 'development') {
     devTools.install()
-  }
+  }*/
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))

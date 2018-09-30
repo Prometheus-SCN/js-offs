@@ -162,15 +162,16 @@ module.exports = function (br, emit) {
     url.fileName = req.get('file-name')
     url.streamLength = parseInt(req.get('stream-length'))
     let recycle = req.get('recycler')
+    let temporary = req.get('temporary')
     try {
       let ws
       if (!recycle) {
-        ws = br.createWriteStream(url)
+        ws = br.createWriteStream(url, temporary)
 
       } else {
         let urls = JSON.parse(recycle)
         urls = urls.map((url) => OffUrl.parse(url))
-        ws = br.createWriteStreamWithRecycler(url, urls)
+        ws = br.createWriteStreamWithRecycler(url, urls, temporary)
       }
       ws.once('url', (url)=> {
         res.write(url.toString())
@@ -187,6 +188,60 @@ module.exports = function (br, emit) {
       res.status(500).send()
     }
   })
+
+  off.delete(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
+    (req, res) => {
+      let start = 0
+      let end = parseInt(req.params[ 1 ])
+      /*
+       if (req.headers.range) {
+       let range = req.headers.range
+       let positions = range.replace(/bytes=/, "").split("-")
+       start = positions[ 0 ] ? parseInt(positions[ 0 ]) : null
+       end = positions[ 1 ] ? parseInt(positions[ 1 ]) : req.params[ 1 ]
+       }*/
+      let url = new OffUrl()
+      url.contentType = req.params[ 0 ]
+      url.streamOffset = start
+      url.streamLength = parseInt(req.params[ 1 ])
+      url.streamOffsetLength = parseInt(end)
+      url.fileHash = req.params[ 2 ]
+      url.descriptorHash = req.params[ 3 ]
+      url.fileName = req.params[ 4 ]
+      br.removeTemporaries(url, (err) => {
+        if (err) {
+          emit('error', ex)
+          return res.status(500).send()
+        }
+      })
+    })
+  off.post(/\/offsystem\/v3\/([-+.\w]+\/[-+.\w]+)\/(\d+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)\/([^ !$`&*()+]*|\\[ !$`&*()+]*)+/,
+    (req, res) => {
+      let start = 0
+      let end = parseInt(req.params[ 1 ])
+      /*
+       if (req.headers.range) {
+       let range = req.headers.range
+       let positions = range.replace(/bytes=/, "").split("-")
+       start = positions[ 0 ] ? parseInt(positions[ 0 ]) : null
+       end = positions[ 1 ] ? parseInt(positions[ 1 ]) : req.params[ 1 ]
+       }*/
+      let url = new OffUrl()
+      url.contentType = req.params[ 0 ]
+      url.streamOffset = start
+      url.streamLength = parseInt(req.params[ 1 ])
+      url.streamOffsetLength = parseInt(end)
+      url.fileHash = req.params[ 2 ]
+      url.descriptorHash = req.params[ 3 ]
+      url.fileName = req.params[ 4 ]
+      try {
+        br.removeTemporaries(url)
+        return res.end('Success')
+      } catch (ex) {
+        emit('error', ex)
+        return res.status(500).send()
+      }
+    })
   off.use(express.static(pth.join(__dirname, 'static')))
   return off
 }

@@ -119,7 +119,7 @@
           this.configuratorErr = "Peer already exists"
           return
         }
-        this.peers.push({id: this.nodeid, ip: this.ipaddress, port: this.port})
+        this.peers.push({id: this.nodeid, ip: this.ipaddress, port: +this.port})
         this.configurator.set('bootstrap', this.peers). then((success) => {
           if (success) {
             this.configuratorErr = null
