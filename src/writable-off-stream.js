@@ -1,6 +1,6 @@
 'use strict'
 const blocker = require('block-stream2')
-const Writable = require('readable-stream').Writable;
+const {Writable} = require('stream')
 const Recycler = require('./recycler')
 const BlockCache = require('./block-cache')
 const Descriptor = require('./descriptor')

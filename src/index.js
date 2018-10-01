@@ -61,7 +61,7 @@ function createTray () {
         width = 530
         height = 304
       }
-      importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar:true, resizable: true})
+      importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar:true, resizable: false})
       importWin.on('close', (e) => {
         e.preventDefault()
         importWin.hide()
@@ -83,7 +83,7 @@ function createTray () {
     }
 
     let createExportWin = () => {
-      exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar:true, resizable: true})
+      exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar:true, resizable: false})
       exportWin.on('close', (e) => {
         e.preventDefault()
         exportWin.hide()
