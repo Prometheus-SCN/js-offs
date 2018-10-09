@@ -21,10 +21,8 @@ module.exports = class Block {
     if (!Number.isInteger(blockSize)) {
       throw new TypeError('Block size must be an integer')
     }
-    if (Buffer.isBuffer(data)) {
-      _data.set(this, data)
-    } else {
-      data = new Buffer(data)
+    if (!Buffer.isBuffer(data)) {
+      data = Buffer.from(data)
     }
     if (data.length > blockSize) {
       throw new Error('Invalid block size for this data size')

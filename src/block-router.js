@@ -290,7 +290,7 @@ module.exports = class BlockRouter extends EventEmitter {
         i++
         if (i < keys.length) {
           let key = keys[ i ]
-          rpc.findValue(new Buffer(bs58.decode(key)), type, (err)=> {
+          rpc.findValue(bs58.decode(key), type, (err)=> {
             flightBox.filter.remove(key)
             if (err) {
               return flightBox.emitter.emit('error', err)
@@ -322,7 +322,7 @@ module.exports = class BlockRouter extends EventEmitter {
       i++
       if (i < config.bootstrap.length) {
         let obj = config.bootstrap[ i ]
-        obj.id = new Buffer(bs58.decode(obj.id))
+        obj.id = bs58.decode(obj.id)
         let peer = Peer.fromJSON(obj)
         this.connect(peer, next)
       } else { //Fill routing table with the closet nodes to themselves

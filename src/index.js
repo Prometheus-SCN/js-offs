@@ -29,14 +29,9 @@ const log = require('js-logging')
 let win
 let node
 
-const shouldQuit = app.makeSingleInstance((commandLine, workingDirectory) => {
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.focus()
-  }
-})
+const single = !app.requestSingleInstanceLock()
 
-if (shouldQuit) {
+if (single) {
   app.quit()
 }
 
@@ -57,7 +52,10 @@ function createTray () {
       if (/^win/.test(process.platform)) {
         width = 530
         height = 332
-      } else {
+      } else if (/^darwin/.test(process.platform)){
+          width = 530
+          height = 327
+      } else{
         width = 530
         height = 304
       }
@@ -108,6 +106,9 @@ function createTray () {
       if (/^win/.test(process.platform)) {
         width = 800
         height = 186
+      } else  if (/^darwin/.test(process.platform)) {
+        width = 800
+        height = 186
       } else {
         width = 800
         height = 126
@@ -131,7 +132,7 @@ function createTray () {
           return new Promise((resolve, reject) => {
             let peer
             try {
-              payload.id = new Buffer(bs58.decode(payload.id))
+              payload.id = bs58.decode(payload.id)
               let peer = Peer.fromJSON(payload)
               node.blockRouter.connect(peer, (err) => {
                 if (err){
@@ -198,8 +199,12 @@ function createTray () {
     let importItem = new MenuItem({ label: 'Import', type: 'normal', click: openImportWin })
     let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: openExportWin })
     let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: openConfigurationWin })
-    let connectItem = new MenuItem({ label: 'Connect to Peer', type: 'normal', click: openConnectWin })
-    let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => app.exit() })
+    let connectItem = new MenuItem({ label: 'Connect to a Peer', type: 'normal', click: openConnectWin })
+    let exitItem = new MenuItem({ label: 'Exit', type: 'normal', click: () => {
+      node.removeAllListeners()
+      node.blockRouter.removeAllListeners()
+      app.exit()
+    }})
     let contextMenu = new Menu()
     contextMenu.append(nodeItem)
     contextMenu.append(connectionsItem)

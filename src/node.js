@@ -30,8 +30,6 @@ module.exports = class Node extends EventEmitter {
     } else {
       if (/^win/.test(process.platform)) {
         _platformPath.set(this, path.join(process.env[ 'SystemDrive' ], 'ProgramData', '.offs'))
-      } else if (/^darwin/.test(process.platform)) {
-        _platformPath.set(this, '/Library/Application Support/')
       } else {
         _platformPath.set(this, path.join(process.env[ 'HOME' ], '.offs'))
       }

@@ -43,7 +43,7 @@ module.exports = class Scheduler {
           let redundancy = Math.floor(bucket.count * config.redundancy)
           redundancy = (redundancy < 1 && bucket.count > 0) ? 1 : redundancy
           let count = 0
-          let hash = new Buffer(bs58.decode(key))
+          let hash = bs58.decode(key)
           let peers = bucket.closest(hash, bucket.count)
           //loop through peers
           let i = -1

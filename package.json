@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "block-stream2": "1.1.0",
-    "bs58": "3.0.0",
+    "bs58": "^4.0.1",
     "buffer-split": "1.0.0",
     "buffer-xor": "2.0.1",
     "collect-stream": "1.1.1",
