@@ -2,7 +2,7 @@
   <div>
     <div class="columns">
       <div class="column"></div>
-        <div class="column">
+        <div class="column main">
           <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth" v-if="peers.length">
             <thead>
               <tr>
@@ -72,7 +72,10 @@
     </div>
   </div>
 </template>
-<style>
+<style scoped>
+  .main {
+    min-width: 800px;
+  }
 </style>
 <script>
   export default {

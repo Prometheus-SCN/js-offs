@@ -2,12 +2,12 @@
   <div>
     <div class="columns">
       <div class="column"></div>
-      <div class="column">
+      <div class="column main">
         <form @submit.prevent="save">
           <label class="label">Cache Location</label>
           <div class="field has-addons">
             <div class="control">
-              <input class="input" disabled name="location" type="text" placeholder="Select a Cache Location" v-model="cacheLocation">
+              <input class="input path" disabled name="location" type="text" placeholder="Select a Cache Location" v-model="cacheLocation">
             </div>
             <div class="control">
               <a class="button is-info" @click="choose">
@@ -70,6 +70,9 @@
   </div>
 </template>
 <style>
+  .path {
+   width: 500px;
+  }
 </style>
 <script>
   const mb = 1000000

@@ -29,14 +29,9 @@ const log = require('js-logging')
 let win
 let node
 
-const shouldQuit = app.makeSingleInstance((commandLine, workingDirectory) => {
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.focus()
-  }
-})
+const single = !app.requestSingleInstanceLock()
 
-if (shouldQuit) {
+if (single) {
   app.quit()
 }
 

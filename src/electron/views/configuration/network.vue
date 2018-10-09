@@ -2,7 +2,7 @@
   <div>
     <div class="columns">
       <div class="column"></div>
-      <div class="column">
+      <div class="column main">
         <form @submit.prevent="save">
           <div class="field">
             <label class="label">Start Port</label>

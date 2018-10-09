@@ -163,6 +163,10 @@ module.exports = function (br, emit) {
     url.streamLength = parseInt(req.get('stream-length'))
     let recycle = req.get('recycler')
     let temporary = req.get('temporary')
+    if (!url.streamLength) {
+      res.status(500).send('Empty Stream')
+      return res.end()
+    }
     try {
       let ws
       if (!recycle) {
