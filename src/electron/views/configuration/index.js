@@ -17718,7 +17718,7 @@ exports.default = {
     remove: function remove(index) {
       var _this3 = this;
 
-      this.peers.splice(index);
+      this.peers.splice(index, 1);
       this.configurator.set('bootstrap', this.peers).then(function (success) {
         if (success) {
           _this3.configuratorErr = null;
@@ -17741,9 +17741,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-2b25cc58", __vue__options__)
+    hotAPI.createRecord("data-v-11b85ef9", __vue__options__)
   } else {
-    hotAPI.reload("data-v-2b25cc58", __vue__options__)
+    hotAPI.reload("data-v-11b85ef9", __vue__options__)
   }
 })()}
 },{"babel-runtime/core-js/number/is-integer":1,"vue":80,"vue-hot-reload-api":78}],83:[function(require,module,exports){
@@ -17767,9 +17767,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   module.hot.accept()
   module.hot.dispose(__vueify_style_dispose__)
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-3533a55c", __vue__options__)
+    hotAPI.createRecord("data-v-e5445ffe", __vue__options__)
   } else {
-    hotAPI.reload("data-v-3533a55c", __vue__options__)
+    hotAPI.reload("data-v-e5445ffe", __vue__options__)
   }
 })()}
 },{"vue":80,"vue-hot-reload-api":78,"vueify/lib/insert-css":81}],84:[function(require,module,exports){
@@ -17857,9 +17857,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-23566114", __vue__options__)
+    hotAPI.createRecord("data-v-468aab79", __vue__options__)
   } else {
-    hotAPI.reload("data-v-23566114", __vue__options__)
+    hotAPI.reload("data-v-468aab79", __vue__options__)
   }
 })()}
 },{"vue":80,"vue-hot-reload-api":78}],86:[function(require,module,exports){
@@ -18011,9 +18011,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-77ae5ae1", __vue__options__)
+    hotAPI.createRecord("data-v-ca3ab574", __vue__options__)
   } else {
-    hotAPI.reload("data-v-77ae5ae1", __vue__options__)
+    hotAPI.reload("data-v-ca3ab574", __vue__options__)
   }
 })()}
 },{"babel-runtime/core-js/promise":2,"vue":80,"vue-hot-reload-api":78}]},{},[84]);

@@ -242,14 +242,14 @@ module.exports =
         if (err) {
           return cb(err)
         }
-        let hash = new Buffer(bs58.decode(key))
+        let hash = bs58.decode(key)
         content = content.filter((key) => !filter.contains(key))
         if(!content.length) {
           return cb(new Error('Cache has no new blocks'))
         }
         let sort = (a, b)=> {
-          let hashA = new Buffer(bs58.decode(a))
-          let hashB = new Buffer(bs58.decode(b))
+          let hashA = bs58.decode(a)
+          let hashB = bs58.decode(b)
           return hamming(hashA, hash) - hamming(hashB, hash)
         }
         content.sort(sort)

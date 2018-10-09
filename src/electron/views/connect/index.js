@@ -8806,9 +8806,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-4dba7104", __vue__options__)
+    hotAPI.createRecord("data-v-56fbab29", __vue__options__)
   } else {
-    hotAPI.reload("data-v-4dba7104", __vue__options__)
+    hotAPI.reload("data-v-56fbab29", __vue__options__)
   }
 })()}
 },{"babel-runtime/core-js/number/is-integer":1,"vue":23,"vue-hot-reload-api":22}],25:[function(require,module,exports){

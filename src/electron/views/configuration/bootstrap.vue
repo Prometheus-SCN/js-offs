@@ -131,7 +131,7 @@
         })
       },
       remove (index) {
-        this.peers.splice(index)
+        this.peers.splice(index, 1)
         this.configurator.set('bootstrap', this.peers).then((success) => {
           if (success) {
             this.configuratorErr = null

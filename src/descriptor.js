@@ -22,7 +22,7 @@ module.exports = class Descriptor {
     let tuppleBytes = blocks * config.descriptorPad * config.tupleSize // total size of all tupple descriptions
     _tuppleBytes.set(this, tuppleBytes)
     _blockSize.set(this, blockSize)
-    _data.set(this, new Buffer(0))
+    _data.set(this, Buffer.alloc(0))
     _blockArr.set(this, [])
     _max.set(this, Math.floor(blockSize / config.descriptorPad) * config.descriptorPad)
   }

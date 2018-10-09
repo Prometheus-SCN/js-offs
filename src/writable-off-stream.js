@@ -62,7 +62,7 @@ module.exports = class WritableOffStream extends Writable {
     _blockSize.set(this, blockSize)
     _blockCache.set(this, opts.bc)
     _descriptor.set(this, new Descriptor(blockSize, opts.url.streamLength))
-    _accumulator.set(this, new Buffer(0))
+    _accumulator.set(this, Buffer.alloc(0))
     _hasher.set(this, util.hasher())
     _size.set(this, 0)
     _count.set(this, 0)
