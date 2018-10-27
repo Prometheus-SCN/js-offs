@@ -12,19 +12,20 @@
     "start": "npm run compile-vue && ./node_modules/.bin/electron .",
     "rebuild": "./node_modules/.bin/electron-rebuild",
     "build": "npm run compile-vue && electron-builder --mac --win --linux",
-    "build-native": "./node_modules/.bin/electron-packager ./",
-    "build-linux-x64": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=x64 --icon=src/electron/images/off-logo.png --asar=true --overwrite && zip -FS -r js-offs-linux-x64.zip js-offs-linux-x64",
-    "build-linux-ia32": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=ia32 --icon=src/electron/images/off-logo.png --asar=true --overwrite && zip -FS -r js-offs-linux-ia32.zip js-offs-linux-ia32",
-    "build-linux-armv7l": "./node_modules/.bin/electron-packager ./ --platform=linux --arch=armv7l --icon=src/electron/images/off-logo.png --asar=true --overwrite && zip -FS -r js-offs-linux-armv7l.zip js-offs-linux-armv7l",
-    "build-windows-x64": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=x64 --icon=src/electron/images/off-logo.ico --asar=true --overwrite && zip -FS -r js-offs-win32-x64.zip js-offs-win32-x64",
-    "build-windows-ia32": "./node_modules/.bin/electron-packager ./ --platform=win32 --arch=ia32 --icon=src/electron/images/off-logo.ico --asar=true --overwrite && zip -FS -r js-offs-win32-ia32.zip js-offs-win32-ia32",
-    "build-darwin-x64": "./node_modules/.bin/electron-packager ./ --platform=darwin --arch=x64 --icon=src/electron/images/off-logo.icns --asar=true --overwrite && zip -FS -r js-offs-darwin-x64.zip js-offs-darwin-x64"
+    "build-docker": "npm run build && sudo docker build -t offs .",
+    "docker": "sudo docker run -a STDERR -a STDOUT -p 23402:23402  -p 8200:8200 --name offsystem offs "
   },
   "author": "Prometheus <contact@prometheus.network>",
   "license": "GPL-3.0",
   "build": {
-    "productName": "Off System",
+    "productName": "OFF System",
     "appId": "com.prometheus.offsystem",
+    "extraFiles":[
+      {
+        "from": "LICENSE.md",
+        "to": "license.txt"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
@@ -51,23 +52,36 @@
       "target": "nsis",
       "icon": "src/electron/images/off-logo.ico"
     },
+    "nsis": {
+      "license": "LICENSE.md",
+      "allowToChangeInstallationDirectory": true,
+      "oneClick": false
+    },
     "linux": {
       "target": "deb",
-      "icon": "src/electron/images/off-logo.png"
+      "vendor": "Prometheus",
+      "synopsis": "The Owner Free File System (OFF System)(OFFS) is the world's first 'brightnet'. It facilitates legal data sharing activity over its network through the use of its ingenious data storage mechanisms. This allows it to perform its operations in the open without divulging the privacy, intent, or security of its network participants. The storage mechanism is unique in that it never stores whole files but instead stores completely random data blocks.",
+      "description": "The Owner Free File System",
+      "executableName": "offs",
+      "category": "Network"
+    },
+    "deb": {
+      "artifactName": "${productName}_${version}_${arch}.deb"
     }
   },
   "dependencies": {
     "block-stream2": "1.1.0",
-    "bs58": "^4.0.1",
+    "bs58": "4.0.1",
     "buffer-split": "1.0.0",
     "buffer-xor": "2.0.1",
     "collect-stream": "1.1.1",
+    "commander": "2.19.0",
     "cron": "1.1.1",
-    "cuckoo-filter": "1.0.3",
+    "cuckoo-filter": "1.0.7",
     "electron-ipc-responder": "1.0.4",
     "end-of-stream": "1.1.0",
     "express": "4.14.0",
-    "get-folder-size": "^1.0.1",
+    "get-folder-size": "1.0.1",
     "hamming-distance": "1.0.0",
     "increment-buffer": "1.0.0",
     "is-ip": "1.0.0",
@@ -78,7 +92,7 @@
     "nat-upnp": "1.0.2",
     "network": "0.2.1",
     "node-forge": "0.6.42",
-    "pako": "^1.0.6",
+    "pako": "1.0.6",
     "protobufjs": "5.0.1",
     "protocol-buffers": "3.1.6",
     "streamifier": "0.1.1",
@@ -86,26 +100,26 @@
     "timer-jobs": "0.1.0",
     "urldecode": "1.0.1",
     "urlencode": "1.1.0",
-    "vee-validate": "^2.0.9",
-    "vue": "^2.5.17",
-    "vue-router": "^3.0.1",
-    "vue-template-compiler": "^2.5.17"
+    "vee-validate": "2.0.9",
+    "vue": "2.5.17",
+    "vue-router": "3.0.1",
+    "vue-template-compiler": "2.5.17"
   },
   "devDependencies": {
     "babel-plugin-transform-runtime": "6.23.0",
-    "babel-preset-es2015": "^6.24.1",
-    "browserify": "^14.5.0",
+    "babel-preset-es2015": "6.24.1",
+    "browserify": "14.5.0",
     "chai": "3.5.0",
-    "electron": "^3.0.2",
-    "electron-builder": "^20.28.4",
+    "electron": "3.0.2",
+    "electron-builder": "20.28.4",
     "electron-packager": "8.6.0",
     "electron-prebuilt": "1.4.13",
     "electron-rebuild": "1.5.6",
     "gulp": "3.9.1",
     "mocha": "3.1.2",
     "random-ipv4": "1.0.2",
-    "vue-devtools": "^4.1.4",
-    "vueify": "^9.4.1",
-    "vuetable-2": "^1.7.5"
+    "vue-devtools": "4.1.4",
+    "vueify": "9.4.1",
+    "vuetable-2": "1.7.5"
   }
 }
