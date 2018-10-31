@@ -1,3 +1,6 @@
+const cbor = require('cbor-js')
+const toAb = require('to-array-buffer')
+const abToB = require('arraybuffer-to-buffer')
 const extend = require('util')._extend
 const fs = require('fs')
 const path = require('path')
@@ -37,6 +40,8 @@ let defaults = {
   cacheLocation: null,
   ofdTimeout: 60 * 1000 * 5,
   temporaryTimeout: 60 * 1000 *5,
+  peerTimeout: 250,
+  lastKnownPeers: false,
   bootstrap: [
     {id: '8fHecNZCiTxavnfnskySbeAYCd1bcv1SAVyi1mcZqurH', ip: '73.135.22.132', port: 8200 },
     {id: 'GgA9QwCDRgKt9tKLQVjyjnv9wvt7FaeAJo91JWWWmXuK', ip: '73.135.22.132', port: 8201 }
@@ -74,6 +79,8 @@ let _batchConcurrency = new WeakMap()
 let _cacheLocation = new WeakMap()
 let _ofdTimeout = new WeakMap()
 let _temporaryTimeout = new WeakMap()
+let _peerTimeout = new WeakMap()
+let _lastKnownPeers = new WeakMap()
 let _bootstrap = new WeakMap()
 let _path = new WeakMap()
 class Config {
@@ -84,7 +91,9 @@ class Config {
       pth = _path.get(this)
     }
     _path.set(this, pth)
-    fs.writeFile(path.join(pth, 'config'), JSON.stringify(this.toJSON()), (err) => {
+    let buf = abToB(cbor.encode(this.toJSON()))
+    let fd = path.join(pth, 'config')
+    fs.writeFile(fd, buf, (err) => {
       if (err) {
        console.error(err)
        //TODO Dunno what to do with this error
@@ -93,7 +102,8 @@ class Config {
   }
   load (pth) {
     try {
-      let config = JSON.parse(fs.readFileSync(path.join(pth, 'config')))
+      let buf = fs.readFileSync(path.join(pth, 'config'))
+      let config = cbor.decode(toAb(buf))
       _path.set(this, pth)
       _blockPath.set(this, config.blockPath)
       _miniPath.set(this, config.miniPath)
@@ -127,6 +137,8 @@ class Config {
       _cacheLocation.set(this, config.cacheLocation)
       _ofdTimeout.set(this, config.ofdTimeout || defaults.ofdTimeout)
       _temporaryTimeout.set(this, config.temporaryTimeout || defaults.temporaryTimeout)
+      _peerTimeout.set(this, config.peerTimeout || defaults.peerTimeout)
+      _lastKnownPeers.set(this, config.lastKnownPeers || defaults.lastKnownPeers)
       _bootstrap.set(this, config.bootstrap.slice(0))
     } catch (ex) {
       return ex
@@ -165,6 +177,8 @@ class Config {
     _cacheLocation.set(this, defaults.cacheLocation)
     _ofdTimeout.set(this, defaults.ofdTimeout)
     _temporaryTimeout.set(this, defaults.temporaryTimeout)
+    _peerTimeout.set(this, defaults.peerTimeout)
+    _lastKnownPeers.set(this, defaults.lastKnownPeers)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
   }
 
@@ -393,6 +407,15 @@ class Config {
   get temporaryTimeout () {
     return _temporaryTimeout.get(this)
   }
+  get peerTimeout () {
+    return _peerTimeout.get(this)
+  }
+  get lastKnownPeers () {
+    return _lastKnownPeers.get(this)
+  }
+  set lastKnownPeers(value) {
+    _lastKnownPeers.set(this, !!value)
+  }
   toJSON () {
     return {
       blockPath: this.blockPath,
@@ -425,6 +448,8 @@ class Config {
       redundancy: this.redundancy,
       batchConcurrency: this.batchConcurrency,
       cacheLocation: this.cacheLocation,
+      temporaryTimeout: this.temporaryTimeout,
+      peerTimeout: this.peerTimeout,
       bootstrap: this.bootstrap
     }
   }

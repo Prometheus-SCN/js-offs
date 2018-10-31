@@ -11,9 +11,13 @@ const bs58 = require('bs58')
 const RPC = require('./rpc')
 const Peer = require('./peer')
 const Bucket = require('./bucket')
+const cbor = require('cbor-js')
+const toAb = require('to-array-buffer')
+const abToB = require('arraybuffer-to-buffer')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const Scheduler = require('./scheduler')
 const pth = require('path')
+const fs = require('fs')
 
 let _bc = new WeakMap()
 let _mc = new WeakMap()
@@ -22,6 +26,8 @@ let _rpc = new WeakMap()
 let _scheduler = new WeakMap()
 let _self = new WeakMap()
 let _bucket = new WeakMap()
+let _path = new WeakMap()
+let _timeout = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
   constructor (path, peer) {
@@ -36,6 +42,7 @@ module.exports = class BlockRouter extends EventEmitter {
     _bucket.set(this, bucket)
     let rpc = new RPC(peer, bucket, this.rpcInterface())
     _rpc.set(this, rpc)
+    _path.set(this, path)
     let bc = new BlockCache(pth.join(path, config.blockPath), config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
     let mc = new BlockCache(pth.join(path, config.miniPath), config.miniBlockSize, config.miniBlockCacheSize, this.cacheInterface(config.mini))
     let nc = new BlockCache(pth.join(path, config.nanoPath), config.nanoBlockSize, config.nanoBlockCacheSize, this.cacheInterface(config.nano))
@@ -64,20 +71,25 @@ module.exports = class BlockRouter extends EventEmitter {
     nc.on('full', () => {
       this.emit('full', config.nano)
     })
-    bc.on('capacity', (capacity)=> {
+    bc.on('capacity', (capacity) => {
       this.emit('capacity', config.block, capacity)
     })
-    mc.on('capacity', (capacity)=> {
+    mc.on('capacity', (capacity) => {
       this.emit('capacity', config.mini, capacity)
     })
-    nc.on('capacity', (capacity)=> {
+    nc.on('capacity', (capacity) => {
       this.emit('capacity', config.nano, capacity)
     })
-    bucket.on('removed', (peer)=> {
+    bucket.on('removed', () => {
       this.emit('connection', bucket.count)
+      this.savePeers()
     })
-    bucket.on('added', (capacity)=> {
+    bucket.on('added', () => {
       this.emit('connection', bucket.count)
+      this.savePeers()
+    })
+    bucket.on('updated', () => {
+      this.savePeers()
     })
   }
 
@@ -314,24 +326,82 @@ module.exports = class BlockRouter extends EventEmitter {
   }
 
   bootstrap (cb) {
-    let i = -1
-    let next = (err) => {
-      if (err) {
-        this.emit('error', err)
+    let self = _self.get(this)
+    let connect = () => {
+      let i = -1
+      let next = (err) => {
+        if (err) {
+          this.emit('error', err)
+        }
+        i++
+        if (i < config.bootstrap.length) {
+          let obj = config.bootstrap[ i ]
+          if (obj.id === self.key) {
+            return next()
+          }
+          obj.id = bs58.decode(obj.id)
+          let peer = Peer.fromJSON(obj)
+          this.connect(peer, next)
+        } else { //Fill routing table with the closet nodes to themselves
+          let rpc = _rpc.get(this)
+          let self = _self.get(this)
+          rpc.findNode(self.id, cb)
+        }
       }
-      i++
-      if (i < config.bootstrap.length) {
-        let obj = config.bootstrap[ i ]
-        obj.id = bs58.decode(obj.id)
-        let peer = Peer.fromJSON(obj)
-        this.connect(peer, next)
-      } else { //Fill routing table with the closet nodes to themselves
-        let rpc = _rpc.get(this)
-        let self = _self.get(this)
-        rpc.findNode(self.id, cb)
-      }
+      next()
     }
-    next()
+    let bootstrap
+    // This option is selected Bootstrap to whomever we were last online with
+    if (config.lastKnownPeers) {
+      bootstrap = config.bootstrap
+      let path = _path.get(this)
+      let fd = pth.join(path, '.bucket')
+      fs.readFile(fd, (err, bucketFile) => {
+        if (err) {
+          this.emit(err)
+          connect()
+        }
+        if (bucketFile) {
+          let peers = cbor.decode(toAb(buf))
+          for (let peer of peers) {
+            let index = bootstrap.findIndex((boot) => peer.id === boot.id)
+            if (index === -1) {
+              bootstrap.push(boot)
+            } else {
+              bootstrap.splice(index, 1, peer)
+            }
+          }
+          connect()
+        } else {
+          connect()
+        }
+      })
+    } else {
+      bootstrap = config.bootstrap
+      connect()
+    }
+  }
+
+  savePeers () {
+    let timeout = _timeout.get(this)
+    if (timeout) {
+      clearTimeout(timeout)
+    } else {
+      let timeout = setTimeout(() => {
+        let bucket = _bucket.get(this)
+        let peers = bucket.toArray()
+        peers = peers.map((peer => () => peer.toJSON()))
+        let buf = abToB(cbor.encode(peers))
+        let path = _path.get(this)
+        let fd = pth.join(path, '.bucket')
+        fs.writeFile(buf, fd, (err) => {
+          if (err) {
+            this.emit('error', err)
+          }
+        })
+      }, config.peerTimeout)
+      _timeout.set(this, timeout)
+    }
   }
 
   listen () {
@@ -358,5 +428,4 @@ module.exports = class BlockRouter extends EventEmitter {
     let bucket = _bucket.get(this)
     return bucket.count
   }
-
 }

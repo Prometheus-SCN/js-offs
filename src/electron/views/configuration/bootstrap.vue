@@ -21,6 +21,12 @@
               </tr>
             </tbody>
           </table>
+          <div>
+            <label class="checkbox">
+              <input type="checkbox" v-model="lastKnownPeers">
+              Bootstrap To Last Known Connections
+            </label>
+          </div>
           <hr>
           <form @submit.prevent="add">
             <div class="columns">
@@ -87,6 +93,7 @@
         .then((peers) => {
           this.peers = peers
         })
+      this.configurator.get('lastKnownPeers').then((lastKnownPeers) => this.lastKnownPeers = lastKnownPeers)
     },
     data () {
       return {
@@ -103,6 +110,7 @@
         connector: null,
         configuratorErr: null,
         success: false,
+        lastKnownPeers: null
       }
     },
     methods: {
@@ -132,6 +140,7 @@
               })
           }
         })
+        this.configurator.set('lastKnownPeers', this.lastKnownPeers).then((success) => this.configuratorErr = null)
       },
       remove (index) {
         this.peers.splice(index, 1)

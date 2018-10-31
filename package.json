@@ -20,7 +20,7 @@
   "build": {
     "productName": "OFF System",
     "appId": "com.prometheus.offsystem",
-    "extraFiles":[
+    "extraFiles": [
       {
         "from": "LICENSE.md",
         "to": "license.txt"
@@ -46,7 +46,8 @@
     },
     "mac": {
       "target": "zip",
-      "icon": "src/electron/images/off-logo.icns"
+      "icon": "src/electron/images/off-logo.icns",
+      "artifactName": "${productName}_${version}_mac_${arch}.zip"
     },
     "win": {
       "target": "nsis",
@@ -55,10 +56,21 @@
     "nsis": {
       "license": "LICENSE.md",
       "allowToChangeInstallationDirectory": true,
-      "oneClick": false
+      "oneClick": false,
+      "artifactName": "${productName}_${version}_win_${arch}.exe"
     },
     "linux": {
-      "target": "deb",
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "ia32",
+            "armv7l",
+            "arm64"
+          ]
+        }
+      ],
       "vendor": "Prometheus",
       "synopsis": "The Owner Free File System (OFF System)(OFFS) is the world's first 'brightnet'. It facilitates legal data sharing activity over its network through the use of its ingenious data storage mechanisms. This allows it to perform its operations in the open without divulging the privacy, intent, or security of its network participants. The storage mechanism is unique in that it never stores whole files but instead stores completely random data blocks.",
       "description": "The Owner Free File System",
@@ -70,10 +82,12 @@
     }
   },
   "dependencies": {
+    "arraybuffer-to-buffer": "0.0.4",
     "block-stream2": "1.1.0",
     "bs58": "4.0.1",
     "buffer-split": "1.0.0",
     "buffer-xor": "2.0.1",
+    "cbor-js": "^0.1.0",
     "collect-stream": "1.1.1",
     "commander": "2.19.0",
     "cron": "1.1.1",
@@ -81,6 +95,7 @@
     "electron-ipc-responder": "1.0.4",
     "end-of-stream": "1.1.0",
     "express": "4.14.0",
+    "external-ip": "^2.0.3",
     "get-folder-size": "1.0.1",
     "hamming-distance": "1.0.0",
     "increment-buffer": "1.0.0",
@@ -98,6 +113,7 @@
     "streamifier": "0.1.1",
     "through2": "2.0.1",
     "timer-jobs": "0.1.0",
+    "to-array-buffer": "^2.1.0",
     "urldecode": "1.0.1",
     "urlencode": "1.1.0",
     "vee-validate": "2.0.9",

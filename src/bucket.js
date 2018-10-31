@@ -112,7 +112,7 @@ module.exports = class Bucket extends EventEmitter {
     }
     const nodeId = _nodeId.get(this)
     if (nodeId.equals(peer.id)) {
-      return
+      throw new Error('Invalid Peer: Self')
     }
     if (!index) {
       index = 0
@@ -124,7 +124,7 @@ module.exports = class Bucket extends EventEmitter {
     let root = _root.get(this)
     if (bucket) {
       let found = bucket.find((known)=> { return known.id.compare(peer.id) === 0}) //TODO fix double search
-      if (found) {
+      if (found && (found.ip !== peer.ip || found.port !== peer.port)) {
         this.update(peer)
       } else {
         let size = _size.get(this)
@@ -157,6 +157,8 @@ module.exports = class Bucket extends EventEmitter {
     let bucket = _bucket.get(this)
     bucket = bucket.filter((known)=> { return known.id.compare(peer.id) !== 0})
     bucket.push(peer)
+    let root = _root.get(this)
+    root.emit('updated')
   }
 
   remove (peer, index) {
