@@ -415,6 +415,7 @@ class Config {
   }
   set lastKnownPeers(value) {
     _lastKnownPeers.set(this, !!value)
+    this.save()
   }
   toJSON () {
     return {

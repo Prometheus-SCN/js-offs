@@ -23,8 +23,8 @@
           </table>
           <div>
             <label class="checkbox">
-              <input type="checkbox" v-model="lastKnownPeers">
-              Bootstrap To Last Known Connections
+              <input type="checkbox" v-model="lastKnownPeers" @click="check">
+              Bootstrap to last known connections?
             </label>
           </div>
           <hr>
@@ -140,7 +140,9 @@
               })
           }
         })
-        this.configurator.set('lastKnownPeers', this.lastKnownPeers).then((success) => this.configuratorErr = null)
+      },
+      check () {
+        this.configurator.set('lastKnownPeers', this.lastKnownPeers).then((success) => { if (success) { this.configuratorErr = null } })
       },
       remove (index) {
         this.peers.splice(index, 1)
