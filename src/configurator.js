@@ -39,7 +39,7 @@ class mainConfigurator extends responder {
         }
         catch (ex) {
           this.tell('error', ex.message)
-          resolve(fa)
+          resolve()
         }
       })
     })

@@ -140,6 +140,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
               let peer
               try {
                 payload.id = bs58.decode(payload.id)
+                payload.port = +payload.port
                 let peer = Peer.fromJSON(payload)
                 node.blockRouter.connect(peer, (err) => {
                   if (err) {
