@@ -33,13 +33,19 @@
               </span>
             </div>
           </div>
+          <div>
+            <label class="checkbox">
+              Use internal IP for connections?
+              <input type="checkbox" v-model="internalIP">
+            </label>
+          </div>
           <span v-show="errors.has('httpPort')" class="error">{{ errors.first('httpPort') }}</span>
           <div class="control">
             <span class="message is-sucess" v-if="success">{{success}}</span>
             <span class="message is-danger" v-if="error">{{error}}</span>
             <input type="submit" class="button is-primary" style="float:right" value="Save">
           </div>
-        </form>
+                  </form>
       </div>
       <div class="column"></div>
     </div>
@@ -65,6 +71,10 @@
         .then((port) => {
           this.httpPort = port
         })
+      this.configurator.get('internalIP')
+        .then((internalIP) => {
+          this.internalIP = internalIP
+        })
     },
     data () {
       return {
@@ -73,6 +83,7 @@
         numPortTries: 0,
         error: null,
         configurator: null,
+        internalIP: false,
         success: null,
       }
     },
@@ -92,6 +103,10 @@
           return
         }
         ok = await this.configurator.set('httpPort', this.httpPort)
+        if (!ok) {
+          return
+        }
+        ok = await this.configurator.set('internalIP', this.httpPort)
         if (!ok) {
           return
         }

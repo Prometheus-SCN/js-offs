@@ -359,7 +359,7 @@ module.exports = class BlockRouter extends EventEmitter {
       fs.readFile(fd, (err, bucketFile) => {
         if (err) {
           this.emit(err)
-          connect()
+          return connect()
         }
         if (bucketFile) {
           let peers = cbor.decode(toAb(buf))
@@ -371,14 +371,14 @@ module.exports = class BlockRouter extends EventEmitter {
               bootstrap.splice(index, 1, peer)
             }
           }
-          connect()
+          return connect()
         } else {
-          connect()
+          return connect()
         }
       })
     } else {
       bootstrap = config.bootstrap
-      connect()
+      return connect()
     }
   }
 

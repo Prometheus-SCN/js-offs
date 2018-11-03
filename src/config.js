@@ -41,7 +41,8 @@ let defaults = {
   ofdTimeout: 60 * 1000 * 5,
   temporaryTimeout: 60 * 1000 *5,
   peerTimeout: 250,
-  lastKnownPeers: false,
+  lastKnownPeers: true,
+  internalIP: false,
   bootstrap: [
     {id: '8fHecNZCiTxavnfnskySbeAYCd1bcv1SAVyi1mcZqurH', ip: '73.135.22.132', port: 8200 },
     {id: 'GgA9QwCDRgKt9tKLQVjyjnv9wvt7FaeAJo91JWWWmXuK', ip: '73.135.22.132', port: 8201 }
@@ -81,6 +82,7 @@ let _ofdTimeout = new WeakMap()
 let _temporaryTimeout = new WeakMap()
 let _peerTimeout = new WeakMap()
 let _lastKnownPeers = new WeakMap()
+let _internalIP = new WeakMap()
 let _bootstrap = new WeakMap()
 let _path = new WeakMap()
 class Config {
@@ -139,6 +141,7 @@ class Config {
       _temporaryTimeout.set(this, config.temporaryTimeout || defaults.temporaryTimeout)
       _peerTimeout.set(this, config.peerTimeout || defaults.peerTimeout)
       _lastKnownPeers.set(this, config.lastKnownPeers || defaults.lastKnownPeers)
+      _internalIP.set(this, config.internalIP, defaults.internalIP)
       _bootstrap.set(this, config.bootstrap.slice(0))
     } catch (ex) {
       return ex
@@ -179,6 +182,7 @@ class Config {
     _temporaryTimeout.set(this, defaults.temporaryTimeout)
     _peerTimeout.set(this, defaults.peerTimeout)
     _lastKnownPeers.set(this, defaults.lastKnownPeers)
+    _internalIP.set(this, defaults.internalIP)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
   }
 
@@ -417,6 +421,13 @@ class Config {
     _lastKnownPeers.set(this, !!value)
     this.save()
   }
+  get internalIP () {
+    return _internalIP.get(this)
+  }
+  set internalIP(value) {
+    _internalIP.set(this, !!value)
+  }
+
   toJSON () {
     return {
       blockPath: this.blockPath,
@@ -451,6 +462,8 @@ class Config {
       cacheLocation: this.cacheLocation,
       temporaryTimeout: this.temporaryTimeout,
       peerTimeout: this.peerTimeout,
+      lastKnownPeers: this.lastKnownPeers,
+      internalIP: this.internalIP,
       bootstrap: this.bootstrap
     }
   }

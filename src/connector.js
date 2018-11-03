@@ -5,8 +5,8 @@ class rendererConnector extends responder {
     super(ipcRenderer.send.bind(ipcRenderer), ipcRenderer.on.bind(ipcRenderer))
     this.registerTopic('error', async (err) => onError(err))
   }
-  async connect (id, ip, port) {
-    await this.ask('connect', {id, ip, port})
+  async connect (locator) {
+    await this.ask('connect', locator)
   }
 }
 

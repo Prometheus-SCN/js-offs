@@ -118,7 +118,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           height = 186
         } else {
           width = 800
-          height = 126
+          height = 146
         }
         connectWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar: true, resizable: false })
         connectWin.on('close', (e) => {
@@ -139,9 +139,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
             return new Promise((resolve, reject) => {
               let peer
               try {
-                payload.id = bs58.decode(payload.id)
-                payload.port = +payload.port
-                let peer = Peer.fromJSON(payload)
+                let peer = Peer.fromLocator(payload)
                 node.blockRouter.connect(peer, (err) => {
                   if (err) {
                     return reject(err)
@@ -186,7 +184,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
         }
       }
       let copyNodeId = () => {
-        clipboard.writeText(node.peerInfo.key)
+        clipboard.writeText(node.peerInfo.toLocator())
       }
 
       tray = new Tray(trayIcon)
