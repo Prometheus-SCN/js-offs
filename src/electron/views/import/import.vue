@@ -2,6 +2,14 @@
   <div>
     <div id="container">
       <div id="dropzone" ref="dropzone">
+        <div ref="recycle" class="recycle-container">
+          <a v-if="!isLoading" class="recycle-link" @click="toggleRecycler"><i class="fa fa-recycle fa-3x recycle-icon"></i></a>
+          <div class="recycle-form">
+            <label class="label">Enter Off System Links (comma-delimited)</label>
+            <textarea class="textarea" v-model="links" :class="badLinks ? 'is-danger' : ''"></textarea>
+            <span v-if="badLinks" class="error has-text-danger">Invalid links</span>
+          </div>
+        </div>
         <h3 id="uploadMessage">{{message}}</h3>
         <img id="uploadIcon" ref="icon" src="../../images/upload.svg" class="upload">
       </div>
@@ -33,12 +41,61 @@
     </div>
   </div>
 </template>
-<style>
+<style scoped>
+  #dropzone {
+    position: relative;
+  }
   .notification {
     word-wrap: break-word;
   }
   .title, .notification {
     font-family: Odin;
+  }
+  .recycle-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    z-index: 20;
+    transition: .5s;
+  }
+  .recycle-container.expanded {
+    transition: .5s;
+    background-color: white;
+    outline: 5px;
+  }
+  .recycle-container > .recycle-form {
+    display: none;
+  }
+  .recycle-container.expanded > .recycle-form {
+    display: block;
+  }
+  .recycle-link {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+  }
+  .recycle-icon {
+    color: #53b998;
+  }
+  .recycle-icon:hover {
+    opacity: .8;
+  }
+  .label {
+    position: absolute;
+    top: 10%;
+    color: grey;
+  }
+  .textarea {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height:60%;
+    width: 60%;
+    transform: translate(-50%, -50%);
+  }
+  .error {
+    position: absolute;
+    bottom: 10%;
   }
 </style>
 <script>
@@ -56,6 +113,9 @@ export default {
       autoProcessQueue: false
     })
     dropzone.on('drop', (e) => {
+      if (this.expanded) {
+        return
+      }
       this.isDropped = true
       this.startLoader()
       for (var i = 0; i < e.dataTransfer.items.length; i++) {
@@ -64,22 +124,57 @@ export default {
       }
     })
     dropzone.on('addedfile', (file) => {
+      if (this.expanded) {
+        return
+      }
       if (!this.isDropped && (file instanceof File)) {
         this.startLoader()
         this.uploadFile(file, this.complete)
       }
     })
   },
+  watch: {
+    links () {
+      if (this.links) {
+        let links = this.links.split(',')
+        for (let i = 0; i < links.length; i++) {
+          try {
+            links[i] = links[i].trim()
+            OffUrl.parse(links[i])
+          } catch (ex) {
+            console.log(ex)
+            this.badLinks = true
+            this.urls = null
+            return
+          }
+        }
+        this.badLinks = false
+        this.urls = links
+      } else {
+        this.badLinks = false
+        this.urls = null
+      }
+    }
+
+  },
   data: function () {
     return {
       message: 'Drag and Drop a File or Folder',
       timer: null,
       isDropped: false,
+      isLoading: false,
       messages: [ 'Dissolving', 'Dissolving.', 'Dissolving..', 'Dissolving...' ],
-      link: null
+      links: null,
+      urls: null,
+      badLinks: false,
+      expanded: false
     }
   },
   methods: {
+    toggleRecycler () {
+      this.$refs.recycle.classList.toggle('expanded')
+      this.expanded = !this.expanded
+    },
     toggleModal () {
       if ($(this.$refs.completeModal).hasClass('is-active')) {
         $(this.$refs.completeModal).removeClass('is-active')
@@ -104,6 +199,10 @@ export default {
       xhr.open('PUT', 'http://localhost:23402/offsystem', true);
       xhr.setRequestHeader('server-address', 'http://localhost:23402');
       xhr.setRequestHeader('type', type || file.type || 'application/octet-stream');
+      let urls = this.urls
+      if (urls) {
+        xhr.setRequestHeader('recycler', JSON.stringify(urls));
+      }
       xhr.setRequestHeader('file-name', name || file.name);
       xhr.setRequestHeader('stream-length', file.size);
       xhr.addEventListener('load', (e) => {
@@ -126,6 +225,7 @@ export default {
     },
     startLoader () {
       this.message = 'Dissolving...'
+      this.isLoading = true
       let i = 0;
       this.timer = setInterval(() => {
         i++
@@ -136,6 +236,7 @@ export default {
     },
     endLoader () {
       this.toggleModal()
+      this.isLoading = false
       clearInterval(this.timer)
       this.message = 'Drag and Drop a File or Folder'
       this.$refs.icon.setAttribute('src', '../../images/upload.svg')

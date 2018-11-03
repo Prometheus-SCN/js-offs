@@ -1,9 +1,9 @@
 const dns = require('dns')
-const isIP = require('is-ip')
 const bs58 = require('bs58')
 const fs = require('fs')
 const path = require('path')
 const net = require('net')
+const cbor = require('cbor')
 let _port = new WeakMap()
 let _ip = new WeakMap()
 let _id = new WeakMap()
@@ -17,7 +17,7 @@ module.exports = class Peer {
     if (!net.isIP(ip)) {
       throw new Error('Ip is not a valid address')
     }
-    if (isNaN(port)) {
+    if (!Number.isInteger(port)) {
       throw new Error('Port is not a Number')
     }
     _ip.set(this, ip)
@@ -49,8 +49,16 @@ module.exports = class Peer {
     return _key.get(this)
   }
 
+  toLocator () {
+    return bs58.encode(cbor.encode(this.toJSON()))
+  }
+
+  static fromLocator(loc) {
+    return this.fromJSON(cbor.decode(bs58.decode(loc)))
+  }
+
   toString () {
-    return `id:${this.key} ip:${this.ip} port: ${this.port}`
+    return `id: ${this.key} ip: ${this.ip} port: ${this.port}`
   }
 
   toJSON () {

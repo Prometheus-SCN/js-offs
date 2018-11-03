@@ -2,7 +2,7 @@
   <div>
     <div class="columns">
       <div class="column"></div>
-        <div class="column">
+        <div class="column main">
           <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth" v-if="peers.length">
             <thead>
               <tr>
@@ -21,49 +21,29 @@
               </tr>
             </tbody>
           </table>
+          <div>
+            <label class="checkbox">
+              Bootstrap to last known connections?
+              <input type="checkbox" v-model="lastKnownPeers" @click="check">
+            </label>
+          </div>
           <hr>
           <form @submit.prevent="add">
-            <div class="columns">
-              <div class="column">
-                <div class="field">
-                  <label class="label">Node ID</label>
-                  <div class="control has-icons-left has-icons-right">
-                    <input class="input is-success" type="text" v-model="nodeid" name="nodeid">
-                    <span class="icon is-small is-left">
-                      <i class="fa fa-id-card-o"></i>
-                    </span>
-                  </div>
-                  <p v-show="nodeidErr"  class="help is-danger">Invalid Node ID</p>
+            <div class="column">
+              <div class="field">
+                <label class="label">Locator</label>
+                <div class="control has-icons-left has-icons-right">
+                  <input v-model="locator" class=" input is-success" type="text" placeholder="locator"  name="locator">
+                  <span class="icon is-small is-left">
+                    <i class="fa fa-globe"></i>
+                  </span>
                 </div>
+                <p v-show="locatorErr"  class="help is-danger">Invalid Locator</p>
               </div>
-              <div class="column">
-                <div class="field">
-                  <label class="label">IP Address</label>
-                  <div class="control has-icons-left has-icons-right">
-                    <input class="input is-success" type="text" placeholder="0.0.0.0" v-model="ipaddress" name="ipaddress" >
-                    <span class="icon is-small is-left">
-                      <i class="fa fa-sitemap"></i>
-                    </span>
-                  </div>
-                  <p v-show="ipaddressErr"  class="help is-danger">Invalid IP Address</p>
-                </div>
-              </div>
-              <div class="column">
-                <div class="field">
-                  <label class="label">Port</label>
-                  <div class="control has-icons-left has-icons-right">
-                    <input v-model="port" class=" input is-success" type="text" placeholder="#"  name="port">
-                    <span class="icon is-small is-left">
-                      <i class="fa fa-space-shuttle"></i>
-                    </span>
-                  </div>
-                  <p v-show="portErr"  class="help is-danger">Invalid Port</p>
-                </div>
-                <div class="control">
-                  <span class="message is-sucess" v-if="success">Success</span>
-                  <span class="message is-danger" v-if="configuratorErr">{{configuratorErr}}</span>
-                  <input type="submit" class="button is-primary" style="float:right" value="Add">
-                </div>
+              <div class="control">
+                <span class="message is-sucess" v-if="success">Success</span>
+                <span class="message is-danger" v-if="configuratorErr">{{configuratorErr}}</span>
+                <input type="submit" class="button is-primary" style="float:right" value="Add">
               </div>
             </div>
           </form>
@@ -72,7 +52,10 @@
     </div>
   </div>
 </template>
-<style>
+<style scoped>
+  .main {
+    min-width: 800px;
+  }
 </style>
 <script>
   export default {
@@ -84,22 +67,18 @@
         .then((peers) => {
           this.peers = peers
         })
+      this.configurator.get('lastKnownPeers').then((lastKnownPeers) => this.lastKnownPeers = lastKnownPeers)
     },
     data () {
       return {
         configurator: null,
         peers: [],
-        nodeidErr: false,
-        ipaddressErr: false,
-        portErr: false,
-        nodeid: null,
-        ipaddress: null,
-        port: null,
-        nodeIdRegEx: new RegExp(/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{43})/),
-        ipRegEx: new RegExp(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/),
-        connector: null,
+        locatorErr: false,
+        locator: null,
+        locatorRegEx: new RegExp(/([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)/),
         configuratorErr: null,
         success: false,
+        lastKnownPeers: null
       }
     },
     methods: {
@@ -108,30 +87,35 @@
         window.resizeBy(0, ((b - w) || d - w))
       },
       add () {
-        this.connectErr= null
-        this.nodeidErr = !this.nodeIdRegEx.test(this.nodeid)
-        this.ipaddressErr = !this.ipRegEx.test(this.ipaddress)
-        this.portErr = (!Number.isInteger(+this.port)) || (this.port < 1) || (this.port > 65535)
-        if (this.nodeidErr || this.portErr || this.portErr) {
+        this.locatorErr = !this.locatorRegEx.test(this.locator)
+        if (this.locatorErrr) {
           return
         }
-        if (this.peers.find((peer) => peer.id === this.nodeid)) {
-          this.configuratorErr = "Peer already exists"
-          return
-        }
-        this.peers.push({id: this.nodeid, ip: this.ipaddress, port: this.port})
-        this.configurator.set('bootstrap', this.peers). then((success) => {
-          if (success) {
-            this.configuratorErr = null
-            this.configurator.get('bootstrap')
-              .then((peers) => {
-                this.peers = peers
-              })
+        try {
+          let newPeer = Peer.fromLocator(this.locator)
+          if (this.peers.find((peer) => peer.id === newPeer.key)) {
+            this.configuratorErr = "Peer already exists"
+            return
           }
-        })
+          this.peers.push({id: newPeer.key, ip: newPeer.key.ip, port: newPeer.port})
+          this.configurator.set('bootstrap', this.peers). then((success) => {
+            if (success) {
+              this.configuratorErr = null
+              this.configurator.get('bootstrap')
+                .then((peers) => {
+                  this.peers = peers
+                })
+            }
+          })
+        } catch(ex) {
+          this.configuratorErr = ex
+        }
+      },
+      check () {
+        this.configurator.set('lastKnownPeers', this.lastKnownPeers).then((success) => { if (success) { this.configuratorErr = null } })
       },
       remove (index) {
-        this.peers.splice(index)
+        this.peers.splice(index, 1)
         this.configurator.set('bootstrap', this.peers).then((success) => {
           if (success) {
             this.configuratorErr = null

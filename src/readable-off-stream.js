@@ -1,5 +1,5 @@
 'use strict'
-const Readable = require('readable-stream').Readable;
+const {Readable} = require('stream')
 const BlockCache = require('./block-cache')
 const OffUrl = require('./off-url')
 const config = require('./config')

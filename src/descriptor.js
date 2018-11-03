@@ -11,7 +11,10 @@ let _blockSize = new WeakMap()
 module.exports = class Descriptor {
   constructor (blockSize, streamLength) {
     if (!Number.isInteger(blockSize)) {
-      throw new Error('Block size must be an integer')
+      throw new TypeError('Block size must be an integer')
+    }
+    if (!Number.isInteger(streamLength)) {
+      throw new TypeError('Stream length must be an integer')
     }
     let blocks = Math.ceil(streamLength / blockSize) //total number of source blocks
     let cutPoint = ((Math.floor(blockSize / config.descriptorPad) ) * config.descriptorPad)// maximum length of a descriptor in bytes
@@ -19,7 +22,7 @@ module.exports = class Descriptor {
     let tuppleBytes = blocks * config.descriptorPad * config.tupleSize // total size of all tupple descriptions
     _tuppleBytes.set(this, tuppleBytes)
     _blockSize.set(this, blockSize)
-    _data.set(this, new Buffer(0))
+    _data.set(this, Buffer.alloc(0))
     _blockArr.set(this, [])
     _max.set(this, Math.floor(blockSize / config.descriptorPad) * config.descriptorPad)
   }

@@ -1,6 +1,7 @@
 'use strict'
 const blocker = require('block-stream2')
-const Writable = require('readable-stream').Writable;
+const {Writable} = require('stream')
+const Recycler = require('./recycler')
 const BlockCache = require('./block-cache')
 const Descriptor = require('./descriptor')
 const config = require('./config')
@@ -21,34 +22,47 @@ let _size = new WeakMap()
 let _count = new WeakMap()
 let _randomList = new WeakMap()
 let _writer = new WeakMap()
+let _recycler = new WeakMap()
+let _temp = new WeakMap()
 
 module.exports = class WritableOffStream extends Writable {
   constructor (blockSize, opts) {
     if (!Number.isInteger(blockSize)) {
-      throw new Error('Block size must be an integer')
+      throw new TypeError('Block size must be an integer')
     }
     if (!opts) {
-      throw new Error('Invalid Options')
+      throw new TypeError('Invalid Options')
     }
     if (opts instanceof BlockCache) {
       opts = { bc: opts }
     }
     if (!opts.bc) {
-      throw new Error('Invalid Block Cache')
+      throw new TypeError('Invalid Block Cache')
+    } else if (!(opts.bc instanceof BlockCache)) {
+      throw new TypeError('Invalid Block Cache')
     }
     opts.highWaterMark = blockSize
     super(opts)
-    if (opts.url && (opts.url instanceof OffUrl)) {
-      _url.set(this, opts.url)
-    } else {
-      opts.url = new OffUrl
-      _url.set(this, opts.url)
+    if(!opts.url || !(opts.url instanceof OffUrl)) {
+      throw new TypeError('Invalid OffUrl')
+    }
+    _url.set(this, opts.url)
+
+
+    if (opts.recycler) {
+      if (!(opts.recycler instanceof Recycler)) {
+        throw new Error('Invalid recycler')
+      }
+      _recycler.set(this, opts.recycler)
+    }
+    if (opts.temporary) {
+      _temp.set(this, ops.bc.newTemporary())
     }
 
     _blockSize.set(this, blockSize)
     _blockCache.set(this, opts.bc)
     _descriptor.set(this, new Descriptor(blockSize, opts.url.streamLength))
-    _accumulator.set(this, new Buffer(0))
+    _accumulator.set(this, Buffer.alloc(0))
     _hasher.set(this, util.hasher())
     _size.set(this, 0)
     _count.set(this, 0)
@@ -61,28 +75,63 @@ module.exports = class WritableOffStream extends Writable {
       _hasher.set(this, hasher)
 
       let bc = _blockCache.get(this)
-      let randomList = _randomList.get(this)
       let url = _url.get(this)
       let randoms = []
-
       //gather the randoms from the cache
       let gather = () => {
         let i = -1
         let randomList = _randomList.get(this)
+        let recycler = _recycler.get(this)
+        let temp = _temp.get(this)
         let next = (err, block) => {
-          if (err) {
-            return this.emit('error', err)
+          if (err) { // Recycler is empty just continue the loop from another source keep the counter the same
+            if (err.message === 'Recycler is Empty') {
+              i--
+            } else {
+              return this.emit('error', err)
+            }
           }
           if (block) {
             randoms.push(block)
           }
           i++
           if (i < (config.tupleSize - 1)) {
-            let random = randomList.shift()
-            if (random) {
-              bc.get(random, next)
-            } else {
-              bc.randomBlock(next)
+            // Get it from the recycler if we have it
+            if (recycler && !recycler.empty) {
+              return recycler.next(next)
+            }
+            // if we don't have a random list get one and start processing
+            if (!randomList) {
+              return bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (config.tupleSize - 1)), (err, randoms) => {
+                if (err) {
+                  return this.emit('error', err)
+                }
+                randomList = randoms
+                _randomList.set(this, randomList)
+                let random = randomList.shift()
+                if (random) {
+                  return bc.get(random, next)
+                } else {
+                  return bc.randomBlock(next)
+                }
+              })
+            } else { //or just process existing list
+              let random = randomList.shift()
+              if (random) {
+                return bc.get(random, next)
+              } else { //or generate new random blocks
+                if (temp) {
+                  return bc.randomBlock((err, block) => {
+                    if (err) {
+                      return next(err)
+                    }
+                    temp.push(block.key)
+                    return next(err, block)
+                  })
+                } else {
+                  return bc.randomBlock(next)
+                }
+              }
             }
           } else {
             return process()
@@ -93,6 +142,7 @@ module.exports = class WritableOffStream extends Writable {
 
       //process the randoms into a tuple
       let process = () => {
+        let temp = _temp.get(this)
         //create off block from accumulated buffer
         let count = _count.get(this)
         let offBlock = new Block(buf, blockSize)
@@ -122,29 +172,36 @@ module.exports = class WritableOffStream extends Writable {
         _descriptor.set(this, descriptor)
 
         //save resultant off block
-        bc.put(offBlock, (err)=> {
-          if (err) {
-            this.emit('error', err)
-            return
-          }
-          return nxt()
-        })
-        //Save block to network
-        bc.emit('block', offBlock)
+        let put = () => {
+          bc.put(offBlock, (err)=> {
+            if (err) {
+              this.emit('error', err)
+              return
+            }
+            return nxt()
+          })
+          //Save block to network
+          bc.emit('block', offBlock)
+        }
+        // If this is supposed to be temporary save any new blocks as such
+        // we need this check for temproraries because recyclers produce
+        // duplicate blocks that should not be considered temporary
+        if (temp) {
+          bc.contains(offBlock.key, (yes) => {
+            if(yes) {
+              return nxt()
+            } else {
+              temp.push(block.key)
+              return put()
+            }
+          })
+        } else {
+          return put()
+        }
+
       }
-      //Get the keys of all the randoms needed for writing this file's representations
-      if (!randomList) {
-        bc.randomBlockList((Math.ceil(url.streamLength / blockSize) * (config.tupleSize - 1)), (err, randoms) => {
-          if (err) {
-            return this.emit('error', err)
-          }
-          randomList = randoms
-          _randomList.set(this, randomList)
-          gather()
-        })
-      } else {
-        gather()
-      }
+      //Start finding blocks
+      gather()
 
     }
     _writer.set(this, writer)
@@ -159,6 +216,7 @@ module.exports = class WritableOffStream extends Writable {
       let genURL = () => {
         let descriptor = _descriptor.get(this)
         let dBlocks = descriptor.blocks()
+        let temp = _temp.get(this)
         let i = -1
         let next = (err) => {
           if (err) {
@@ -168,14 +226,28 @@ module.exports = class WritableOffStream extends Writable {
           i++
           if (i < dBlocks.length) {
             let block = dBlocks[ i ]
-            bc.put(block, (err) => {
-              if (err) {
-                return next(err)
-              }
-              return next(err)
-            })
-            //Save block to network
-            bc.emit('block', block)
+             let put = () => {
+               bc.put(block, (err) => {
+                 if (err) {
+                   return next(err)
+                 }
+                 return next(err)
+               })
+               //Save block to network
+               bc.emit('block', block)
+             }
+            if (temp) {
+              bc.contains(block.key, (yes) => {
+                if(yes) {
+                  return next()
+                } else {
+                  temp.push(block.key)
+                  return put()
+                }
+              })
+            } else {
+              return put()
+            }
           } else {
             let hasher = _hasher.get(this)
             let url = _url.get(this)
@@ -185,6 +257,9 @@ module.exports = class WritableOffStream extends Writable {
             url.streamLength = size
             url.streamOffsetLength = size
             url.streamOffset = 0
+            if (temp) {
+              bc.assignTemporary(url.fileHash + url.descriptorHash, temp)
+            }
             _url.set(this, url)
             this.emit('url', url)
             return
@@ -219,7 +294,6 @@ module.exports = class WritableOffStream extends Writable {
     let size = _size.get(this)
     size += buf.length
     _size.set(this, size)
-
     accumulator = Buffer.concat([ accumulator, buf ])
     _accumulator.set(this, accumulator)
     if (accumulator.length < blockSize) {
