@@ -17676,7 +17676,7 @@ exports.default = {
           this.configuratorErr = "Peer already exists";
           return;
         }
-        this.peers.push({ id: newPeer.key, ip: newPeer.key.ip, port: newPeer.port });
+        this.peers.push({ id: newPeer.key, ip: newPeer.ip, port: newPeer.port });
         this.configurator.set('bootstrap', this.peers).then(function (success) {
           if (success) {
             _this2.configuratorErr = null;
@@ -17686,7 +17686,7 @@ exports.default = {
           }
         });
       } catch (ex) {
-        this.configuratorErr = ex;
+        this.configuratorErr = 'Invalid Locator';
       }
     },
     check: function check() {

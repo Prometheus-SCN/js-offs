@@ -97,7 +97,7 @@
             this.configuratorErr = "Peer already exists"
             return
           }
-          this.peers.push({id: newPeer.key, ip: newPeer.key.ip, port: newPeer.port})
+          this.peers.push({id: newPeer.key, ip: newPeer.ip, port: newPeer.port})
           this.configurator.set('bootstrap', this.peers). then((success) => {
             if (success) {
               this.configuratorErr = null
@@ -108,7 +108,7 @@
             }
           })
         } catch(ex) {
-          this.configuratorErr = ex
+          this.configuratorErr = 'Invalid Locator'
         }
       },
       check () {

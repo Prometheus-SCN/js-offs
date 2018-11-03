@@ -121,7 +121,7 @@ module.exports = class Node extends EventEmitter {
                */
               port = config.startPort
               if (config.internalIP) {
-                return getIP(new Error('Using Internal IP'))
+                return getIp(new Error('Using Internal IP'))
               } else {
                 return extIP(getIp)
               }
