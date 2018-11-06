@@ -194,11 +194,14 @@ module.exports = class Scheduler {
         if (i < nodes.length) {
           let node = nodes[ i ]
           rpc.ping(node.id, next)
+        } else {
+          let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
+          _maintenanceJob.set(this, maintenanceJob)
         }
       }
       next()
     }
-    let maintenanceJob = new CronJob('*/15 * * * *', maintainBucket) // every 15 minutes
+    let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
     _maintenanceJob.set(this, maintenanceJob)
 
   }

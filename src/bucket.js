@@ -112,7 +112,8 @@ module.exports = class Bucket extends EventEmitter {
     }
     const nodeId = _nodeId.get(this)
     if (nodeId.equals(peer.id)) {
-      throw new Error('Invalid Peer: Self')
+      return
+      //throw new Error('Invalid Peer: Self')
     }
     if (!index) {
       index = 0
@@ -120,12 +121,15 @@ module.exports = class Bucket extends EventEmitter {
     if (isNaN(index)) {
       throw new Error('Invalid index')
     }
+
     let bucket = _bucket.get(this)
     let root = _root.get(this)
     if (bucket) {
       let found = bucket.find((known)=> { return known.id.compare(peer.id) === 0}) //TODO fix double search
-      if (found && (found.ip !== peer.ip || found.port !== peer.port)) {
-        this.update(peer)
+      if (found) {
+        if (found.ip !== peer.ip || found.port !== peer.port) {
+          this.update(peer)
+        }
       } else {
         let size = _size.get(this)
         if (bucket.length < size) {

@@ -246,6 +246,6 @@ module.exports = function (br, emit) {
         return res.status(500).send()
       }
     })
-  off.use(express.static(pth.join(__dirname, 'static')))
+  //off.use(express.static(pth.join(__dirname, 'static')))
   return off
 }

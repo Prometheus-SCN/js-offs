@@ -28,6 +28,7 @@ let _self = new WeakMap()
 let _bucket = new WeakMap()
 let _path = new WeakMap()
 let _timeout = new WeakMap()
+let _peer = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
   constructor (path, peer) {
@@ -38,6 +39,7 @@ module.exports = class BlockRouter extends EventEmitter {
       throw new TypeError('Invalid Peer')
     }
     super()
+    _peer.set(this, peer)
     let bucket = new Bucket(peer.id, config.bucketSize)
     _bucket.set(this, bucket)
     let rpc = new RPC(peer, bucket, this.rpcInterface())
@@ -327,6 +329,8 @@ module.exports = class BlockRouter extends EventEmitter {
 
   bootstrap (cb) {
     let self = _self.get(this)
+    let peerInfo = _peer.get(this)
+    let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer)).filter((peer) => !peer.isEqual(peerInfo))
     let connect = () => {
       let i = -1
       let next = (err) => {
@@ -334,13 +338,8 @@ module.exports = class BlockRouter extends EventEmitter {
           this.emit('error', err)
         }
         i++
-        if (i < config.bootstrap.length) {
-          let obj = config.bootstrap[ i ]
-          if (obj.id === self.key) {
-            return next()
-          }
-          obj.id = bs58.decode(obj.id)
-          let peer = Peer.fromJSON(obj)
+        if (i < bootstrap.length) {
+          let peer = bootstrap[ i ]
           this.connect(peer, next)
         } else { //Fill routing table with the closet nodes to themselves
           let rpc = _rpc.get(this)
@@ -350,10 +349,8 @@ module.exports = class BlockRouter extends EventEmitter {
       }
       next()
     }
-    let bootstrap
     // This option is selected Bootstrap to whomever we were last online with
     if (config.lastKnownPeers) {
-      bootstrap = config.bootstrap
       let path = _path.get(this)
       let fd = pth.join(path, '.bucket')
       fs.readFile(fd, (err, bucketFile) => {
@@ -362,22 +359,18 @@ module.exports = class BlockRouter extends EventEmitter {
           return connect()
         }
         if (bucketFile) {
-          let peers = cbor.decode(toAb(buf))
-          for (let peer of peers) {
-            let index = bootstrap.findIndex((boot) => peer.id === boot.id)
-            if (index === -1) {
-              bootstrap.push(boot)
-            } else {
-              bootstrap.splice(index, 1, peer)
+          let peers = cbor.decode(toAb(bucketFile))
+          for (let pier of peers) {
+            let peer = Peer.fromLocator(pier)
+            let found = bootstrap.find((boot) => peer.isEqual(boot))
+            if (!found) {
+              bootstrap.push(peer)
             }
           }
-          return connect()
-        } else {
-          return connect()
         }
+        return connect()
       })
     } else {
-      bootstrap = config.bootstrap
       return connect()
     }
   }
@@ -390,13 +383,13 @@ module.exports = class BlockRouter extends EventEmitter {
       let timeout = setTimeout(() => {
         let bucket = _bucket.get(this)
         let peers = bucket.toArray()
-        peers = peers.map((peer => () => peer.toJSON()))
+        peers = peers.map((peer) => peer.toLocator())
         let buf = abToB(cbor.encode(peers))
         let path = _path.get(this)
         let fd = pth.join(path, '.bucket')
-        fs.writeFile(buf, fd, (err) => {
+        fs.writeFile(fd, buf, (err) => {
           if (err) {
-            this.emit('error', err)
+            return this.emit('error', err)
           }
         })
       }, config.peerTimeout)

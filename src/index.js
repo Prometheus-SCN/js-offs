@@ -151,7 +151,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
                   if (err) {
                     return reject(err)
                   } else {
-                    return resolve()
+                    return resolve(true)
                   }
                 })
               } catch (ex) {

@@ -94,19 +94,19 @@
         if (!ok) {
           return
         }
-        ok = await this.configurator.set('startPort', this.startPort)
+        ok = await this.configurator.set('startPort', +this.startPort)
         if (!ok) {
           return
         }
-        ok = await this.configurator.set('numPortTries', this.numPortTries)
+        ok = await this.configurator.set('numPortTries', +this.numPortTries)
         if (!ok) {
           return
         }
-        ok = await this.configurator.set('httpPort', this.httpPort)
+        ok = await this.configurator.set('httpPort', +this.httpPort)
         if (!ok) {
           return
         }
-        ok = await this.configurator.set('internalIP', this.httpPort)
+        ok = await this.configurator.set('internalIP', this.internalIP)
         if (!ok) {
           return
         }

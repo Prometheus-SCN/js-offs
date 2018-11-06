@@ -3,7 +3,9 @@ const bs58 = require('bs58')
 const fs = require('fs')
 const path = require('path')
 const net = require('net')
-const cbor = require('cbor')
+const cbor = require('cbor-js')
+const toAb = require('to-array-buffer')
+const abToB = require('arraybuffer-to-buffer')
 let _port = new WeakMap()
 let _ip = new WeakMap()
 let _id = new WeakMap()
@@ -49,12 +51,20 @@ module.exports = class Peer {
     return _key.get(this)
   }
 
+  isEqual(peer2) {
+    let id1 = _id.get(this)
+    let id2 = _id.get(peer2)
+   return id1.compare(id2) === 0
+  }
+
   toLocator () {
-    return bs58.encode(cbor.encode(this.toJSON()))
+    return bs58.encode(abToB(cbor.encode(this.toJSON())))
   }
 
   static fromLocator(loc) {
-    return this.fromJSON(cbor.decode(bs58.decode(loc)))
+    let obj = cbor.decode(toAb(bs58.decode(loc)))
+    obj.id = Buffer.from(obj.id)
+    return this.fromJSON(obj)
   }
 
   toString () {
