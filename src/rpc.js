@@ -196,8 +196,6 @@ module.exports = class RPC extends EventEmitter {
           let pb = RPCProto.RPC.decode(msg)
           sanitizeRPC(pb)
           let bucket = _bucket.get(this)
-          let peer = socket.address()
-          console.log('on connection', socket.remoteAddress)
           bucket.add(new Peer(pb.from.id, pb.from.ip, pb.from.port))
           _bucket.set(this, bucket)
           switch (pb.type) {
@@ -309,6 +307,7 @@ module.exports = class RPC extends EventEmitter {
                 }
                 bucket.add(peer)
               })
+              return next()
             } catch (err) {
               return next()
             }
@@ -359,7 +358,8 @@ module.exports = class RPC extends EventEmitter {
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true }, () => {
           collect(socket, (err, msg)=> {
             if (err) {
-              return cb(err)
+              this.emit('error', err)
+              return next()
             }
             try {
               let pb = RPCProto.RPC.decode(msg)
@@ -383,7 +383,7 @@ module.exports = class RPC extends EventEmitter {
                   }
                   bucket.add(peer)
                 })
-                next()
+                return next()
               }
             } catch (err) {
               return cb(err)

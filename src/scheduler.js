@@ -3,6 +3,7 @@ const RPC = require('./rpc')
 const Bucket = require('./bucket')
 const config = require('./config')
 const bs58 = require('bs58')
+const crypto = require('crypto')
 let _maintenanceJob = new WeakMap()
 let _capacityJob = new WeakMap()
 module.exports = class Scheduler {
@@ -156,6 +157,7 @@ module.exports = class Scheduler {
         let then = Math.ceil(fillRate * 60 * 60 * 1000)
         then = then < 0 ? 1000 : then
         then = then < 10000 ? 10000 : then
+        then += (crypto.randomBytes(1)[0] % 10) * 1000
         let job = ()=> {
           if (isRunningCapacity) {
             return

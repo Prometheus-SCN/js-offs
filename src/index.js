@@ -34,6 +34,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
   node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
+  node.start()
 } else {
   const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard, ipcMain } = require('electron')
   require('electron-context-menu')({ showInspectElement: false, showCopyImageAddress: false, showSaveImageAs: false })
@@ -52,6 +53,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
     node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
     node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
+    node.start()
 
     node.once('ready', () => {
       let importWin
