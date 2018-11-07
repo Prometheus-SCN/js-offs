@@ -5376,7 +5376,10 @@ module.exports = function (path) {
 },{"_process":1}],5:[function(require,module,exports){
 var Vue // late bind
 var version
-var map = (window.__VUE_HOT_MAP__ = Object.create(null))
+var map = Object.create(null)
+if (typeof window !== 'undefined') {
+  window.__VUE_HOT_MAP__ = map
+}
 var installed = false
 var isBrowserify = false
 var initHookName = 'beforeCreate'
@@ -5413,6 +5416,8 @@ exports.install = function (vue, browserify) {
  */
 
 exports.createRecord = function (id, options) {
+  if(map[id]) { return }
+
   var Ctor = null
   if (typeof options === 'function') {
     Ctor = options
@@ -5427,6 +5432,16 @@ exports.createRecord = function (id, options) {
 }
 
 /**
+ * Check if module is recorded
+ *
+ * @param {String} id
+ */
+
+exports.isRecorded = function (id) {
+  return typeof map[id] !== 'undefined'
+}
+
+/**
  * Make a Component options object hot.
  *
  * @param {String} id
@@ -5438,7 +5453,7 @@ function makeOptionsHot(id, options) {
     var render = options.render
     options.render = function (h, ctx) {
       var instances = map[id].instances
-      if (instances.indexOf(ctx.parent) < 0) {
+      if (ctx && instances.indexOf(ctx.parent) < 0) {
         instances.push(ctx.parent)
       }
       return render(h, ctx)
@@ -5516,13 +5531,21 @@ exports.rerender = tryWrap(function (id, options) {
       instance.$options.render = options.render
       instance.$options.staticRenderFns = options.staticRenderFns
       // reset static trees
+      // pre 2.5, all static trees are cached together on the instance
       if (instance._staticTrees) {
-        // pre 2.5 staticTrees are cached per-instance
         instance._staticTrees = []
-      } else {
-        // post 2.5 staticTrees are cached on shared options
-        record.Ctor.options._staticTrees = []
       }
+      // 2.5.0
+      if (Array.isArray(record.Ctor.options.cached)) {
+        record.Ctor.options.cached = []
+      }
+      // 2.5.3
+      if (Array.isArray(instance.$options.cached)) {
+        instance.$options.cached = []
+      }
+      // post 2.5.4: v-once trees are cached on instance._staticTrees.
+      // Pure static trees are cached on the staticRenderFns array
+      // (both already reset above)
       instance.$forceUpdate()
     })
   } else {
@@ -5549,7 +5572,10 @@ exports.rerender = tryWrap(function (id, options) {
         }
       }
       record.options._Ctor = null
-      record.options._staticTrees = []
+      // 2.5.3
+      if (Array.isArray(record.options.cached)) {
+        record.options.cached = []
+      }
       record.instances.slice().forEach(function (instance) {
         instance.$forceUpdate()
       })
@@ -13658,114 +13684,257 @@ exports.insert = function (css) {
 },{}],8:[function(require,module,exports){
 var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert("strong {\n  font-family: Odin;\n}\n.button {\n  font-family: Odin;\n}\n.file-status {\n  border-bottom: 2px solid #ced3cc;\n}\n.icontainer {\n  display: flex;\n  min-height: 100px;\n  min-width: 100px;\n  height: 100px;\n  width: 100px;\n  background-color: #3273dc;\n  border-radius: 10px;\n  margin: 5px;\n}\n.loader-icon.error {\n  background-color: transparent;\n}\n.loader-icon {\n  background-color: white;\n  border-radius: 10px;\n  height: 80px;\n  width: 80px;\n  margin: 50% 50%;\n  transform: translate(-50%, -50%);\n}\n.form-container {\n  max-height: 128px;\n  max-width: 500px;\n  min-height: 128px;\n  min-width: 500px;\n  height: 128px;\n  width: 500px;\n}\n.file-info {\n  display: flex;\n}\n.file-status {\n  display: flex;\n  flex-direction: row;\n  margin: 5px;\n}\n\n.download-button {\n  height: 100%;\n  width: auto;\n  min-width: 100px;\n  font-family: Odin;\n  background-color: #edf0f2;\n  padding: 0;\n  display: flex;\n  border-color: #878787;\n  border-style: dotted;\n  border-width: 10px;\n  padding: 3px;\n  color: #878787;\n  outline: 5px solid #edf0f2;\n  margin: 5px;\n  font-family: Odin;\n  align-self: center;\n  align-content: center;\n  justify-content: center;\n  flex-direction: column;\n}\n.download {\n  width: 40px;\n  height: 40px;\n  margin: 0 auto 3px auto;\n}\n.download-button:hover h3 {\n  color: #878787;\n}\n.download-button:hover {\n  outline: 5px solid #878787;\n}\n.error {\n  color: red;\n}")
 ;(function(){
-'use strict';
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-
-var progressbar = require('./progressbar.vue');
-var urldecode = require('urldecode');
-function getRandomInt(min, max) {
+let progressbar = require('./progressbar.vue')
+let urldecode = require('urldecode')
+function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-exports.default = {
-  components: { progressbar: progressbar },
-  data: function data() {
+module.exports = {
+  components: {progressbar},
+  data () {
     return {
       location: null,
       url: null,
       files: [],
       Exporter: null,
       isExpandable: true
-    };
+    }
   },
-  mounted: function mounted() {
-    this.Exporter = new Exporter(ipcRenderer, this.onPercent, this.onError);
-    var heightOffset = window.outerHeight - window.innerHeight;
-    var widthOffset = window.outerWidth - window.innerWidth;
-    var height = this.$refs.container.clientHeight + heightOffset;
-    var width = this.$refs.container.clientWidth + widthOffset;
-    window.resizeTo(width, height);
+  mounted () {
+    this.Exporter =  new Exporter(ipcRenderer, this.onPercent, this.onError)
+    let heightOffset = window.outerHeight - window.innerHeight
+    let widthOffset = window.outerWidth - window.innerWidth
+    let height = this.$refs.container.clientHeight + heightOffset
+    let width = this.$refs.container.clientWidth + widthOffset
+    window.resizeTo(width, height)
   },
-
   methods: {
-    choose: function choose() {
-      var _this = this;
-
-      dialog.showOpenDialog({ properties: ['openDirectory'] }, function (filePaths) {
-        if (Array.isArray(filePaths)) {
-          _this.location = filePaths[0];
-        }
-      });
+    choose () {
+      dialog.showOpenDialog({properties: [ 'openDirectory' ]}, (filePaths) => {
+       if (Array.isArray(filePaths)) {
+         this.location = filePaths[0]
+       }
+      })
     },
-    onError: function onError(err) {
-      this.files[err.id].error = err.err;
-      this.files[err.id].icon = '../../images/error.svg';
+    onError (err) {
+      this.files[err.id].error = err.err
+      this.files[err.id].icon = '../../images/error.svg'
     },
-    onPercent: function onPercent(payload) {
-      this.files[payload.id].percent = payload.percent;
+    onPercent(payload) {
+      this.files[payload.id].percent = payload.percent
       if (payload.percent >= 100) {
-        this.files[payload.id].icon = '../../images/folder.svg';
+        this.files[payload.id].icon = '../../images/folder.svg'
       }
     },
-    resize: function resize() {
-      var heightOffset = window.outerHeight - window.innerHeight;
-      var widthOffset = window.outerWidth - window.innerWidth;
-      var height = this.$refs.container.clientHeight + heightOffset;
-      var width = this.$refs.container.clientWidth + widthOffset;
-      if (!this.isExpandable || height >= .80 * window.screen.height) {
-        document.body.style.overflowY = 'scroll';
-
-        if (this.isExpandable) {
-          this.isExpandable = false;
+    resize () {
+      let heightOffset = window.outerHeight - window.innerHeight
+      let widthOffset = window.outerWidth - window.innerWidth
+      let height = this.$refs.container.clientHeight + heightOffset
+      let width = this.$refs.container.clientWidth + widthOffset
+      if (!this.isExpandable || height >= (.80 * window.screen.height)) {
+        document.body.style.overflowY = 'scroll'
+        //this.$refs.fileStatus.style.overflowY = 'scroll'
+        //stop resizing window after the first time
+        if(this.isExpandable) {
+          this.isExpandable = false
+          //this.$refs.fileStatus.style.maxHeight = this.$refs.fileStatus.offsetHeight
         }
       } else {
-        window.resizeTo(width, height);
+        //this.$refs.fileStatus.style.overflowY = "auto"
+        //this.$refs.fileStatus.style.height = "auto"
+        window.resizeTo(width, height)
       }
     },
-    exporter: function exporter() {
-      var _this2 = this;
+    exporter () {
+    this.$validator.validateAll()
+      .then((ok) => {
+        if (!ok) return
+        let url = OffUrl.parse(this.url)
+        let filename = path.join(this.location, urldecode(url.fileName))
+        let streamLength = url.streamLength
+        let percent = 0
+        let size = 0
+        let icon = `../../images/Preloader_${ getRandomInt(1, 7) }.gif`
+        let show = true
+        let error = null
+        let file = {filename, percent, size, streamLength, icon, show, error}
 
-      this.$validator.validateAll().then(function (ok) {
-        if (!ok) return;
-        var url = OffUrl.parse(_this2.url);
-        var filename = path.join(_this2.location, urldecode(url.fileName));
-        var streamLength = url.streamLength;
-        var percent = 0;
-        var size = 0;
-        var icon = '../../images/Preloader_' + getRandomInt(1, 7) + '.gif';
-        var show = true;
-        var error = null;
-        var file = { filename: filename, percent: percent, size: size, streamLength: streamLength, icon: icon, show: show, error: error };
-
-        setTimeout(_this2.resize, 100);
-        var id = _this2.files.length;
-        _this2.files.push(file);
-        _this2.Exporter.exporter(_this2.location, _this2.url, id);
-
-        _this2.$validator.flag('location', {
+        // Resize Window to fit
+        setTimeout(this.resize, 100)
+        let id = this.files.length
+        this.files.push(file)
+        this.Exporter.exporter(this.location, this.url, id)
+        //this.location = null
+        //this.url = null
+        this.$validator.flag('location', {
           valid: false,
           dirty: false
-        });
-        _this2.$validator.flag('url', {
+        })
+        this.$validator.flag('url', {
           valid: false,
           dirty: false
-        });
-      });
+        })
+      })
     },
-    openLocation: function openLocation(index) {
+    openLocation (index) {
       if (this.files[index].percent >= 100) {
-        shell.showItemInFolder(this.files[index].filename);
+        shell.showItemInFolder(this.files[index].filename)
       }
       if (this.files[index].error) {
-        this.files[index].show = false;
-        setTimeout(this.resize, 100);
+        this.files[index].show = false
+        setTimeout(this.resize, 100)
       }
     }
   }
-};
+}
+
 })()
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)
@@ -13820,14 +13989,52 @@ new Vue({
 },{"./export.vue":8,"vee-validate":4,"vue":6}],10:[function(require,module,exports){
 var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".progress-bar[data-v-cac42708] {\n  display: block;\n  height: 50px;\n  width: 300px;\n  background-color: #ced3cc;\n  border-radius: 10px;\n}\n.error[data-v-cac42708] {\n  color: #b24a4a;\n}\n.progress-bar.error[data-v-cac42708]::-webkit-progress-bar {\n  background-color: #b24a4a;\n}\n/*\n.progress-bar::after {\n  content: attr(value);\n}*/\n.progress-bar[data-v-cac42708]::-webkit-progress-bar{\n  background-color: #ced3cc;\n  border-radius: 10px;\n}\n.progress-bar[value][data-v-cac42708]::-webkit-progress-value {\n  background-color: #6cc4bd;\n  border-radius: 10px;\n}\n\n.progressjs-theme-blueOverlayRadiusWithPercentBar[data-v-cac42708] {\n  background-color: #ced3cc;\n}\n\n.progressjs-theme-blueOverlayRadiusWithPercentBar .progressjs-inner[data-v-cac42708] {\n  background-color: #6cc4bd;\n}")
 ;(function(){
-'use strict';
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = {
+module.exports = {
   props: ['percent', 'error']
-};
+}
+
 })()
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)

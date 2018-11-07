@@ -196,6 +196,8 @@ module.exports = class RPC extends EventEmitter {
           let pb = RPCProto.RPC.decode(msg)
           sanitizeRPC(pb)
           let bucket = _bucket.get(this)
+          let peer = socket.address()
+          console.log('on connection', socket.remoteAddress)
           bucket.add(new Peer(pb.from.id, pb.from.ip, pb.from.port))
           _bucket.set(this, bucket)
           switch (pb.type) {

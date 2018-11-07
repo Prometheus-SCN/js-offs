@@ -25,7 +25,7 @@
   }
 </style>
 <script>
-  export default {
+  module.exports = {
     data () {
       return {
         locatorErr: false,

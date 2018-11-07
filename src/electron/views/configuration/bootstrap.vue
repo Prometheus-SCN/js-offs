@@ -58,7 +58,7 @@
   }
 </style>
 <script>
-  export default {
+  module.exports = {
     mounted () {
       this.configurator = new Configurator(ipcRenderer, (err) => {
        this.configuratorErr = err

@@ -1,8 +1,6 @@
 'use strict'
 const RPC = require('./rpc')
 const Bucket = require('./bucket')
-const CronJob = require('cron').CronJob
-const TimerJob = require('timer-jobs')
 const config = require('./config')
 const bs58 = require('bs58')
 let _maintenanceJob = new WeakMap()

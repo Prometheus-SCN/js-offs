@@ -67,6 +67,6 @@ ul.navigation li a.active {
 }
 </style>
 <script>
-  export default {
+  module.exports = {
   }
 </script>

@@ -266,7 +266,10 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
 },{"process/browser.js":1,"timers":2}],3:[function(require,module,exports){
 var Vue // late bind
 var version
-var map = (window.__VUE_HOT_MAP__ = Object.create(null))
+var map = Object.create(null)
+if (typeof window !== 'undefined') {
+  window.__VUE_HOT_MAP__ = map
+}
 var installed = false
 var isBrowserify = false
 var initHookName = 'beforeCreate'
@@ -303,6 +306,8 @@ exports.install = function (vue, browserify) {
  */
 
 exports.createRecord = function (id, options) {
+  if(map[id]) { return }
+
   var Ctor = null
   if (typeof options === 'function') {
     Ctor = options
@@ -317,6 +322,16 @@ exports.createRecord = function (id, options) {
 }
 
 /**
+ * Check if module is recorded
+ *
+ * @param {String} id
+ */
+
+exports.isRecorded = function (id) {
+  return typeof map[id] !== 'undefined'
+}
+
+/**
  * Make a Component options object hot.
  *
  * @param {String} id
@@ -328,7 +343,7 @@ function makeOptionsHot(id, options) {
     var render = options.render
     options.render = function (h, ctx) {
       var instances = map[id].instances
-      if (instances.indexOf(ctx.parent) < 0) {
+      if (ctx && instances.indexOf(ctx.parent) < 0) {
         instances.push(ctx.parent)
       }
       return render(h, ctx)
@@ -406,13 +421,21 @@ exports.rerender = tryWrap(function (id, options) {
       instance.$options.render = options.render
       instance.$options.staticRenderFns = options.staticRenderFns
       // reset static trees
+      // pre 2.5, all static trees are cached together on the instance
       if (instance._staticTrees) {
-        // pre 2.5 staticTrees are cached per-instance
         instance._staticTrees = []
-      } else {
-        // post 2.5 staticTrees are cached on shared options
-        record.Ctor.options._staticTrees = []
       }
+      // 2.5.0
+      if (Array.isArray(record.Ctor.options.cached)) {
+        record.Ctor.options.cached = []
+      }
+      // 2.5.3
+      if (Array.isArray(instance.$options.cached)) {
+        instance.$options.cached = []
+      }
+      // post 2.5.4: v-once trees are cached on instance._staticTrees.
+      // Pure static trees are cached on the staticRenderFns array
+      // (both already reset above)
       instance.$forceUpdate()
     })
   } else {
@@ -439,7 +462,10 @@ exports.rerender = tryWrap(function (id, options) {
         }
       }
       record.options._Ctor = null
-      record.options._staticTrees = []
+      // 2.5.3
+      if (Array.isArray(record.options.cached)) {
+        record.options.cached = []
+      }
       record.instances.slice().forEach(function (instance) {
         instance.$forceUpdate()
       })
@@ -8548,13 +8574,35 @@ exports.insert = function (css) {
 },{}],6:[function(require,module,exports){
 var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".form[data-v-4dba7104] {\n  padding: 0 20px 0 20px;\n}")
 ;(function(){
-"use strict";
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = {
-  data: function data() {
+module.exports = {
+  data () {
     return {
       locatorErr: false,
       locator: null,
@@ -8563,34 +8611,32 @@ exports.default = {
       connectErr: null,
       success: false,
       connecting: false
-    };
+    }
   },
-  mounted: function mounted() {
-    var _this = this;
-
-    this.connector = new Connector(ipcRenderer, function (err) {
-      _this.connectErr = err;
-    });
+  mounted () {
+    this.connector = new Connector(ipcRenderer, (err) => {
+      this.connectErr = err
+    })
   },
-
   methods: {
-    connect: async function connect() {
-      this.connectErr = null;
-      this.locatorErr = !this.locatorRegEx.test(this.locator);
+    async connect() {
+      this.connectErr= null
+      this.locatorErr = !this.locatorRegEx.test(this.locator)
       if (this.locatorErr) {
-        return;
+        return
       }
       try {
-        this.connecting = true;
-        this.success = await this.connector.connect(this.locator);
-        this.connecting = false;
+        this.connecting= true
+        this.success = await this.connector.connect(this.locator)
+        this.connecting= false
       } catch (ex) {
-        this.connectErr = ex;
-        this.connecting = false;
+        this.connectErr = ex
+        this.connecting= false
       }
     }
   }
-};
+}
+
 })()
 if (module.exports.__esModule) module.exports = module.exports.default
 var __vue__options__ = (typeof module.exports === "function"? module.exports.options: module.exports)

@@ -76,7 +76,7 @@
 </style>
 <script>
   const mb = 1000000
-  export default {
+  module.exports = {
     mounted () {
       this.configurator = new Configurator(ipcRenderer, (err) => {
        this.error = err
