@@ -151,7 +151,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
                   if (err) {
                     return reject(err)
                   } else {
-                    return resolve(true)
+                    return resolve(t)
                   }
                 })
               } catch (ex) {
@@ -232,8 +232,8 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       let externalLocatorItem = new MenuItem({ label: 'Copy External Locator', type: 'normal', click: copyExternalLocator })
       let exitItem = new MenuItem({
         label: 'Exit', type: 'normal', click: () => {
-          node.removeAllListeners()
-          node.blockRouter.removeAllListeners()
+          node.blockRouter.removeAllListeners('connection')
+          node.blockRouter.removeAllListeners('capacity')
           app.exit()
         }
       })
