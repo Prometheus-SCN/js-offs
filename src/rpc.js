@@ -196,7 +196,7 @@ module.exports = class RPC extends EventEmitter {
           let pb = RPCProto.RPC.decode(msg)
           sanitizeRPC(pb)
           let bucket = _bucket.get(this)
-          bucket.add(new Peer(pb.from.id, pb.from.ip, pb.from.port))
+          bucket.add(Peer.fromJSON(pb.from))
           _bucket.set(this, bucket)
           switch (pb.type) {
             case RPCType.Ping :
@@ -301,7 +301,7 @@ module.exports = class RPC extends EventEmitter {
                 if (peer.id.equals(thisNode.id)) {
                   return
                 }
-                peer = new Peer(peer.id, peer.ip, peer.port)
+                peer = Peer.fromJSON(peer)
                 if (!queried.contains(peer.id)) {
                   nodeBucket.add(peer)
                 }
@@ -377,7 +377,7 @@ module.exports = class RPC extends EventEmitter {
                   if (peer.id.equals(thisNode.id)) {
                     return
                   }
-                  peer = new Peer(peer.id, peer.ip, peer.port)
+                  peer = Peer.fromJSON(peer)
                   if (!queried.contains(peer.id)) {
                     nodeBucket.add(peer)
                   }
@@ -403,6 +403,9 @@ module.exports = class RPC extends EventEmitter {
     let peer = _peer.get(this)
     let bucket = _bucket.get(this)
     let to = bucket.get(id)
+    if (!to) {
+      return cb(new Error('Peer not found'))
+    }
     let requestpb = {}
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping

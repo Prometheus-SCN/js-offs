@@ -45,7 +45,7 @@ let defaults = {
   internalIP: false,
   bucketTimeout: 60 * 1000 * 5,
   bootstrap: [
-    'jveHD3mfMhpE5JUCXr1xQpaRuJEM5HErw3w3X9NGv1NXK594C1hdQrpKSPz787XUnV8tCQzsX2Rvy33vqE1s59'
+    '5LTX64UZmqxAckP99fRNKutPQCJabbB1xMa1vuCG1Z58SJdLkGa9NkngQNSihHhBPA25evTSSMzqrPJovRLkEykSf7orstw7TCUh1DABKyn3iozxBsL3yKBq7EWz9pHdAE9Fd'
   ]
 }
 let _blockPath = new WeakMap()

@@ -107,7 +107,6 @@
     "nat-upnp": "^1.1.1",
     "network": "^0.4.1",
     "node-forge": "^0.7.6",
-    "pako": "1.0.6",
     "protobufjs": "5.0.1",
     "protocol-buffers": "3.1.6",
     "streamifier": "0.1.1",

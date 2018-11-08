@@ -63,10 +63,15 @@
       this.configurator = new Configurator(ipcRenderer, (err) => {
        this.configuratorErr = err
       })
-      this.configurator.get('bootstrap')
-        .then((peers) => {
-          this.peers = peers.map((peer) => Peer.fromLocator(peer))
+      this.configurator.self()
+        .then((self) => {
+           Peer.self = Peer.fromLocator(self)
+           this.configurator.get('bootstrap')
+            .then((peers) => {
+              this.peers = peers.map((peer) => Peer.fromLocator(peer))
+            })
         })
+
       this.configurator.get('lastKnownPeers').then((lastKnownPeers) => this.lastKnownPeers = lastKnownPeers)
     },
     data () {
@@ -103,7 +108,7 @@
               this.configuratorErr = null
               this.configurator.get('bootstrap')
                 .then((peers) => {
-                  this.peers.splice(0, this.peers.length, ...peers.map((peer) => peer.toLocator()))
+                  this.peers.splice(0, this.peers.length, ...peers.map((peer) => Peer.fromLocator(peer)))
                 })
             }
           })

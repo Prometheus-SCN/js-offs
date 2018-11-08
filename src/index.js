@@ -32,7 +32,10 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
-  node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
+  node.on('ready', () => {
+    log.notice(`Node ${node.peerInfo.key} is online externally at ${node.peerInfo.extIp} and port ${node.peerInfo.extPort}`)
+    log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
+  })
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
   node.start()
 } else {
@@ -51,7 +54,10 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     node = new Node('OFFSYSTEM')
     node.on('error', log.error)
     node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
-    node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
+    node.on('ready', () => {
+      log.notice(`Node ${node.peerInfo.key} is online externally at ${node.peerInfo.extIp} and port ${node.peerInfo.extPort}`)
+      log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
+    })
     node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
     node.start()
 
@@ -136,7 +142,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
         connectWin.webContents.on('did-finish-load', function() {
           connectWin.show()
         })
-        //connectWin.webContents.openDevTools({})
+        // connectWin.webContents.openDevTools({})
       }
 
       let openConnectWin = () => {
@@ -148,17 +154,20 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
             return new Promise((resolve, reject) => {
               let peer
               try {
-                let peer = Peer.fromLocator(payload)
-                node.blockRouter.connect(peer, (err) => {
-                  if (err) {
-                    return reject(err)
-                  } else {
-                    return resolve(t)
-                  }
-                })
+                peer = Peer.fromLocator(payload)
+                if (node.peerInfo.isEqual(peer)) {
+                 return reject(new Error('Cannot connect to self'))
+                }
               } catch (ex) {
-                reject(new Error('Invalid Locator'))
+                return reject(new Error('Invalid Locator'))
               }
+              node.blockRouter.connect(peer, (err) => {
+                if (err) {
+                  return reject(err)
+                } else {
+                  return resolve(true)
+                }
+              })
             })
           })
         }
@@ -175,7 +184,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
         configurationWin.webContents.on('did-finish-load', function() {
           configurationWin.show()
         })
-        // configurationWin.webContents.openDevTools({})
+        configurationWin.webContents.openDevTools({})
         let setHandler = async (payload) => {
           config[ payload.key ] = payload.value
         }
@@ -186,7 +195,10 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           app.relaunch()
           app.exit(0)
         }
-        configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler, resetHandler)
+        let selfHandler = async () => {
+          return node.peerInfo.toLocator()
+        }
+        configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler, resetHandler, selfHandler)
       }
       let openConfigurationWin = () => {
         if (configurationWin) {
@@ -195,20 +207,8 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           createConfigurationWin()
         }
       }
-      let copyExternalLocator = () => {
+      let copyLocator = () => {
         clipboard.writeText(node.peerInfo.toLocator())
-      }
-      let copyInternalLocator = () => {
-        const network = require('network')
-        const Peer = require('./peer')
-        network.get_private_ip((err, ip) => {
-          if (err) {
-            return log.error(err)
-          }
-
-          let peer = new Peer(node.peerInfo.id, ip, node.peerInfo.port)
-          clipboard.writeText(peer.toLocator())
-        })
       }
 
       tray = new Tray(trayIcon)
@@ -230,8 +230,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: openExportWin })
       let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: openConfigurationWin })
       let connectItem = new MenuItem({ label: 'Connect to a Peer', type: 'normal', click: openConnectWin })
-      let internalLocatorItem = new MenuItem({ label: 'Copy Internal Locator', type: 'normal', click: copyInternalLocator })
-      let externalLocatorItem = new MenuItem({ label: 'Copy External Locator', type: 'normal', click: copyExternalLocator })
+      let locatorItem = new MenuItem({ label: 'Copy Locator', type: 'normal', click: copyLocator })
       let exitItem = new MenuItem({
         label: 'Exit', type: 'normal', click: () => {
           node.blockRouter.removeAllListeners('connection')
@@ -252,8 +251,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       contextMenu.append(configItem)
       contextMenu.append(connectItem)
       contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
-      contextMenu.append(externalLocatorItem)
-      contextMenu.append(internalLocatorItem)
+      contextMenu.append(locatorItem)
       contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
       contextMenu.append(exitItem)
       tray.setToolTip('Off System')

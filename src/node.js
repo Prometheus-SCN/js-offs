@@ -11,7 +11,7 @@ const mkdirp = require('mkdirp')
 const util = require('./utility')
 const BlockRouter = require('./block-router')
 const Server = require('./server')
-const extIP = require('external-ip')()
+const externalIP = require('external-ip')()
 let _platformPath = new WeakMap()
 let _applicationName = new WeakMap()
 let _keyPair = new WeakMap()
@@ -60,15 +60,15 @@ module.exports = class Node extends EventEmitter {
           }
           let client = natUpnp.createClient()
           _client.set(this, client)
-
-          let getPeer = (err, ip)=> {
+          let extIP
+          let getPeer = (err, intIP)=> {
             if (err) {
               this.emit('error', err)
               ip = '127.0.0.1'
             }
             let pk = keyPair.publicKey
             let id = util.hash(pk)
-            let peerInfo = new Peer(id, ip, port)
+            let peerInfo = new Peer(id, extIP || intIP, port, intIP, port)
             _peerInfo.set(this, peerInfo)
             Peer.self = peerInfo
             let blockRouter = new BlockRouter(config.cacheLocation, peerInfo)
@@ -95,10 +95,10 @@ module.exports = class Node extends EventEmitter {
           let getIp = (err, ip)=> {
             if (err) {
               this.emit('error', err)
-              return network.get_private_ip(getPeer)
             } else {
-              return getPeer(null, ip)
+              extIP = ip
             }
+            return network.get_private_ip(getPeer)
           }
           let findPort = (err)=> {
             /*
@@ -125,7 +125,7 @@ module.exports = class Node extends EventEmitter {
             if (config.internalIP) {
               return getIp(new Error('Using Internal IP'))
             } else {
-              return extIP(getIp)
+              return externalIP(getIp)
             }
           }
           findPort()

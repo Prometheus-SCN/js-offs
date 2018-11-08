@@ -2,8 +2,10 @@ package RPCProto;
 
 message Peer {
     required bytes id = 1;
-    required string ip = 2;
-    required int64 port = 3;
+    required string extIp = 2;
+    required int64 extPort = 3;
+    required string intIp = 4;
+    required int64 intPort = 5;
 }
 enum RPCType {
     Ping = 1;
