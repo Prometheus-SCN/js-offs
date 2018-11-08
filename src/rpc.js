@@ -664,7 +664,8 @@ function sanitizeRPC (rpc) {
   try {
     rpc.id = rpc.id.toBuffer()
     rpc.from.id = rpc.from.id.toBuffer()
-    rpc.from.port = rpc.from.port.toNumber()
+    rpc.from.extPort = rpc.from.extPort.toNumber()
+    rpc.from.intPort = rpc.from.intPort.toNumber()
     if (rpc.payload) {
       rpc.payload = rpc.payload.toBuffer()
     }
