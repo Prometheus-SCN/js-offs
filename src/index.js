@@ -184,7 +184,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
         configurationWin.webContents.on('did-finish-load', function() {
           configurationWin.show()
         })
-        configurationWin.webContents.openDevTools({})
+        // configurationWin.webContents.openDevTools({})
         let setHandler = async (payload) => {
           config[ payload.key ] = payload.value
         }
