@@ -192,6 +192,7 @@ module.exports = class RPC2 extends EventEmitter {
       try {
         let pb = RPCProto.RPC.decode(msg)
         sanitizeRPC(pb)
+        console.log(pb)
         let bucket = _bucket.get(this)
         let peer = Peer.fromJSON(pb.from)
         bucket.add(peer)
@@ -199,7 +200,6 @@ module.exports = class RPC2 extends EventEmitter {
         if (!peerSocks.get(peer.key)) {
           peerSocks.set(peer.key, socket)
           let onExpire = (socket) => {
-            console.log(socket)
             socket.close()
           }
           socket.on('closed', () => {
@@ -209,7 +209,7 @@ module.exports = class RPC2 extends EventEmitter {
 
           peerSocks.once(peer.key, onExpire)
         }
-        if (pb.Direction === Direction.Request) {
+        if (pb.comType === Direction.Request) {
           switch (pb.type) {
             case RPCType.Ping :
               pingResponse(pb, socket)
@@ -234,6 +234,7 @@ module.exports = class RPC2 extends EventEmitter {
               break;
           }
         } else {
+          console.log('happened')
           socket.emit(pb.id.toString('hex'), pb)
         }
       } catch (err) {
@@ -276,7 +277,7 @@ module.exports = class RPC2 extends EventEmitter {
         })
       }
       socket.on('error', onError)
-      socket.on('message', ({data}) => onMessage (socket, data))
+      socket.on('message', (data) => onMessage (socket, data))
     }
     let getSocket = (peer, cb) => {
       let peerSocks = _peerSocks.get(this)
