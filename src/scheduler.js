@@ -1,5 +1,5 @@
 'use strict'
-const RPC = require('./rpc')
+const RPC = require('./rpc2')
 const Bucket = require('./bucket')
 const config = require('./config')
 const bs58 = require('bs58')
@@ -178,9 +178,9 @@ module.exports = class Scheduler {
       }
       bc.on('capacity', onCapacity)
     }
-    capacityJob(block, config.block)
-    capacityJob(mini, config.mini)
-    capacityJob(nano, config.nano)
+    //capacityJob(block, config.block)
+    //capacityJob(mini, config.mini)
+    //capacityJob(nano, config.nano)
 
     bucket.on('ping', onPing)
     let maintainBucket = ()=> {

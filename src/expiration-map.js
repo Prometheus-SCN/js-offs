@@ -1,8 +1,10 @@
+const EventEmitter = require('events').EventEmitter
 let _map = new WeakMap()
 let _timers = new WeakMap()
 let _timeout = new WeakMap()
-module.exports = class ExpirationMap {
+module.exports = class ExpirationMap extends EventEmitter {
   constructor (timeout) {
+    super()
     _map.set(this, new Map())
     _timers.set(this, new Map())
     _timeout.set(this, timeout)
@@ -18,8 +20,7 @@ module.exports = class ExpirationMap {
     }
     map.set(key, value)
     timers.set(key, setTimeout(() => {
-      map.delete(key)
-      timers.delete(key)
+      this.delete(key)
     }, timeout))
   }
 
@@ -32,8 +33,7 @@ module.exports = class ExpirationMap {
       clearTimeout(timer)
     }
     timers.set(key, setTimeout(() => {
-      map.delete(key)
-      timers.delete(key)
+      this.delete(key)
     }, timeout))
     return map.get(key)
   }
@@ -46,6 +46,7 @@ module.exports = class ExpirationMap {
   delete (key) {
     let map = _map.get(this)
     let timers = _timers.get(this)
+    this.emit(key, map.get(key))
     map.delete(key)
     timers.delete(key)
   }
