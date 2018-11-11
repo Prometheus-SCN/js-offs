@@ -8,7 +8,6 @@ const Cuckoo = require('cuckoo-filter').CuckooFilter
 const util = require('./utility')
 const config = require('./config')
 const protobuf = require('protobufjs')
-const collect = require('collect-stream')
 const EventEmitter = require('events').EventEmitter
 const crypto = require('crypto')
 const increment = require('increment-buffer')
@@ -192,7 +191,6 @@ module.exports = class RPC2 extends EventEmitter {
       try {
         let pb = RPCProto.RPC.decode(msg)
         sanitizeRPC(pb)
-        console.log(pb)
         let bucket = _bucket.get(this)
         let peer = Peer.fromJSON(pb.from)
         bucket.add(peer)
@@ -234,7 +232,6 @@ module.exports = class RPC2 extends EventEmitter {
               break;
           }
         } else {
-          console.log('happened')
           socket.emit(pb.id.toString('hex'), pb)
         }
       } catch (err) {
@@ -448,8 +445,11 @@ module.exports = class RPC2 extends EventEmitter {
               let valuespb = FindValueResponse.decode(pb.payload)
               sanitizeValueResponse(valuespb)
               if (valuespb.data) {
-                return rpcInterface.storeValue(valuespb.data, valuespb.type, (err) => {
-                  return cb(err)
+                return rpcInterface.storeValue(valuespb.data, valuespb.type, hash, (err, block) => {
+                  if (err) {
+                    return cb(err)
+                  }
+                  return cb(err, block)
                 })
               } else {
                 let thisNode = _peer.get(this)

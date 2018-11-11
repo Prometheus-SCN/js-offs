@@ -196,7 +196,11 @@ module.exports = class BlockRouter extends EventEmitter {
 
   rpcInterface () {
     let rpc = {}
-    rpc.storeValue = (value, type, cb)=> {
+    rpc.storeValue = (value, type, hash, cb)=> {
+      if (typeof hash === 'function') {
+        cb = hash
+        hash = undefined
+      }
       let bc
       let block
       switch (type) {
@@ -213,7 +217,10 @@ module.exports = class BlockRouter extends EventEmitter {
           block = new Block(value, config.nanoBlockSize)
           break;
       }
-      bc.put(block, cb)
+      if (hash && hash.compare(block.hash) !== 0) {
+        return cb(new Error('Hash does not match data'))
+      }
+      bc.put(block, (err) => cb(err, block))
     }
     rpc.getValue = (hash, type, cb) => {
       let bc
@@ -266,7 +273,7 @@ module.exports = class BlockRouter extends EventEmitter {
           break;
       }
       let key = bs58.encode(hash)
-      return bc.contains(key, cb)
+      return bc.get(key, (err) => cb(!err))
     }
     rpc.storageCapacity = (type) => {
       let bc
@@ -289,35 +296,13 @@ module.exports = class BlockRouter extends EventEmitter {
   cacheInterface (type) {
     let rpc = _rpc.get(this)
     let cache = {}
-    cache.load = (keys)=> {
-      if (!Array.isArray(keys)) {
-        throw new TypeError('Invalid Key Array')
-      }
-      let flightBox = {
-        filter: new CuckooFilter(keys.length + Math.ceil(keys.length * .05), 4, 8),
-        emitter: new EventEmitter()
-      }//add 5% to decrease collision probability
-      for (let i = 0; i < keys.length; i++) {
-        flightBox.filter.add(keys[ i ])
-      }
-      let i = -1
-      let next = ()=> {
-        i++
-        if (i < keys.length) {
-          let key = keys[ i ]
-          rpc.findValue(bs58.decode(key), type, (err)=> {
-            flightBox.filter.remove(key)
-            if (err) {
-              return flightBox.emitter.emit('error', err)
-            }
-            flightBox.emitter.emit(key)
-            flightBox.filter.remove('key')
-            return err ? null : next()//do next after callback
-          })
+    cache.load = (key, cb) => {
+      rpc.findValue(bs58.decode(key), type, (err, block) => {
+        if (err) {
+          return cb(err)
         }
-      }
-      process.nextTick(next)
-      return flightBox
+        return cb(null, block)
+      })
     }
     return cache
 

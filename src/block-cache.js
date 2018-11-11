@@ -118,9 +118,9 @@ module.exports =
       _sizeTimer.set(this, sizeTimer)
     }
 
-    load (keys) {
+    load (key, cb) {
       let cacheInterface = _cacheInterface.get(this)
-      return cacheInterface.load(keys)
+      return cacheInterface.load(key, cb)
     }
 
     put (block, cb) {
@@ -163,11 +163,6 @@ module.exports =
         }
         return cb(err)
       })
-    }
-
-    contains(key, cb) {
-      let fd = util.sanitize(key, this.path)
-      fs.access(fd, (err) => cb(!err))
     }
 
     content (cb) {
