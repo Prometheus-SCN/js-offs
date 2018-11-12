@@ -55,6 +55,7 @@ module.exports = class BlockRouter extends EventEmitter {
     _scheduler.set(this, scheduler)
     _self.set(this, peer)
 
+    scheduler.on('error', (err) => this.emit('error', err))
     rpc.on('error', (err) => this.emit('error', err))
     bc.on('block', (block)=> {
       rpc.store(block.hash, config.block, block.data, () => {})

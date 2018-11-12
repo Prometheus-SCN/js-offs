@@ -1,4 +1,5 @@
 'use strict'
+const EventEmitter = require('events').EventEmitter
 const RPC = require('./rpc')
 const Bucket = require('./bucket')
 const config = require('./config')
@@ -6,7 +7,7 @@ const bs58 = require('bs58')
 const crypto = require('crypto')
 let _maintenanceJob = new WeakMap()
 let _capacityJob = new WeakMap()
-module.exports = class Scheduler {
+module.exports = class Scheduler extends EventEmitter {
   constructor (rpc, bucket, block, mini, nano) {
     if (!(rpc instanceof RPC )) {
       throw new TypeError('Invalid RPC')
@@ -14,6 +15,7 @@ module.exports = class Scheduler {
     if (!(bucket instanceof Bucket )) {
       throw new TypeError('Invalid Bucket')
     }
+    super()
     let onPing = (peers, peer)=> {
       let i = -1
       let next = (err)=> {
@@ -58,7 +60,7 @@ module.exports = class Scheduler {
               //delete Block
               bc.remove(key, (err)=> {
                 if (err) {
-                  console.log(err)
+                  this.emit('error', err)
                   //TODO: Decide what to do when this fails
                 }
                 return cb()
@@ -82,7 +84,7 @@ module.exports = class Scheduler {
           let i = -1
           let next = (err, block)=> {
             if (err) {
-              console.log(err)
+              this.emit('error', err)
             }
             // stop once capacity is below 50%
             if (bc.capacity <= 50) {
@@ -111,7 +113,7 @@ module.exports = class Scheduler {
         }
         let loopContent = (err, content)=> {
           if (err) {
-            //console.log(err) //TODO: Figure out what happens when this fails
+            this.emit('error', err) //TODO: Figure out what happens when this fails
           }
           let i = -1
           let key
@@ -165,7 +167,7 @@ module.exports = class Scheduler {
           isRunningCapacity = true
           bc.contentFilter((err, contentFilter)=> {
             if (err) {
-              console.log(err)
+              this.emit('error', err)
               return //TODO: Decide what happens when this fails
             }
             rpc.random(1, type, contentFilter, () => {

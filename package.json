@@ -98,6 +98,7 @@
     "express": "^4.16.4",
     "external-ip": "^2.0.3",
     "get-folder-size": "1.0.1",
+    "graceful-fs": "^4.1.15",
     "hamming-distance": "1.0.0",
     "increment-buffer": "1.0.0",
     "isstream": "0.1.2",

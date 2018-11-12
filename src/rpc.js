@@ -312,6 +312,7 @@ module.exports = class RPC2 extends EventEmitter {
           peerSocks.delete(peer.key)
         })
       }
+      socket.setMaxListeners(0)
       socket.on('error', onError)
       socket.on('message', (data) => onMessage (socket, data))
     }
