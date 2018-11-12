@@ -8,7 +8,7 @@ const WritableOffStream = require('./writable-off-stream')
 const Recycler = require('./recycler')
 const URL = require('./off-url')
 const bs58 = require('bs58')
-const RPC = require('./rpc2')
+const RPC = require('./rpc')
 const Peer = require('./peer')
 const Bucket = require('./bucket')
 const cbor = require('cbor-js')
@@ -335,7 +335,7 @@ module.exports = class BlockRouter extends EventEmitter {
       }
       next()
     }
-    // This option is selected Bootstrap to whomever we were last online with
+    // If this option is selected  then Bootstrap to whomever we were last online with
     if (config.lastKnownPeers) {
       let path = _path.get(this)
       let fd = pth.join(path, '.bucket')
@@ -365,22 +365,22 @@ module.exports = class BlockRouter extends EventEmitter {
     let timeout = _timeout.get(this)
     if (timeout) {
       clearTimeout(timeout)
-    } else {
-      let timeout = setTimeout(() => {
-        let bucket = _bucket.get(this)
-        let peers = bucket.toArray()
-        peers = peers.map((peer) => peer.toLocator())
-        let buf = abToB(cbor.encode(peers))
-        let path = _path.get(this)
-        let fd = pth.join(path, '.bucket')
-        fs.writeFile(fd, buf, (err) => {
-          if (err) {
-            return this.emit('error', err)
-          }
-        })
-      }, config.peerTimeout)
-      _timeout.set(this, timeout)
     }
+    timeout = setTimeout(() => {
+      let bucket = _bucket.get(this)
+      let peers = bucket.toArray()
+      peers = peers.map((peer) => peer.toLocator())
+      let buf = abToB(cbor.encode(peers))
+      let path = _path.get(this)
+      let fd = pth.join(path, '.bucket')
+      fs.writeFile(fd, buf, (err) => {
+        if (err) {
+          return this.emit('error', err)
+        }
+      })
+    }, config.peerTimeout)
+    _timeout.set(this, timeout)
+
   }
 
   listen () {
