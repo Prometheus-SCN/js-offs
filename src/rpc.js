@@ -45,7 +45,7 @@ module.exports = class RPC extends EventEmitter {
     if (!rpcInterface) {
       throw new TypeError('Invalid RPC Interface')
     }
-    _port.set(this, peer.port)
+    _port.set(this, Peer.self.port)
     _bucket.set(this, bucket)
     _rpcInterface.set(this, rpcInterface)
     _rpcid.set(this, crypto.randomBytes(2))
@@ -55,7 +55,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         responsepb.status = Status.Success
         let response = new RPCProto.RPC(responsepb).encode().toBuffer()
         let msg = RPCProto.RPC.decode(response)
@@ -72,7 +72,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         let peers = bucket.closest(nodepb.id, nodepb.count)
         let peerspb = peers.map((peer)=> {return peer.toJSON()})
         let payload = FindNodeResponse.encode({ nodes: peerspb })
@@ -92,7 +92,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         rpcInterface.getValue(valuepb.hash, valuepb.type, (err, value)=> {
           try {
             if (err) {
@@ -129,7 +129,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         rpcInterface.storeValue(storepb.value, storepb.type, (err) => {
           if (err) {
             responsepb.status = Status.Failure
@@ -151,7 +151,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         let type = randompb.type
         rpcInterface.closestBlock(pb.from.id, Cuckoo.fromCBOR(randompb.filter), randompb.type, (err, block)=> {
           if (err) {
@@ -179,7 +179,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         rpcInterface.containsValue(pingvaluepb.hash, pingvaluepb.type, (contains) => {
           responsepb.status = contains ? Status.Success : Status.Failure
           let response = new RPCProto.RPC(responsepb).encode().toBuffer()
@@ -196,7 +196,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = Peer.self
+        responsepb.from = Peer.self.toJSON()
         responsepb.status = Status.Success
         let type = pingstoragepb.type
         pingstoragepb = {}
@@ -296,7 +296,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Find_Node
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let findnodepb = {}
     findnodepb.id = id
     findnodepb.count = config.nodeCount
@@ -373,7 +373,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Find_Value
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let findvaluepb = {}
     findvaluepb.hash = hash
     findvaluepb.count = config.nodeCount
@@ -459,7 +459,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     let onErr = (err) => cb(err)
     let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
@@ -498,7 +498,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Store
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let storepb = {}
     storepb.type = type
     storepb.value = value
@@ -563,7 +563,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Random
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let randompb = {}
     randompb.type = type
     randompb.filter = filter.toCBOR()
@@ -642,7 +642,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping_Value
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let pingvaluepb = {}
     pingvaluepb.type = type
     pingvaluepb.hash = hash
@@ -686,7 +686,7 @@ module.exports = class RPC extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping_Storage
     requestpb.comType = Direction.Request
-    requestpb.from = Peer.self
+    requestpb.from = Peer.self.toJSON()
     let pingstoragepb = {}
     pingstoragepb.type = type
     requestpb.payload = new PingStorageRequest(pingstoragepb).encode().toBuffer()
