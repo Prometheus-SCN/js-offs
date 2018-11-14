@@ -24,25 +24,21 @@ let _mc = new WeakMap()
 let _nc = new WeakMap()
 let _rpc = new WeakMap()
 let _scheduler = new WeakMap()
-let _self = new WeakMap()
 let _bucket = new WeakMap()
 let _path = new WeakMap()
 let _timeout = new WeakMap()
-let _peer = new WeakMap()
+let _bucketPath = new WeakMap()
 
 module.exports = class BlockRouter extends EventEmitter {
-  constructor (path, peer) {
+  constructor (path, bucketPath) {
     if (typeof path !== 'string') {
       throw new TypeError('Invalid Path')
     }
-    if (!(peer instanceof Peer)) {
-      throw new TypeError('Invalid Peer')
-    }
     super()
-    _peer.set(this, peer)
-    let bucket = new Bucket(peer.id, config.bucketSize)
+    let bucket = new Bucket(Peer.self.id, config.bucketSize)
     _bucket.set(this, bucket)
-    let rpc = new RPC(peer, bucket, this.rpcInterface())
+    _bucketPath.set(this, bucketPath)
+    let rpc = new RPC(bucket, this.rpcInterface())
     _rpc.set(this, rpc)
     _path.set(this, path)
     let bc = new BlockCache(pth.join(path, config.blockPath), config.blockSize, config.blockCacheSize, this.cacheInterface(config.block))
@@ -53,7 +49,6 @@ module.exports = class BlockRouter extends EventEmitter {
     _mc.set(this, mc)
     _nc.set(this, nc)
     _scheduler.set(this, scheduler)
-    _self.set(this, peer)
 
     scheduler.on('error', (err) => this.emit('error', err))
     rpc.on('error', (err) => this.emit('error', err))
@@ -315,9 +310,7 @@ module.exports = class BlockRouter extends EventEmitter {
   }
 
   bootstrap (cb) {
-    let self = _self.get(this)
-    let peerInfo = _peer.get(this)
-    let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer)).filter((peer) => !peer.isEqual(peerInfo))
+    let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer)).filter((peer) => !peer.isEqual(Peer.self))
     let connect = () => {
       let i = -1
       let next = (err) => {
@@ -330,8 +323,7 @@ module.exports = class BlockRouter extends EventEmitter {
           this.connect(peer, next)
         } else { //Fill routing table with the closet nodes to themselves
           let rpc = _rpc.get(this)
-          let self = _self.get(this)
-          rpc.findNode(self.id, cb)
+          rpc.findNode(Peer.self.id, cb)
         }
       }
       next()
@@ -369,11 +361,11 @@ module.exports = class BlockRouter extends EventEmitter {
     }
     timeout = setTimeout(() => {
       let bucket = _bucket.get(this)
+      let bucketPath = _bucketPath.get(this)
       let peers = bucket.toArray()
       peers = peers.map((peer) => peer.toLocator())
       let buf = abToB(cbor.encode(peers))
-      let path = _path.get(this)
-      let fd = pth.join(path, '.bucket')
+      let fd = pth.join(bucketPath , '.bucket')
       fs.writeFile(fd, buf, (err) => {
         if (err) {
           return this.emit('error', err)

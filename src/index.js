@@ -1,6 +1,3 @@
-const gfs = require('graceful-fs')
-const fs = require('fs')
-gfs.gracefulify(fs)
 const path = require('path')
 const url = require('url')
 const Node = require('./node')

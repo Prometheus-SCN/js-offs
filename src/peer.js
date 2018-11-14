@@ -102,7 +102,7 @@ module.exports = class Peer {
   }
 
   toString () {
-    return `id:${this.key} external ip:${this.extIP} external port:${this.extPort} internal ip:${this.intIp} internal port:${this.intPort}`
+    return `id:${this.key} external ip:${this.extIp} external port:${this.extPort} internal ip:${this.intIp} internal port:${this.intPort}`
   }
 
   toJSON () {
@@ -118,5 +118,8 @@ module.exports = class Peer {
       throw new TypeError('Invalid Peer')
     }
     _self = value
+  }
+  static get self () {
+    return _self
   }
 }

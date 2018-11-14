@@ -4,7 +4,10 @@ const RPC = require('./rpc')
 const Bucket = require('./bucket')
 const config = require('./config')
 const bs58 = require('bs58')
+const network = require('network')
 const crypto = require('crypto')
+const Peer = require('./peer')
+const externalIP = require('external-ip')()
 let _maintenanceJob = new WeakMap()
 let _capacityJob = new WeakMap()
 module.exports = class Scheduler extends EventEmitter {
@@ -201,10 +204,30 @@ module.exports = class Scheduler extends EventEmitter {
           _maintenanceJob.set(this, maintenanceJob)
         }
       }
-      next()
+      checkIP(next)
     }
     let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
     _maintenanceJob.set(this, maintenanceJob)
+    let checkIP = (cb) => {
+      let intIP
+      let extIP
+      network.get_private_ip((err, intIp) => {
+        if (err) {
+          this.emit('error', err)
+          return cb()
+        }
+        externalIP((err, extIp) => {
+          if (err) {
+            this.emit('error', err)
+            return cb()
+          }
+          if (Peer.self.intIp !== intIp || Peer.self.extIp !== extIp) {
+            Peer.self = new Peer(Peer.self.id, extIp, Peer.self.extPort, intIp, Peer.self.intPort)
+          }
+          return cb()
+        })
+      })
+    }
 
   }
 

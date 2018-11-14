@@ -1,13 +1,13 @@
 'use strict'
 const Peer = require('./peer')
 const Bucket = require('./bucket')
-const ExpirationMap = require('./expiration-map')
-const ws = require('ws')
+const net = require('net')
 const ScalableCuckoo = require('cuckoo-filter').ScalableCuckooFilter
 const Cuckoo = require('cuckoo-filter').CuckooFilter
 const util = require('./utility')
 const config = require('./config')
 const protobuf = require('protobufjs')
+const collect = require('collect-stream')
 const EventEmitter = require('events').EventEmitter
 const crypto = require('crypto')
 const increment = require('increment-buffer')
@@ -30,23 +30,15 @@ const RPCType = RPCProto.RPCType
 const Direction = RPCProto.Direction
 const Status = RPCProto.Status
 
-let _peer = new WeakMap()
 let _rpcid = new WeakMap()
 let _bucket = new WeakMap()
 let _rpcInterface = new WeakMap()
 let _server = new WeakMap()
 let _port = new WeakMap()
-let _onError = new WeakMap()
-let _onConnection = new WeakMap()
-let _peerSocks = new WeakMap()
-let _getSocket = new WeakMap()
 
-module.exports = class RPC2 extends EventEmitter {
-  constructor (peer, bucket, rpcInterface) {
+module.exports = class RPC extends EventEmitter {
+  constructor (bucket, rpcInterface) {
     super()
-    if (!(peer instanceof Peer)) {
-      throw new TypeError('Invalid Peer')
-    }
     if (!(bucket instanceof Bucket)) {
       throw new TypeError('Invalid Bucket')
     }
@@ -55,20 +47,19 @@ module.exports = class RPC2 extends EventEmitter {
     }
     _port.set(this, peer.port)
     _bucket.set(this, bucket)
-    _peer.set(this, peer)
     _rpcInterface.set(this, rpcInterface)
     _rpcid.set(this, crypto.randomBytes(2))
-    _peerSocks.set(this, new ExpirationMap(60 * 1000))
     let pingResponse = (pb, socket)=> {
       try {
         let responsepb = {}
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         responsepb.status = Status.Success
         let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-        socket.send(response)
+        let msg = RPCProto.RPC.decode(response)
+        socket.end(response)
       } catch (err) {
         this.emit('error', err)
       }
@@ -81,15 +72,15 @@ module.exports = class RPC2 extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         let peers = bucket.closest(nodepb.id, nodepb.count)
         let peerspb = peers.map((peer)=> {return peer.toJSON()})
         let payload = FindNodeResponse.encode({ nodes: peerspb })
         responsepb.payload = payload
         responsepb.status = Status.Success
         let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-        socket.send(response)
-      } catch(err) {
+        socket.end(response)
+      } catch (err) {
         this.emit('error', err)
       }
     }
@@ -101,7 +92,7 @@ module.exports = class RPC2 extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         rpcInterface.getValue(valuepb.hash, valuepb.type, (err, value)=> {
           try {
             if (err) {
@@ -112,14 +103,14 @@ module.exports = class RPC2 extends EventEmitter {
               responsepb.payload = payload
               responsepb.status = Status.Failure
               let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-              socket.send(response)
+              socket.end(response)
             } else {
               let valueRespb = { hash: valuepb.hash, data: value, type: valuepb.type, nodes: [] }
               let payload = new FindValueResponse(valueRespb).encode().toBuffer()
               responsepb.payload = payload
               responsepb.status = Status.Success
               let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-              socket.send(response)
+              socket.end(response)
             }
           } catch (err) {
             this.emit('error', err)
@@ -138,7 +129,7 @@ module.exports = class RPC2 extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         rpcInterface.storeValue(storepb.value, storepb.type, (err) => {
           if (err) {
             responsepb.status = Status.Failure
@@ -146,7 +137,7 @@ module.exports = class RPC2 extends EventEmitter {
             responsepb.status = Status.Success
           }
           let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-          socket.send(response)
+          socket.end(response)
         })
       } catch (err) {
         this.emit('error', err)
@@ -160,24 +151,20 @@ module.exports = class RPC2 extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         let type = randompb.type
         rpcInterface.closestBlock(pb.from.id, Cuckoo.fromCBOR(randompb.filter), randompb.type, (err, block)=> {
-          try {
-            if (err) {
-              responsepb.status = Status.Failure
-              let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-              socket.send(response)
-            } else {
-              let randompb = { type: type, value: block.data }
-              let payload = new RandomResponse(randompb).encode().toBuffer()
-              responsepb.payload = payload
-              responsepb.status = Status.Success
-              let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-              socket.send(response)
-            }
-          } catch (err) {
-            this.emit('error', err)
+          if (err) {
+            responsepb.status = Status.Failure
+            let response = new RPCProto.RPC(responsepb).encode().toBuffer()
+            socket.end(response)
+          } else {
+            let randompb = { type: type, value: block.data }
+            let payload = new RandomResponse(randompb).encode().toBuffer()
+            responsepb.payload = payload
+            responsepb.status = Status.Success
+            let response = new RPCProto.RPC(responsepb).encode().toBuffer()
+            socket.end(response)
           }
         })
       } catch (err) {
@@ -192,15 +179,11 @@ module.exports = class RPC2 extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         rpcInterface.containsValue(pingvaluepb.hash, pingvaluepb.type, (contains) => {
-          try {
-            responsepb.status = contains ? Status.Success : Status.Failure
-            let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-            socket.send(response)
-          } catch (err) {
-            this.emit('error', err)
-          }
+          responsepb.status = contains ? Status.Success : Status.Failure
+          let response = new RPCProto.RPC(responsepb).encode().toBuffer()
+          socket.end(response)
         })
       } catch (err) {
         this.emit('error', err)
@@ -213,7 +196,7 @@ module.exports = class RPC2 extends EventEmitter {
         responsepb.id = pb.id
         responsepb.type = pb.type
         responsepb.comType = Direction.Response
-        responsepb.from = peer.toJSON()
+        responsepb.from = Peer.self
         responsepb.status = Status.Success
         let type = pingstoragepb.type
         pingstoragepb = {}
@@ -221,32 +204,32 @@ module.exports = class RPC2 extends EventEmitter {
         let payload = new PingStorageResponse(pingstoragepb).encode().toBuffer()
         responsepb.payload = payload
         let response = new RPCProto.RPC(responsepb).encode().toBuffer()
-        socket.send(response)
+        socket.end(response)
       } catch (err) {
         this.emit('error', err)
       }
     }
-    let onMessage = (socket, msg) => {
-      try {
-        let pb = RPCProto.RPC.decode(msg)
-        sanitizeRPC(pb)
-        let bucket = _bucket.get(this)
-        let peer = Peer.fromJSON(pb.from)
-        bucket.add(peer)
-        let peerSocks = _peerSocks.get(this)
-        if (!peerSocks.get(peer.key)) {
-          peerSocks.set(peer.key, socket)
-          let onExpire = (socket) => {
-            socket.close()
-          }
-          socket.on('closed', () => {
-            peerSocks.removeEventListener(peer.key, onExpire)
-            peerSocks.delete(peer.key)
-          })
 
-          peerSocks.once(peer.key, onExpire)
+    let onError = (err) => {
+      this.emit('error', err)
+    }
+    let onConnection = (socket) => {
+      socket.on('error', onError)
+      socket.on('timeout', () =>  {
+        socket.destroy()
+        socket.emit('error', new Error('Socket Timeout'))
+      })
+      socket.setTimeout(config.socketTimeout)
+      collect(socket, (err, msg) => {
+        if (err) {
+          return this.emit('error', err)
         }
-        if (pb.comType === Direction.Request) {
+        try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
+          let bucket = _bucket.get(this)
+          bucket.add(Peer.fromJSON(pb.from))
+          _bucket.set(this, bucket)
           switch (pb.type) {
             case RPCType.Ping :
               pingResponse(pb, socket)
@@ -270,71 +253,19 @@ module.exports = class RPC2 extends EventEmitter {
               pingStorageResponse(pb, socket)
               break;
           }
-        } else {
-          socket.emit(pb.id.toString('hex'), pb)
+        } catch (err) {
+          return this.emit('error', err)
         }
-      } catch (err) {
-        return this.emit('error', err)
-      }
+      })
     }
 
-    let onError = (err) => {
-      this.emit('error', err)
+    let server = net.createServer({ allowHalfOpen: true }, onConnection)
+    server.on('error', onError)
+    let onlistening = () => {
+      this.emit('listening')
     }
-    _onError.set(this, onError)
-    let newSocket = (socket, peer, cb) => {
-      if (typeof peer == 'function') {
-        cb = peer
-        peer = undefined
-      }
-      if (socket instanceof Peer) {
-        peer = socket
-        socket = undefined
-      }
-
-      if(!socket) {
-        socket = new ws(`ws://${peer.ip}:${peer.port}`)
-        let peerSocks = _peerSocks.get(this)
-        let onExpire = (socket) => {
-          socket.close()
-        }
-        let openErr = (err) => cb(err)
-        socket.once('error', openErr)
-        socket.on('open', () => {
-          socket.removeEventListener('error', openErr)
-          peerSocks.set(peer.key, socket)
-          peerSocks.once(peer.key, onExpire)
-          return cb(null, socket)
-        })
-
-        socket.on('closed', () => {
-          peerSocks.removeEventListener(peer.key, onExpire)
-          peerSocks.delete(peer.key)
-        })
-      }
-      socket.setMaxListeners(0)
-      socket.on('error', onError)
-      socket.on('message', (data) => onMessage (socket, data))
-    }
-    let getSocket = (peer, cb) => {
-      let peerSocks = _peerSocks.get(this)
-      let socket = peerSocks.get(peer.key)
-      if (!socket) {
-        newSocket(peer, cb)
-      } else {
-        if (socket.readyState === 1) {
-          return cb(null, socket)
-        } else if (socket.readyState === 2 || socket.readyState === 3) {
-          return cb(new Error('Connection Closed'))
-        }
-      }
-    }
-    _getSocket.set(this, getSocket)
-
-    let onConnection = (socket) => {
-      return newSocket(socket, () => {})
-    }
-    _onConnection.set(this, onConnection)
+    server.on('listening', onlistening)
+    _server.set(this, server)
   }
 
   get rpcid () {
@@ -347,32 +278,16 @@ module.exports = class RPC2 extends EventEmitter {
 
   listen () {
     let server = _server.get(this)
-    if (server) {
-      this.close()
-    }
     let port = _port.get(this)
-    let onError =  _onError.get(this)
-    let onConnection = _onConnection.get(this)
-    server = new ws.Server({port})
-    server.on('error', onError)
-    server.on('listening', () => this.emit('listening'))
-    server.on('connection', onConnection)
-    _server.set(this, server)
+    server.listen(port)
   }
 
   close (cb) {
-    let peerSocks = _peerSocks.get(this)
-    for (socket of peerSocks.values()) {
-      socket.close()
-    }
     let server = _server.get(this)
     server.close(cb)
-    _server.set(this, undefined)
   }
 
   findNode (id, cb) {
-    let peer = _peer.get(this)
-    let getSocket = _getSocket.get(this)
     let bucket = _bucket.get(this)
     if (!bucket.count) {
       return cb(new Error('No Peers Connected'))
@@ -381,7 +296,7 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Find_Node
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let findnodepb = {}
     findnodepb.id = id
     findnodepb.count = config.nodeCount
@@ -390,33 +305,30 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     let nodes = bucket.closest(id, bucket.count)
-    let nodeBucket = new Bucket(peer.id, config.kbucketSize)
+    let nodeBucket = new Bucket(Peer.self.id, config.kbucketSize)
     for (let i = 0; i < nodes.length; i++) {
       nodeBucket.add(nodes[ i ])
     }
     let queried = new ScalableCuckoo(config.filterSize, config.bucketSize, config.fingerprintSize, config.scale)
     let i = 0
-    let next = () => {
+    let next = ()=> {
       if (nodeBucket.count > 0 && i < config.nodeCount) {
         let to = nodeBucket.closest(id, 1).shift()
         queried.add(to.id)
         nodeBucket.remove(to)
-        getSocket(to, (err, socket) => {
-          if (err) {
-            this.emit('error', err)
-            return next
-          }
-          let onErr = () => {
-            this.emit('error', err)
-            return next()
-          }
-          socket.once('error', onErr)
-          socket.once(requestpb.id.toString('hex'), (pb) => {
+        let onErr = () => next()
+        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout}, () => {
+          socket.removeEventListener('error', onErr)
+          collect(socket, (err, msg)=> {
+            if (err) {
+              return next()
+            }
             try {
-              socket.removeEventListener('error', onErr)
               i++
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
               let nodespb = FindNodeResponse.decode(pb.payload)
-              let thisNode = peer
+              let thisNode = Peer.self
               nodespb.nodes.forEach((peer)=> {
                 try {
                   sanitizePeer(peer)
@@ -434,17 +346,16 @@ module.exports = class RPC2 extends EventEmitter {
               })
               return next()
             } catch (err) {
-              this.emit('error', err)
               return next()
             }
           })
-          try {
-            socket.send(request)
-          } catch (err) {
-            this.emit('error', err)
-            return next()
-          }
+          socket.end(request)
         })
+        socket.on('timeout', () =>  {
+          socket.destroy()
+          socket.emit('error', new Error('Socket Timeout'))
+        })
+        socket.once('error', onErr)
       } else {
         return cb()
       }
@@ -453,9 +364,7 @@ module.exports = class RPC2 extends EventEmitter {
   }
 
   findValue (hash, type, cb) {
-    let peer = _peer.get(this)
     let bucket = _bucket.get(this)
-    let getSocket = _getSocket.get(this)
     if (!bucket.count) {
       return cb(new Error('No Peers Connected'))
     }
@@ -464,7 +373,7 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Find_Value
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let findvaluepb = {}
     findvaluepb.hash = hash
     findvaluepb.count = config.nodeCount
@@ -474,7 +383,7 @@ module.exports = class RPC2 extends EventEmitter {
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
 
     let nodes = bucket.closest(hash, bucket.count)
-    let nodeBucket = new Bucket(peer.id, config.kbucketSize)
+    let nodeBucket = new Bucket(Peer.self.id, config.kbucketSize)
     for (let i = 0; i < nodes.length; i++) {
       nodeBucket.add(nodes[ i ])
     }
@@ -484,17 +393,17 @@ module.exports = class RPC2 extends EventEmitter {
         let to = nodeBucket.closest(hash, 1).shift()
         queried.add(to.id)
         nodeBucket.remove(to)
-        getSocket(to, (err, socket) => {
-          if (err) {
-            return next()
-          }
-          let onErr = (err) => {
-            this.emit('error', err)
-            return next()
-          }
-          socket.once(requestpb.id.toString('hex'), (pb) => {
-            socket.removeEventListener('error', onErr)
+        let onErr = () => next()
+        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
+          socket.removeEventListener('error', onErr)
+          collect(socket, (err, msg)=> {
+            if (err) {
+              this.emit('error', err)
+              return next()
+            }
             try {
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
               let valuespb = FindValueResponse.decode(pb.payload)
               sanitizeValueResponse(valuespb)
               if (valuespb.data) {
@@ -505,7 +414,7 @@ module.exports = class RPC2 extends EventEmitter {
                   return cb(err, block)
                 })
               } else {
-                let thisNode = _peer.get(this)
+                let thisNode = Peer.self
                 valuespb.nodes.forEach((peer)=> {
                   try {
                     sanitizePeer(peer)
@@ -528,22 +437,20 @@ module.exports = class RPC2 extends EventEmitter {
               return next()
             }
           })
-          socket.once('error', onErr)
-          try {
-            socket.send(request)
-          } catch(err) {
-            return onErr(err)
-          }
+          socket.end(request)
         })
+        socket.on('timeout', () =>  {
+          socket.destroy()
+          socket.emit('error', new Error('Socket Timeout'))
+        })
+        socket.once('error', onErr)
       }
     }
     next()
   }
 
   ping (id, cb) {
-    let peer = _peer.get(this)
     let bucket = _bucket.get(this)
-    let getSocket = _getSocket.get(this)
     let to = bucket.get(id)
     if (!to) {
       return cb(new Error('Peer not found'))
@@ -552,18 +459,18 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    getSocket(to, (err, socket) => {
-      if (err) {
-        return cb(err)
-      }
-      let onErr = (err) => {
-        return cb(err)
-      }
-      socket.once(requestpb.id.toString('hex'), (pb) => {
-        socket.removeEventListener('error', onErr)
+    let onErr = (err) => cb(err)
+    let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
+      socket.removeEventListener('error', onErr)
+      collect(socket, (err, msg) => {
+        if (err) {
+          return cb(err)
+        }
         try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
           if (pb.Status === Status.Sucess) {
             return cb()
           } else {
@@ -573,19 +480,17 @@ module.exports = class RPC2 extends EventEmitter {
           return cb(err)
         }
       })
-      socket.once('error', onErr)
-      try {
-        socket.send(request)
-      } catch(err) {
-        return onErr(err)
-      }
+      socket.end(request)
     })
+    socket.on('timeout', () =>  {
+      socket.destroy()
+      socket.emit('error', new Error('Socket Timeout'))
+    })
+    socket.once('error', onErr)
   }
 
   store (hash, type, value, cb) {
-    let peer = _peer.get(this)
     let bucket = _bucket.get(this)
-    let getSocket = _getSocket.get(this)
     if (!bucket.count) {
       return cb(new Error('No Peers Connected'))
     }
@@ -593,7 +498,7 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Store
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let storepb = {}
     storepb.type = type
     storepb.value = value
@@ -604,7 +509,7 @@ module.exports = class RPC2 extends EventEmitter {
     let redundancy = Math.floor(bucket.count * config.redundancy)
     redundancy = (redundancy < 1 && bucket.count > 1) ? 1 : redundancy
     let nodes = bucket.closest(hash, redundancy + config.kbucketSize)
-    let nodeBucket = new Bucket(peer.id, config.kbucketSize)
+    let nodeBucket = new Bucket(Peer.self.id, config.kbucketSize)
     for (let i = 0; i < nodes.length; i++) {
       nodeBucket.add(nodes[ i ])
     }
@@ -613,18 +518,16 @@ module.exports = class RPC2 extends EventEmitter {
       if (nodeBucket.count > 0) {
         let to = nodeBucket.closest(hash, 1).shift()
         nodeBucket.remove(to)
-        getSocket(to, (err, socket) => {
-          if (err) {
-            this.emit('error', err)
-            return next()
-          }
-          let onErr = (err) => {
-            this.emit('error', err)
-            return next()
-          }
-          socket.once(requestpb.id.toString('hex'), (pb) => {
-            socket.removeEventListener('error', onErr)
+        let onErr = () => next()
+        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
+          socket.removeEventListener('error', onErr)
+          collect(socket, (err, msg)=> {
+            if (err) {
+              return next()
+            }
             try {
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
               if (pb.status == Status.Success && i++ && i >= redundancy) {
                 return cb()
               } else {
@@ -634,13 +537,13 @@ module.exports = class RPC2 extends EventEmitter {
               return next()
             }
           })
-          socket.once('error', onErr)
-          try {
-            socket.send(request)
-          } catch(err) {
-            return onErr(err)
-          }
+          socket.end(request)
         })
+        socket.on('timeout', () =>  {
+          socket.destroy()
+          socket.emit('error', new Error('Socket Timeout'))
+        })
+        socket.once('error', onErr)
       } else if (i < redundancy) {
         return cb(new Error('Value Not Stored'))
       } else {
@@ -651,9 +554,7 @@ module.exports = class RPC2 extends EventEmitter {
   }
 
   random (count, type, filter, cb) {
-    let peer = _peer.get(this)
     let bucket = _bucket.get(this)
-    let getSocket = _getSocket.get(this)
     if (!bucket.count) {
       return cb(new Error('No Peers Connected'))
     }
@@ -662,29 +563,29 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Random
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let randompb = {}
     randompb.type = type
     randompb.filter = filter.toCBOR()
     let payload = new RandomRequest(randompb).encode().toBuffer()
     requestpb.payload = payload
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    let nodes = bucket.closest(peer.id, bucket.count)
+    let nodes = bucket.closest(Peer.self.id, bucket.count)
     let i = 0
     let next = () => {
       if (nodes.length > 0 && i < count) {
         let index = util.getRandomInt(0, nodes.length - 1)// random selection of nodes to ask
         let to = nodes.splice(index, 1)[ 0 ]
-        getSocket(to, (err, socket) => {
-          if (err) {
-            return next()
-          }
-          let onErr = (err) => {
-            return next()
-          }
-          socket.once(requestpb.id.toString('hex'), (pb) => {
-            socket.removeEventListener('error', onErr)
+        let onErr = () => next()
+        let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, ()=> {
+          socket.removeEventListener('error', onErr)
+          collect(socket, (err, msg)=> {
+            if (err) {
+              return next()
+            }
             try {
+              let pb = RPCProto.RPC.decode(msg)
+              sanitizeRPC(pb)
               if (pb.status == Status.Success) {
                 let randompb = RandomResponse.decode(pb.payload)
                 sanitizeRandomResponse(randompb)
@@ -703,13 +604,13 @@ module.exports = class RPC2 extends EventEmitter {
               return next()
             }
           })
-          socket.once('error', onErr)
-          try {
-            socket.send(request)
-          } catch (err) {
-            return onErr(err)
-          }
+          socket.end(request)
         })
+        socket.on('timeout', () =>  {
+          socket.destroy()
+          socket.emit('error', new Error('Socket Timeout'))
+        })
+        socket.once('error', onErr)
       } else if (i < count) {
         return cb(new Error('Failed To Retrieve Random'))
       } else {
@@ -732,9 +633,7 @@ module.exports = class RPC2 extends EventEmitter {
   }
 
   pingValue (id, hash, type, cb) {
-    let peer = _peer.get(this)
     let bucket = _bucket.get(this)
-    let getSocket = _getSocket.get(this)
     if (!bucket.count) {
       return cb(new Error('No Peers Connected'))
     }
@@ -743,22 +642,22 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping_Value
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let pingvaluepb = {}
     pingvaluepb.type = type
     pingvaluepb.hash = hash
     requestpb.payload = new PingValueRequest(pingvaluepb).encode().toBuffer()
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    getSocket(to, (err, socket) =>{
-      if (err) {
-        return cb(err)
-      }
-      let onErr = (err) => {
-        return cb(err)
-      }
-      socket.once(requestpb.id.toString('hex'), (pb) => {
-        socket.removeEventListener('error', onErr)
+    let onErr = (err) => cb(err)
+    let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, ()=> {
+      socket.removeEventListener('error', onErr)
+      collect(socket, (err, msg)=> {
+        if (err) {
+          return cb(err)
+        }
         try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
           if (pb.Status === Status.Sucess) {
             return cb()
           } else {
@@ -768,19 +667,17 @@ module.exports = class RPC2 extends EventEmitter {
           return cb(err)
         }
       })
-      socket.once('error', onErr)
-      try {
-        socket.send(request)
-      } catch (err) {
-        return onErr(err)
-      }
+      socket.end(request)
     })
+    socket.on('timeout', () =>  {
+      socket.destroy()
+      socket.emit('error', new Error('Socket Timeout'))
+    })
+    socket.once('error', onErr)
   }
 
   pingStorage (id, type, cb) {
-    let peer = _peer.get(this)
     let bucket = _bucket.get(this)
-    let getSocket = _getSocket.get(this)
     if (!bucket.count) {
       return cb(new Error('No Peers Connected'))
     }
@@ -789,21 +686,21 @@ module.exports = class RPC2 extends EventEmitter {
     requestpb.id = this.rpcid
     requestpb.type = RPCType.Ping_Storage
     requestpb.comType = Direction.Request
-    requestpb.from = peer.toJSON()
+    requestpb.from = Peer.self
     let pingstoragepb = {}
     pingstoragepb.type = type
     requestpb.payload = new PingStorageRequest(pingstoragepb).encode().toBuffer()
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
-    getSocket(to, (err, socket) => {
-      if (err) {
-        return cb(err)
-      }
-      let onErr = (err) => {
-        return cb(err)
-      }
-      socket.once(requestpb.id.toString('hex'), (pb) => {
-        socket.removeEventListener('error', onErr)
+    let onErr = (err) => cb(err)
+    let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
+      socket.removeEventListener('error', onErr)
+      collect(socket, (err, msg)=> {
+        if (err) {
+          return cb(err)
+        }
         try {
+          let pb = RPCProto.RPC.decode(msg)
+          sanitizeRPC(pb)
           if (pb.Status === Status.Sucess) {
             let storagepb = PingStorageResponse.decode(pb.payload)
             return process.nextTick(()=> {
@@ -818,13 +715,13 @@ module.exports = class RPC2 extends EventEmitter {
           return cb(err)
         }
       })
-      socket.once('error', onErr)
-      try {
-        socket.send(request)
-      } catch (err) {
-        return onErr(err)
-      }
+      socket.end(request)
     })
+    socket.on('timeout', () => {
+      socket.destroy()
+      socket.emit('error', new Error('Socket Timeout'))
+     })
+    socket.once('error', onErr)
   }
 }
 
