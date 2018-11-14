@@ -318,7 +318,7 @@ module.exports = class RPC extends EventEmitter {
         nodeBucket.remove(to)
         let onErr = () => next()
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout}, () => {
-          socket.removeEventListener('error', onErr)
+          socket.removeListener('error', onErr)
           collect(socket, (err, msg)=> {
             if (err) {
               return next()
@@ -395,7 +395,7 @@ module.exports = class RPC extends EventEmitter {
         nodeBucket.remove(to)
         let onErr = () => next()
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
-          socket.removeEventListener('error', onErr)
+          socket.removeListener('error', onErr)
           collect(socket, (err, msg)=> {
             if (err) {
               this.emit('error', err)
@@ -463,7 +463,7 @@ module.exports = class RPC extends EventEmitter {
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     let onErr = (err) => cb(err)
     let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
-      socket.removeEventListener('error', onErr)
+      socket.removeListener('error', onErr)
       collect(socket, (err, msg) => {
         if (err) {
           return cb(err)
@@ -520,7 +520,7 @@ module.exports = class RPC extends EventEmitter {
         nodeBucket.remove(to)
         let onErr = () => next()
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
-          socket.removeEventListener('error', onErr)
+          socket.removeListener('error', onErr)
           collect(socket, (err, msg)=> {
             if (err) {
               return next()
@@ -578,7 +578,7 @@ module.exports = class RPC extends EventEmitter {
         let to = nodes.splice(index, 1)[ 0 ]
         let onErr = () => next()
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, ()=> {
-          socket.removeEventListener('error', onErr)
+          socket.removeListener('error', onErr)
           collect(socket, (err, msg)=> {
             if (err) {
               return next()
@@ -650,7 +650,7 @@ module.exports = class RPC extends EventEmitter {
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     let onErr = (err) => cb(err)
     let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, ()=> {
-      socket.removeEventListener('error', onErr)
+      socket.removeListener('error', onErr)
       collect(socket, (err, msg)=> {
         if (err) {
           return cb(err)
@@ -693,7 +693,7 @@ module.exports = class RPC extends EventEmitter {
     let request = new RPCProto.RPC(requestpb).encode().toBuffer()
     let onErr = (err) => cb(err)
     let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
-      socket.removeEventListener('error', onErr)
+      socket.removeListener('error', onErr)
       collect(socket, (err, msg)=> {
         if (err) {
           return cb(err)
