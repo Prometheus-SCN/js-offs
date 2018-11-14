@@ -216,8 +216,8 @@ module.exports = class RPC extends EventEmitter {
     let onConnection = (socket) => {
       socket.on('error', onError)
       socket.on('timeout', () =>  {
-        socket.destroy()
         socket.emit('error', new Error('Socket Timeout'))
+        socket.destroy()
       })
       socket.setTimeout(config.socketTimeout)
       collect(socket, (err, msg) => {
@@ -352,8 +352,8 @@ module.exports = class RPC extends EventEmitter {
           socket.end(request)
         })
         socket.on('timeout', () =>  {
-          socket.destroy()
           socket.emit('error', new Error('Socket Timeout'))
+          socket.destroy()
         })
         socket.once('error', onErr)
       } else {
@@ -440,8 +440,8 @@ module.exports = class RPC extends EventEmitter {
           socket.end(request)
         })
         socket.on('timeout', () =>  {
-          socket.destroy()
           socket.emit('error', new Error('Socket Timeout'))
+          socket.destroy()
         })
         socket.once('error', onErr)
       }
@@ -483,8 +483,8 @@ module.exports = class RPC extends EventEmitter {
       socket.end(request)
     })
     socket.on('timeout', () =>  {
-      socket.destroy()
       socket.emit('error', new Error('Socket Timeout'))
+      socket.destroy()
     })
     socket.once('error', onErr)
   }
@@ -540,8 +540,8 @@ module.exports = class RPC extends EventEmitter {
           socket.end(request)
         })
         socket.on('timeout', () =>  {
-          socket.destroy()
           socket.emit('error', new Error('Socket Timeout'))
+          socket.destroy()
         })
         socket.once('error', onErr)
       } else if (i < redundancy) {
@@ -607,8 +607,8 @@ module.exports = class RPC extends EventEmitter {
           socket.end(request)
         })
         socket.on('timeout', () =>  {
-          socket.destroy()
           socket.emit('error', new Error('Socket Timeout'))
+          socket.destroy()
         })
         socket.once('error', onErr)
       } else if (i < count) {
@@ -670,8 +670,8 @@ module.exports = class RPC extends EventEmitter {
       socket.end(request)
     })
     socket.on('timeout', () =>  {
-      socket.destroy()
       socket.emit('error', new Error('Socket Timeout'))
+      socket.destroy()
     })
     socket.once('error', onErr)
   }
@@ -718,8 +718,8 @@ module.exports = class RPC extends EventEmitter {
       socket.end(request)
     })
     socket.on('timeout', () => {
-      socket.destroy()
       socket.emit('error', new Error('Socket Timeout'))
+      socket.destroy()
      })
     socket.once('error', onErr)
   }
