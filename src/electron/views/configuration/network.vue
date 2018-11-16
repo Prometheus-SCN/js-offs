@@ -33,6 +33,15 @@
               </span>
             </div>
           </div>
+          <div class="field">
+            <label class="label">Socket Timeout</label>
+            <div class="control has-icons-left has-icons-right">
+              <input class="input is-success" v-validate="{ required: true, numeric: true, min_value: 30 }" type="text" v-model="socketTimeout" name="socketTimeout">
+              <span class="icon is-small is-left">
+                #
+              </span>
+            </div>
+          </div>
           <div>
             <label class="checkbox">
               Use internal IP for connections?
@@ -75,12 +84,17 @@
         .then((internalIP) => {
           this.internalIP = internalIP
         })
+      this.configurator.get('socketTimeout')
+        .then((timeout) => {
+          this.socketTimeout = timeout/1000
+        })
     },
     data () {
       return {
         startPort: 0,
         httpPort: 0,
         numPortTries: 0,
+        socketTimeout: 0,
         error: null,
         configurator: null,
         internalIP: false,
@@ -107,6 +121,10 @@
           return
         }
         ok = await this.configurator.set('internalIP', this.internalIP)
+        if (!ok) {
+          return
+        }
+        ok = await this.configurator.set('socketTimeout', 1000 * this.socketTimeout)
         if (!ok) {
           return
         }

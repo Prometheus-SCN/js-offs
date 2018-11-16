@@ -215,12 +215,14 @@ module.exports = class RPC extends EventEmitter {
     }
     let onConnection = (socket) => {
       socket.on('error', onError)
-      socket.on('timeout', () =>  {
+      let onTimeout = () =>  {
         socket.emit('error', new Error('Socket Timeout'))
         socket.destroy()
-      })
-      socket.setTimeout(config.socketTimeout)
+      }
+      socket.on('timeout', onTimeout)
+      socket.setTimeout('timeout', config.socketTimeout)
       collect(socket, (err, msg) => {
+        socket.removeListeners(onTimeout)
         if (err) {
           return this.emit('error', err)
         }
@@ -521,7 +523,7 @@ module.exports = class RPC extends EventEmitter {
         let onErr = () => next()
         let socket = net.connect({ host: to.ip, port: to.port, allowHalfOpen: true, timeout: config.socketTimeout }, () => {
           socket.removeListener('error', onErr)
-          collect(socket, (err, msg)=> {
+          collect(socket, (err, msg) => {
             if (err) {
               return next()
             }

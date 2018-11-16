@@ -44,7 +44,7 @@ let defaults = {
   lastKnownPeers: true,
   internalIP: false,
   bucketTimeout: 60 * 1000 * 5,
-  socketTimeout: 30 * 1000,
+  socketTimeout: 120 * 1000,
   bootstrap: [
     '5LTX64UZmqxAckP99fRNKutPQCJabbB1xMa1vuCG1Z58SJdLkGa9NkngQNSihHhBPA25evTSSMzqrPJovRLkEykSf7orstw7TCUh1DABKyn3iozxBsL3yKBq7EWz9pHdAE9Fd'
   ]
@@ -440,6 +440,11 @@ class Config {
   }
   get socketTimeout () {
     return _socketTimeout.get(this)
+    this.save()
+  }
+  set socketTimeout (value) {
+    _socketTimeout.set(this, +value)
+    this.save()
   }
 
   toJSON () {
