@@ -36,7 +36,6 @@ if (cluster.isMaster) {
                 return cb(msg.err)
               }
               this._free(worker.id)
-              console.log('happened')
               return cb(null, msg.contentFilter)
               break
             case 'closestBlock':
@@ -116,9 +115,8 @@ if (cluster.isMaster) {
     }
   }
 } else {
-  var workerData = { path: process.argv[3], bucketSize: +process.argv[2], fingerprintSize: +process.argv[4]}
+  var workerData = { path: process.argv[2], bucketSize: +process.argv[3], fingerprintSize: +process.argv[4]}
   process.on('message', (msg) => {
-    console.log(`process ${process.pid} received`, msg)
     switch(msg.type) {
       case 'content' :
         content(msg.temps, (err, content) => {
@@ -166,11 +164,9 @@ if (cluster.isMaster) {
       }
       contentFilter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
       let i= -1
-      console.log('started')
       for (let i = 0; i < content.length; i++) {
         contentFilter.add(content[i])
       }
-      console.log('happened')
       return cb(err, contentFilter.toCBOR())
     })
   }
