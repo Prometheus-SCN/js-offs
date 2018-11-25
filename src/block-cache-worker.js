@@ -35,7 +35,8 @@ if (isMainThread) {
                 return cb(msg.err)
               }
               this._free(worker.threadId)
-              return cb(null, msg.contentFilter)
+              console.log('callback sent')
+              return cb(null, msg.filter)
               break
             case 'closestBlock':
               cb = _callbacks.get(worker)
@@ -51,7 +52,7 @@ if (isMainThread) {
       }
     }
     _freeWorker() {
-      for (let worker of _pool) {
+      for (let [_, worker] of _pool) {
         if (!_callbacks.get(worker)) {
           return worker
         }
@@ -72,7 +73,7 @@ if (isMainThread) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.postMessage({type: 'content', temps})
+        worker.postMessage({type: 'contentFilter', temps})
       } else {
         let queue = _queue.get(this)
         queue.unshift({type: 'content', temps, cb: cb})
@@ -115,30 +116,31 @@ if (isMainThread) {
   }
 } else {
   parentPort.on('message', (msg) => {
+    console.log('received message', msg)
     switch(msg.type) {
       case 'content' :
         content(msg.temps, (err, content) => {
           if (err) {
             return parentPort.postMessage({err: err})
           }
-          return parentPort.postMessage({content})
+          return parentPort.postMessage({ type: msg.type, content})
         })
         break
       case 'contentFilter' :
-        contentFilter(msg.temps, (err, contentFilter) => {
+        contentFilter(msg.temps, (err, filter) => {
           if (err) {
             return parentPort.postMessage({err: err})
           }
-          return parentPort.postMessage({contentFilter})
+          return parentPort.postMessage({ type: msg.type, filter})
         })
         break
       case 'closestBlock' :
-        closestBlock (msg.temps, (err, contentFilter(msg.temps, msg.filter, (err, key) => {
+        closestBlock (msg.temps, msg.filter, (err, key) => {
           if (err) {
             return parentPort.postMessage({err: err})
           }
-          return parentPort.postMessage({key})
-        })))
+          return parentPort.postMessage({ type: msg.type, key})
+        })
         break
     }
   })

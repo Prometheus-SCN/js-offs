@@ -11,8 +11,7 @@ if (cluster.isMaster) {
     constructor(size, path, bucketSize, fingerprintSize) {
       cluster.setupMaster({
         exec: __filename,
-        args: [path, bucketSize, fingerprintSize],
-        silent: true
+        args: [path, bucketSize, fingerprintSize]
       })
       _queue.set(this, [])
       for (let i = 0; i < size; i++) {
@@ -37,6 +36,7 @@ if (cluster.isMaster) {
                 return cb(msg.err)
               }
               this._free(worker.id)
+              console.log('happened')
               return cb(null, msg.contentFilter)
               break
             case 'closestBlock':
@@ -53,7 +53,7 @@ if (cluster.isMaster) {
       }
     }
     _freeWorker() {
-      for (let worker of _pool) {
+      for (let [_, worker] of _pool) {
         if (!_callbacks.get(worker)) {
           return worker
         }
@@ -74,10 +74,10 @@ if (cluster.isMaster) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'content', temps})
+        worker.send({type: 'contentFilter', temps})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'content', temps, cb: cb})
+        queue.unshift({type: 'contentFilter', temps, cb: cb})
       }
     }
 
@@ -116,9 +116,9 @@ if (cluster.isMaster) {
     }
   }
 } else {
-  setInterval(() => { console.log(`process ${process.pid} is alive`) }, 30000)
-  var workerData = { path: process.argv[1], bucketSize: +process.argv[2], fingerprintSize: +process.argv[3]}
-  parentPort.on('message', (msg) => {
+  var workerData = { path: process.argv[3], bucketSize: +process.argv[2], fingerprintSize: +process.argv[4]}
+  process.on('message', (msg) => {
+    console.log(`process ${process.pid} received`, msg)
     switch(msg.type) {
       case 'content' :
         content(msg.temps, (err, content) => {
@@ -165,9 +165,12 @@ if (cluster.isMaster) {
         return cb(err)
       }
       contentFilter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
-      for (let key of content){
-        contentFilter.add(key)
+      let i= -1
+      console.log('started')
+      for (let i = 0; i < content.length; i++) {
+        contentFilter.add(content[i])
       }
+      console.log('happened')
       return cb(err, contentFilter.toCBOR())
     })
   }

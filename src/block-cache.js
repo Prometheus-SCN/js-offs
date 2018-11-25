@@ -4,14 +4,14 @@ const ExpirationMap = require('./expiration-map')
 const mkdirp = require('mkdirp')
 const config = require('./config')
 const Block = require('./block')
-const BCW = require('./block-cache-cluster')
+const BCW = require('./block-cache-worker')
 const util = require('./utility')
 const fs = require('fs')
 const getSize = require('get-folder-size')
 const bs58 = require('bs58')
 const hamming = require('hamming-distance')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
-const numCPUs = require('os').cpus().length
+const numCPUs = Math.floor(require('os').cpus().length/3) || 1
 let _cacheInterface = new WeakMap()
 let _path = new WeakMap()
 let _dirty = new WeakMap()
@@ -48,7 +48,7 @@ module.exports =
       _dirty.set(this, false)
       mkdirp.sync(path)
       _path.set(this, path)
-      _bcw.set(this, new BCW(numCPUs, blockSize,path, config.bucketSize, config.fingerprintSize))
+      _bcw.set(this, new BCW(numCPUs, path, config.bucketSize, config.fingerprintSize))
       _temporary.set(this, [])
       _assignedTemporary.set(this, new ExpirationMap(config.temporaryTimeout))
       _gatherTemporaries.set (this, () => {
@@ -175,7 +175,9 @@ module.exports =
       let gatherTemporaries = _gatherTemporaries.get(this)
       let temps = gatherTemporaries()
       let bcw = _bcw.get(this)
-      bcw.content(temps, cb)
+      bcw.content(temps,(err, content) => {
+        cb(err, content)
+      })
     }
 
     contentFilter (cb) {
