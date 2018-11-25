@@ -14,9 +14,13 @@ if (cluster.isMaster) {
         args: [path, bucketSize, fingerprintSize]
       })
       _queue.set(this, [])
-      for (let i = 0; i < size; i++) {
+      function spawnWorker () {
         let worker = cluster.fork()
         _pool.set(worker.id, worker)
+        worker.once('exit', () => {
+          _pool.delete(worker.id)
+          return spawnWorker()
+        })
         worker.on('message', (msg) => {
           let cb
           switch (msg.type) {
@@ -49,6 +53,9 @@ if (cluster.isMaster) {
               break
           }
         })
+      }
+      for (let i = 0; i < size; i++) {
+        spawnWorker()
       }
     }
     _freeWorker() {
