@@ -10,7 +10,6 @@ let _url = new WeakMap()
 let _size = new WeakMap()
 let _offsetStart = new WeakMap()
 let _blockSize = new WeakMap()
-let _flightBox = new WeakMap()
 
 module.exports = class ReadableOffStream extends Readable {
   constructor (url, blockSize, opts) {
@@ -43,8 +42,6 @@ module.exports = class ReadableOffStream extends Readable {
 
     let getBlock = () => {
       let tuple = []
-      let flightBox = _flightBox.get(this)
-
       let yieldBlock = () => { // does actual calculation of the original block
         let sblock = tuple.pop()
         let offsetStart = _offsetStart.get(this)
@@ -88,26 +85,13 @@ module.exports = class ReadableOffStream extends Readable {
         if (i < config.tupleSize) {
           let key = descriptor.shift()
           _descriptor.set(this, descriptor)
-          let doNext = () => {
-            bc.get(key, next)
-          }
-          let testContents = (contains) => {
-            if (!contains) {
-              if (flightBox && flightBox.filter.contains(key)) {
-                flightBox.emitter.on(key, next)
-              } else {
-                let flightBox = bc.load([ key ])
-                flightBox.emitter.once(key, doNext)
-                flightBox.emitter.once('error', (err) => {
-                  this.emit('error', err)
-                })
-                _flightBox.set(this, flightBox)
-              }
+          bc.get(key, (err, block) => {
+            if (err) {
+              bc.load(key, next)
             } else {
-              doNext()
+              return next(err, block)
             }
-          }
-          bc.contains(key, testContents)
+          })
         } else {
           return yieldBlock()
         }
@@ -158,17 +142,11 @@ module.exports = class ReadableOffStream extends Readable {
         } else {
           if (descriptor.length < descKeys) {
             let nextDesc = descriptor.pop()
-            bc.contains(url.descriptorHash, (contains) => {
-              if (contains) {
-                bc.get(nextDesc, getDesc)
+            bc.get(nextDesc, (err, block) => {
+              if (err) {
+                return bc.load(nextDesc, getDesc)
               } else {
-                let flightBox = bc.load([ nextDesc ])
-                flightBox.emitter.once(nextDesc, () => {
-                  bc.get(nextDesc, getDesc)
-                })
-                flightBox.emitter.once('error', (err) => {
-                  this.emit('error', err)
-                })
+                return getDesc(err, block)
               }
             })
           } else {
@@ -177,18 +155,11 @@ module.exports = class ReadableOffStream extends Readable {
           }
         }
       }
-      bc.contains(url.descriptorHash, (contains) => {
-        if (contains) {
-          bc.get(url.descriptorHash, getDesc)
+      bc.get(url.descriptorHash, (err, block) => {
+        if (err) {
+          return bc.load(url.descriptorHash, getDesc)
         } else {
-
-          let flightBox = bc.load([ url.descriptorHash ])
-          flightBox.emitter.once(url.descriptorHash, () => {
-            bc.get(url.descriptorHash, getDesc)
-          })
-          flightBox.emitter.once('error', (err)=> {
-            this.emit('error', err)
-          })
+          return getDesc(err, block)
         }
       })
     } else {

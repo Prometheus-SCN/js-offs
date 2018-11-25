@@ -71,7 +71,7 @@ module.exports = class Node extends EventEmitter {
             let peerInfo = new Peer(id, extIP || intIP, port, intIP, port)
             _peerInfo.set(this, peerInfo)
             Peer.self = peerInfo
-            let blockRouter = new BlockRouter(config.cacheLocation, peerInfo)
+            let blockRouter = new BlockRouter(config.cacheLocation, appFolder)
             _blockRouter.set(this, blockRouter)
             blockRouter.on('error', (err) => this.emit('error', err))
             let server = Server(blockRouter, this.emit.bind(this))

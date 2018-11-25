@@ -1,7 +1,6 @@
 'use strict'
 const EventEmitter = require('events').EventEmitter
 const ExpirationMap = require('./expiration-map')
-const pth = require('path')
 const mkdirp = require('mkdirp')
 const config = require('./config')
 const Block = require('./block')
@@ -118,9 +117,9 @@ module.exports =
       _sizeTimer.set(this, sizeTimer)
     }
 
-    load (keys) {
+    load (key, cb) {
       let cacheInterface = _cacheInterface.get(this)
-      return cacheInterface.load(keys)
+      return cacheInterface.load(key, cb)
     }
 
     put (block, cb) {
@@ -154,7 +153,10 @@ module.exports =
 
     remove (key, cb) {
       let fd = util.sanitize(key, this.path)
-      fs.unlink(fd, (err) => {
+      fs.unlink(fd, (err) => { // Sometimes deleted files are recognized as missing files
+        if (err && err.errno === -2 && err.code === 'ENOENT') {
+          err = undefined
+        }
         if (!err) {
           let blockSize = _blockSize.get(this)
           //approximation of size whilst dodging i/o to fs
@@ -163,11 +165,6 @@ module.exports =
         }
         return cb(err)
       })
-    }
-
-    contains(key, cb) {
-      let fd = util.sanitize(key, this.path)
-      fs.access(fd, (err) => cb(!err))
     }
 
     content (cb) {

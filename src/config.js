@@ -44,6 +44,7 @@ let defaults = {
   lastKnownPeers: true,
   internalIP: false,
   bucketTimeout: 60 * 1000 * 5,
+  socketTimeout: 120 * 1000,
   bootstrap: [
     '5LTX64UZmqxAckP99fRNKutPQCJabbB1xMa1vuCG1Z58SJdLkGa9NkngQNSihHhBPA25evTSSMzqrPJovRLkEykSf7orstw7TCUh1DABKyn3iozxBsL3yKBq7EWz9pHdAE9Fd'
   ]
@@ -86,6 +87,7 @@ let _internalIP = new WeakMap()
 let _bootstrap = new WeakMap()
 let _path = new WeakMap()
 let _bucketTimeout = new WeakMap()
+let _socketTimeout = new WeakMap()
 class Config {
   constructor () {
   }
@@ -145,6 +147,7 @@ class Config {
       _internalIP.set(this, config.internalIP, defaults.internalIP)
       _bootstrap.set(this, config.bootstrap.slice(0))
       _bucketTimeout.set(this, config.bucketTimeout || defaults.bucketTimeout)
+      _socketTimeout.set(this, config.socketTimeout || defaults.socketTimeout)
     } catch (ex) {
       return ex
     }
@@ -187,6 +190,7 @@ class Config {
     _internalIP.set(this, defaults.internalIP)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
     _bucketTimeout.set(this, defaults.bucketTimeout)
+    _bucketTimeout.set(this, defaults.socketTimeout)
   }
 
   get blockPath () {
@@ -434,6 +438,14 @@ class Config {
     _internalIP.set(this, !!value)
     this.save()
   }
+  get socketTimeout () {
+    return _socketTimeout.get(this)
+    this.save()
+  }
+  set socketTimeout (value) {
+    _socketTimeout.set(this, +value)
+    this.save()
+  }
 
   toJSON () {
     return {
@@ -472,7 +484,8 @@ class Config {
       lastKnownPeers: this.lastKnownPeers,
       internalIP: this.internalIP,
       bucketTimeout: this.bucketTimeout,
-      bootstrap: this.bootstrap
+      bootstrap: this.bootstrap,
+      socketTimeout: this.socketTimeout
     }
   }
 }
