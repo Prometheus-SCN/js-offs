@@ -40,7 +40,7 @@
   }
 </style>
 <script>
-  export default {
+  module.exports = {
     props: ['percent', 'error']
   }
 </script>

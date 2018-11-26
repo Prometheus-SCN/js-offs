@@ -32,10 +32,16 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
-  node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
+  node.on('ready', () => {
+    log.notice(`Node ${node.peerInfo.key} is online externally at ${node.peerInfo.extIp} and port ${node.peerInfo.extPort}`)
+    log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
+  })
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
+  node.start()
 } else {
   const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard, ipcMain } = require('electron')
+  require('electron-context-menu')({ showInspectElement: false, showCopyImageAddress: false, showSaveImageAs: false })
+
   const single = !app.requestSingleInstanceLock()
 
   if (single) {
@@ -48,8 +54,12 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     node = new Node('OFFSYSTEM')
     node.on('error', log.error)
     node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
-    node.on('ready', () => log.notice(`Node ${node.peerInfo.key} is online at ${node.peerInfo.ip} and port ${node.peerInfo.port}`))
+    node.on('ready', () => {
+      log.notice(`Node ${node.peerInfo.key} is online externally at ${node.peerInfo.extIp} and port ${node.peerInfo.extPort}`)
+      log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
+    })
     node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
+    node.start()
 
     node.once('ready', () => {
       let importWin
@@ -66,12 +76,15 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           width = 530
           height = 304
         }
-        importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar: true, resizable: false })
+        importWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar: true, resizable: false, show: false })
         importWin.on('close', (e) => {
           e.preventDefault()
           importWin.hide()
         })
         importWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'import', 'index.html')}`)
+        importWin.webContents.on('did-finish-load', function() {
+          importWin.show()
+        })
         //importWin.webContents.openDevTools({})
       }
       let openImportWin = () => {
@@ -83,17 +96,13 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       }
       let exportWin
       let exporter
-      let hideExportWin = () => {
-        exportWin.hide()
-      }
 
       let createExportWin = () => {
-        exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar: true, resizable: false })
+        exportWin = new BrowserWindow({ width: 525, height: 304, icon: icon, autoHideMenuBar: true, resizable: false , show: false})
         exportWin.on('close', (e) => {
           e.preventDefault()
           exportWin.hide()
         })
-        //exportWin.on('blur', hideExportWin)
         //exportWin.webContents.openDevTools({})
       }
       let openExportWin = () => {
@@ -104,6 +113,9 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           exporter = new Exporter(exportWin.webContents, ipcMain)
         }
         exportWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'export', 'index.html')}`)
+        exportWin.webContents.on('did-finish-load', function() {
+          exportWin.show()
+        })
       }
       let connectWin
       let connector
@@ -120,14 +132,17 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           width = 800
           height = 146
         }
-        connectWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar: true, resizable: false })
+        connectWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar: true, resizable: false, show: false })
         connectWin.on('close', (e) => {
           e.preventDefault()
           connectWin.hide()
         })
 
         connectWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'connect', 'index.html')}`)
-        //connectWin.webContents.openDevTools({})
+        connectWin.webContents.on('did-finish-load', function() {
+          connectWin.show()
+        })
+        // connectWin.webContents.openDevTools({})
       }
 
       let openConnectWin = () => {
@@ -139,17 +154,20 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
             return new Promise((resolve, reject) => {
               let peer
               try {
-                let peer = Peer.fromLocator(payload)
-                node.blockRouter.connect(peer, (err) => {
-                  if (err) {
-                    return reject(err)
-                  } else {
-                    return resolve()
-                  }
-                })
+                peer = Peer.fromLocator(payload)
+                if (node.peerInfo.isEqual(peer)) {
+                 return reject(new Error('Cannot connect to self'))
+                }
               } catch (ex) {
-                reject(ex)
+                return reject(new Error('Invalid Locator'))
               }
+              node.blockRouter.connect(peer, (err) => {
+                if (err) {
+                  return reject(err)
+                } else {
+                  return resolve(true)
+                }
+              })
             })
           })
         }
@@ -157,12 +175,15 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       let configurationWin
       let configurator
       let createConfigurationWin = () => {
-        configurationWin = new BrowserWindow({ width: 900, height: 900, icon: icon, autoHideMenuBar: true })
+        configurationWin = new BrowserWindow({ width: 900, height: 900, icon: icon, autoHideMenuBar: true, show: false })
         configurationWin.on('close', (e) => {
           e.preventDefault()
           configurationWin.hide()
         })
         configurationWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'configuration', 'index.html')}`)
+        configurationWin.webContents.on('did-finish-load', function() {
+          configurationWin.show()
+        })
         // configurationWin.webContents.openDevTools({})
         let setHandler = async (payload) => {
           config[ payload.key ] = payload.value
@@ -174,7 +195,10 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           app.relaunch()
           app.exit(0)
         }
-        configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler, resetHandler)
+        let selfHandler = async () => {
+          return node.peerInfo.toLocator()
+        }
+        configurator = new Configurator(configurationWin.webContents, ipcMain, getHandler, setHandler, resetHandler, selfHandler)
       }
       let openConfigurationWin = () => {
         if (configurationWin) {
@@ -183,12 +207,12 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
           createConfigurationWin()
         }
       }
-      let copyNodeId = () => {
+      let copyLocator = () => {
         clipboard.writeText(node.peerInfo.toLocator())
       }
 
       tray = new Tray(trayIcon)
-      let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal', click: copyNodeId })
+      let nodeItem = new MenuItem({ label: `Node: ${node.peerInfo.key}`, type: 'normal'})
       let connectionsItem = new MenuItem({ label: `Connections: ${node.blockRouter.connections}`, type: 'normal' })
       let blockCapacityItem = new MenuItem({
         label: `Block Cache Capacity: ${node.blockRouter.blockCapacity}%`,
@@ -206,10 +230,11 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       let exportItem = new MenuItem({ label: 'Export', type: 'normal', click: openExportWin })
       let configItem = new MenuItem({ label: 'Configuration', type: 'normal', click: openConfigurationWin })
       let connectItem = new MenuItem({ label: 'Connect to a Peer', type: 'normal', click: openConnectWin })
+      let locatorItem = new MenuItem({ label: 'Copy Locator', type: 'normal', click: copyLocator })
       let exitItem = new MenuItem({
         label: 'Exit', type: 'normal', click: () => {
-          node.removeAllListeners()
-          node.blockRouter.removeAllListeners()
+          node.blockRouter.removeAllListeners('connection')
+          node.blockRouter.removeAllListeners('capacity')
           app.exit()
         }
       })
@@ -225,6 +250,8 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       contextMenu.append(exportItem)
       contextMenu.append(configItem)
       contextMenu.append(connectItem)
+      contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
+      contextMenu.append(locatorItem)
       contextMenu.append(new MenuItem({ label: '', type: 'separator' }))
       contextMenu.append(exitItem)
       tray.setToolTip('Off System')

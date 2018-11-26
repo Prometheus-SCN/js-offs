@@ -14,7 +14,7 @@
             </thead>
             <tbody>
               <tr v-for="(peer, index) in peers">
-                  <td>{{peer.id}}</td>
+                  <td>{{peer.key}}</td>
                   <td>{{peer.ip}}</td>
                   <td>{{peer.port}}</td>
                   <td><i class="fa fa-times-circle" aria-hidden="true" @click="remove(index)"></i></td>
@@ -58,15 +58,20 @@
   }
 </style>
 <script>
-  export default {
+  module.exports = {
     mounted () {
       this.configurator = new Configurator(ipcRenderer, (err) => {
        this.configuratorErr = err
       })
-      this.configurator.get('bootstrap')
-        .then((peers) => {
-          this.peers = peers
+      this.configurator.self()
+        .then((self) => {
+           Peer.self = Peer.fromLocator(self)
+           this.configurator.get('bootstrap')
+            .then((peers) => {
+              this.peers = peers.map((peer) => Peer.fromLocator(peer))
+            })
         })
+
       this.configurator.get('lastKnownPeers').then((lastKnownPeers) => this.lastKnownPeers = lastKnownPeers)
     },
     data () {
@@ -93,22 +98,22 @@
         }
         try {
           let newPeer = Peer.fromLocator(this.locator)
-          if (this.peers.find((peer) => peer.id === newPeer.key)) {
+          if (this.peers.find((peer) => peer.isEqual(newPeer))) {
             this.configuratorErr = "Peer already exists"
             return
           }
-          this.peers.push({id: newPeer.key, ip: newPeer.key.ip, port: newPeer.port})
-          this.configurator.set('bootstrap', this.peers). then((success) => {
+          this.peers.push(newPeer)
+          this.configurator.set('bootstrap', this.peers.map((peer) => peer.toLocator())).then((success) => {
             if (success) {
               this.configuratorErr = null
               this.configurator.get('bootstrap')
                 .then((peers) => {
-                  this.peers = peers
+                  this.peers.splice(0, this.peers.length, ...peers.map((peer) => Peer.fromLocator(peer)))
                 })
             }
           })
         } catch(ex) {
-          this.configuratorErr = ex
+          this.configuratorErr = 'Invalid Locator'
         }
       },
       check () {
@@ -121,7 +126,7 @@
             this.configuratorErr = null
             this.configurator.get('bootstrap')
               .then((peers) => {
-                this.peers = peers
+                this.peers.splice(0, this.peers.length, ...peers.map((peer) => peer.toLocator()))
               })
           }
         })

@@ -1,16 +1,17 @@
 'use strict'
 const EventEmitter = require('events').EventEmitter
 const ExpirationMap = require('./expiration-map')
-const pth = require('path')
 const mkdirp = require('mkdirp')
 const config = require('./config')
 const Block = require('./block')
+const BCW = require('./block-cache-cluster')
 const util = require('./utility')
 const fs = require('fs')
 const getSize = require('get-folder-size')
 const bs58 = require('bs58')
 const hamming = require('hamming-distance')
 const CuckooFilter = require('cuckoo-filter').CuckooFilter
+const numCPUs = Math.floor(require('os').cpus().length/3) || 1
 let _cacheInterface = new WeakMap()
 let _path = new WeakMap()
 let _dirty = new WeakMap()
@@ -22,6 +23,7 @@ let _maxSize = new WeakMap()
 let _temporary = new WeakMap()
 let _assignedTemporary = new WeakMap()
 let _gatherTemporaries = new WeakMap()
+let _bcw = new WeakMap()
 
 module.exports =
   class BlockCache extends EventEmitter {
@@ -46,9 +48,10 @@ module.exports =
       _dirty.set(this, false)
       mkdirp.sync(path)
       _path.set(this, path)
+      _bcw.set(this, new BCW(numCPUs, path, config.bucketSize, config.fingerprintSize))
       _temporary.set(this, [])
       _assignedTemporary.set(this, new ExpirationMap(config.temporaryTimeout))
-      _gatherTemporaries.set (this, () =>{
+      _gatherTemporaries.set (this, () => {
         let assignedTemporaries = _assignedTemporary.get(this)
         let temporary = _temporary.get(this)
         let temps = temporary.reduce((acc, val) => acc.concat(val), [])
@@ -118,9 +121,9 @@ module.exports =
       _sizeTimer.set(this, sizeTimer)
     }
 
-    load (keys) {
+    load (key, cb) {
       let cacheInterface = _cacheInterface.get(this)
-      return cacheInterface.load(keys)
+      return cacheInterface.load(key, cb)
     }
 
     put (block, cb) {
@@ -154,7 +157,10 @@ module.exports =
 
     remove (key, cb) {
       let fd = util.sanitize(key, this.path)
-      fs.unlink(fd, (err) => {
+      fs.unlink(fd, (err) => { // Sometimes deleted files are recognized as missing files
+        if (err && err.errno === -2 && err.code === 'ENOENT') {
+          err = undefined
+        }
         if (!err) {
           let blockSize = _blockSize.get(this)
           //approximation of size whilst dodging i/o to fs
@@ -165,20 +171,12 @@ module.exports =
       })
     }
 
-    contains(key, cb) {
-      let fd = util.sanitize(key, this.path)
-      fs.access(fd, (err) => cb(!err))
-    }
-
     content (cb) {
-      fs.readdir(this.path, (err, items) => {
-        if (err) {
-          return cb(err)
-        }
-        let gatherTemporaries = _gatherTemporaries.get(this)
-        let temps = gatherTemporaries()
-        items = items.filter((item) => !(temps.includes(item)))
-        return cb(err, items)
+      let gatherTemporaries = _gatherTemporaries.get(this)
+      let temps = gatherTemporaries()
+      let bcw = _bcw.get(this)
+      bcw.content(temps,(err, content) => {
+        cb(err, content)
       })
     }
 
@@ -187,12 +185,12 @@ module.exports =
       if (contentFilter) {
         return cb(null, contentFilter)
       } else {
-        this.content((err, content) => {
+        let gatherTemporaries = _gatherTemporaries.get(this)
+        let temps = gatherTemporaries()
+        let bcw = _bcw.get(this)
+
+        bcw.contentFilter(temps, (err, contentFilter) => {
           if (!err) {
-            contentFilter = new CuckooFilter(content.length, config.bucketSize, config.fingerprintSize)
-            for (let key of content){
-              contentFilter.add(key)
-            }
             _contentFilter.set(this, contentFilter)
           }
           return cb(err, contentFilter)
@@ -238,22 +236,15 @@ module.exports =
         return cb(new Error("Invalid usage filter"))
       }
 
-      this.content((err, content) => {
+      let gatherTemporaries = _gatherTemporaries.get(this)
+      let temps = gatherTemporaries()
+      let bcw = _bcw.get(this)
+
+      bcw.closestBlock(temps, filter, (err, key) => {
         if (err) {
           return cb(err)
         }
-        let hash = bs58.decode(key)
-        content = content.filter((key) => !filter.contains(key))
-        if(!content.length) {
-          return cb(new Error('Cache has no new blocks'))
-        }
-        let sort = (a, b)=> {
-          let hashA = bs58.decode(a)
-          let hashB = bs58.decode(b)
-          return hamming(hashA, hash) - hamming(hashB, hash)
-        }
-        content.sort(sort)
-        return this.get(content[ 0 ], cb)
+        return this.get(key, cb)
       })
     }
 

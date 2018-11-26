@@ -104,7 +104,7 @@ var Dropzone = require('./../../scripts/dropzone')
 function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-export default {
+module.exports = {
   mounted () {
     var dropzone = new Dropzone(this.$refs.dropzone , {
       url: 'http://localhost:23402/offsystem',

@@ -43,9 +43,10 @@ let defaults = {
   peerTimeout: 250,
   lastKnownPeers: true,
   internalIP: false,
+  bucketTimeout: 60 * 1000 * 5,
+  socketTimeout: 120 * 1000,
   bootstrap: [
-    {id: '8fHecNZCiTxavnfnskySbeAYCd1bcv1SAVyi1mcZqurH', ip: '73.135.22.132', port: 8200 },
-    {id: 'GgA9QwCDRgKt9tKLQVjyjnv9wvt7FaeAJo91JWWWmXuK', ip: '73.135.22.132', port: 8201 }
+    '5LTX64UZmqxAckP99fRNKutPQCJabbB1xMa1vuCG1Z58SJdLkGa9NkngQNSihHhBPA25evTSSMzqrPJovRLkEykSf7orstw7TCUh1DABKyn3iozxBsL3yKBq7EWz9pHdAE9Fd'
   ]
 }
 let _blockPath = new WeakMap()
@@ -85,6 +86,8 @@ let _lastKnownPeers = new WeakMap()
 let _internalIP = new WeakMap()
 let _bootstrap = new WeakMap()
 let _path = new WeakMap()
+let _bucketTimeout = new WeakMap()
+let _socketTimeout = new WeakMap()
 class Config {
   constructor () {
   }
@@ -143,6 +146,8 @@ class Config {
       _lastKnownPeers.set(this, config.lastKnownPeers || defaults.lastKnownPeers)
       _internalIP.set(this, config.internalIP, defaults.internalIP)
       _bootstrap.set(this, config.bootstrap.slice(0))
+      _bucketTimeout.set(this, config.bucketTimeout || defaults.bucketTimeout)
+      _socketTimeout.set(this, config.socketTimeout || defaults.socketTimeout)
     } catch (ex) {
       return ex
     }
@@ -184,6 +189,8 @@ class Config {
     _lastKnownPeers.set(this, defaults.lastKnownPeers)
     _internalIP.set(this, defaults.internalIP)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
+    _bucketTimeout.set(this, defaults.bucketTimeout)
+    _bucketTimeout.set(this, defaults.socketTimeout)
   }
 
   get blockPath () {
@@ -389,14 +396,17 @@ class Config {
     this.save()
   }
 
+  get bucketTimeout  () {
+    return _bucketTimeout.get(this)
+  }
+
+  set bucketTimeout (value) {
+    _bucketTimeout.set(this, value)
+    this.save()
+  }
+
   get bootstrap () {
-    let peers = []
-    _bootstrap.get(this).forEach((peer) => {
-      let cpy = {}
-      extend(cpy, peer)
-      peers.push(cpy)
-    })
-    return peers
+    return _bootstrap.get(this).slice(0)
   }
   set bootstrap (value) {
     if (!Array.isArray(value)){
@@ -426,6 +436,15 @@ class Config {
   }
   set internalIP(value) {
     _internalIP.set(this, !!value)
+    this.save()
+  }
+  get socketTimeout () {
+    return _socketTimeout.get(this)
+    this.save()
+  }
+  set socketTimeout (value) {
+    _socketTimeout.set(this, +value)
+    this.save()
   }
 
   toJSON () {
@@ -464,7 +483,9 @@ class Config {
       peerTimeout: this.peerTimeout,
       lastKnownPeers: this.lastKnownPeers,
       internalIP: this.internalIP,
-      bootstrap: this.bootstrap
+      bucketTimeout: this.bucketTimeout,
+      bootstrap: this.bootstrap,
+      socketTimeout: this.socketTimeout
     }
   }
 }
