@@ -90,14 +90,14 @@ if (cluster.isMaster) {
       }
     }
 
-    closestBlock (temps, filter, cb) {
+    closestBlock (temps, key, filter, cb) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'content', temps, filter})
+        worker.send({type: 'content', temps, key, filter})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'content', temps, filter, cb: cb})
+        queue.unshift({type: 'content', temps, key, filter, cb: cb})
       }
     }
     _free(threadId) {
@@ -107,20 +107,9 @@ if (cluster.isMaster) {
         if (next) {
           let pool = _pool.get(this)
           let worker = pool.get(threadId)
-          switch (next.type) {
-            case 'content':
-              _callbacks.set(worker, next.cb)
-              worker.send({type: next.type, temps: next.temps})
-              break
-            case 'contentFilter':
-              _callbacks.set(worker, next.cb)
-              worker.send({type: next.type, temps: next.temps})
-              break
-            case 'closestBlock':
-              _callbacks.set(worker, next.cb)
-              worker.send({type: next.type, temps: next.temps, filter: next.filter})
-              break
-          }
+          _callbacks.set(worker, next.cb)
+          delete next.cb
+          worker.send({...next})
         }
       })
     }
@@ -146,7 +135,7 @@ if (cluster.isMaster) {
         })
         break
       case 'closestBlock' :
-        closestBlock (msg.temps, msg.filter, (err, key) => {
+        closestBlock (msg.temps, msg.key, Buffer.from(msg.filter), (err, key) => {
           if (err) {
             return process.send({err: err})
           }
@@ -185,7 +174,7 @@ if (cluster.isMaster) {
       }
     })
   }
-  function closestBlock (temps, filter, cb) {
+  function closestBlock (temps, key, filter, cb) {
     content((err, content) => {
       if (err) {
         return cb(err)
