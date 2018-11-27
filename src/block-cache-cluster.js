@@ -42,7 +42,7 @@ if (cluster.isMaster) {
                 return cb(msg.err)
               }
               this._free(worker.id)
-              return cb(null, msg.contentFilter)
+              return cb(null, Buffer.from(msg.filter))
               break
             case 'closestBlock':
               cb = _callbacks.get(worker)
@@ -173,12 +173,16 @@ if (cluster.isMaster) {
       if (err) {
         return cb(err)
       }
-      let filter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
-      let i= -1
-      for (let i = 0; i < content.length; i++) {
-        contentFilter.add(content[i])
+      try {
+        let filter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
+        let i = -1
+        for (let i = 0; i < content.length; i++) {
+          filter.add(content[ i ])
+        }
+        return cb(err, filter.toCBOR())
+      } catch (err){
+        return cb(err)
       }
-      return cb(err, filter.toCBOR())
     })
   }
   function closestBlock (temps, filter, cb) {
