@@ -187,8 +187,8 @@ module.exports = class WritableOffStream extends Writable {
         // we need this check for temproraries because recyclers produce
         // duplicate blocks that should not be considered temporary
         if (temp) {
-          bc.contains(offBlock.key, (yes) => {
-            if(yes) {
+          bc.get(offBlock.key, (err) => {
+            if (!err) {
               return nxt()
             } else {
               temp.push(block.key)
@@ -237,8 +237,8 @@ module.exports = class WritableOffStream extends Writable {
                bc.emit('block', block)
              }
             if (temp) {
-              bc.contains(block.key, (yes) => {
-                if(yes) {
+              bc.get(block.key, (err) => {
+                if(!err) {
                   return next()
                 } else {
                   temp.push(block.key)

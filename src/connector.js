@@ -6,7 +6,7 @@ class rendererConnector extends responder {
     this.registerTopic('error', async (err) => onError(err))
   }
   async connect (locator) {
-    await this.ask('connect', locator)
+   return await this.ask('connect', locator)
   }
 }
 

@@ -8572,7 +8572,7 @@ exports.insert = function (css) {
 }
 
 },{}],6:[function(require,module,exports){
-var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".form[data-v-4dba7104] {\n  padding: 0 20px 0 20px;\n}")
+var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".form[data-v-36cd93b6] {\n  padding: 0 20px 0 20px;\n}")
 ;(function(){
 //
 //
@@ -8643,16 +8643,16 @@ var __vue__options__ = (typeof module.exports === "function"? module.exports.opt
 if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
 __vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('form',{staticClass:"form",staticStyle:{"overflow":"hidden"},on:{"submit":function($event){$event.preventDefault();return _vm.connect($event)}}},[_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Locator")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.locator),expression:"locator"}],staticClass:" input is-success",attrs:{"type":"text","placeholder":"locator","name":"locator"},domProps:{"value":(_vm.locator)},on:{"input":function($event){if($event.target.composing){ return; }_vm.locator=$event.target.value}}}),_vm._v(" "),_vm._m(0)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.locatorErr),expression:"locatorErr"}],staticClass:"help is-danger"},[_vm._v("Invalid Locator")])]),_vm._v(" "),_c('div',{staticClass:"control"},[(_vm.success)?_c('span',{staticClass:"message is-sucess"},[_vm._v("Success")]):_vm._e(),_vm._v(" "),(_vm.connectErr)?_c('span',{staticClass:"message is-danger"},[_vm._v(_vm._s(_vm.connectErr))]):_vm._e(),_vm._v(" "),_c('input',{staticClass:"button is-primary",staticStyle:{"float":"right"},attrs:{"type":"submit","disabled":_vm.connecting,"value":"Connect"}})])])])}
 __vue__options__.staticRenderFns = [function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-globe"})])}]
-__vue__options__._scopeId = "data-v-4dba7104"
+__vue__options__._scopeId = "data-v-36cd93b6"
 if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
   if (!hotAPI.compatible) return
   module.hot.accept()
   module.hot.dispose(__vueify_style_dispose__)
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-4dba7104", __vue__options__)
+    hotAPI.createRecord("data-v-36cd93b6", __vue__options__)
   } else {
-    hotAPI.reload("data-v-4dba7104", __vue__options__)
+    hotAPI.reload("data-v-36cd93b6", __vue__options__)
   }
 })()}
 },{"vue":4,"vue-hot-reload-api":3,"vueify/lib/insert-css":5}],7:[function(require,module,exports){
