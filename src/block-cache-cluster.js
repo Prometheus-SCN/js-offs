@@ -4,7 +4,7 @@ const bs58 = require('bs58')
 const fs = require('fs')
 const hamming = require('hamming-distance')
 if (cluster.isMaster) {
-  let _pool = new Map()
+  let _pool = new WeakMap()
   let _callbacks = new WeakMap()
   let _queue = new WeakMap()
   module.exports = class Pool {
@@ -13,12 +13,14 @@ if (cluster.isMaster) {
         exec: __filename,
         args: [path, bucketSize, fingerprintSize]
       })
+      _pool.set(this, new Map())
       _queue.set(this, [])
-      function spawnWorker () {
+      let spawnWorker = () => {
         let worker = cluster.fork()
-        _pool.set(worker.id, worker)
+        let pool = _pool.get(this)
+        pool.set(worker.id, worker)
         worker.once('exit', () => {
-          _pool.delete(worker.id)
+          pool.delete(worker.id)
           return spawnWorker()
         })
         worker.on('message', (msg) => {
@@ -59,7 +61,8 @@ if (cluster.isMaster) {
       }
     }
     _freeWorker() {
-      for (let [_, worker] of _pool) {
+      let pool = _pool.get(this)
+      for (let worker of pool.values()) {
         if (!_callbacks.get(worker)) {
           return worker
         }
@@ -102,7 +105,8 @@ if (cluster.isMaster) {
         let queue = _queue.get(this)
         let next = queue.pop()
         if (next) {
-          let worker = _pool.get(threadId)
+          let pool = _pool.get(this)
+          let worker = pool.get(threadId)
           switch (next.type) {
             case 'content':
               _callbacks.set(worker, next.cb)
@@ -130,24 +134,24 @@ if (cluster.isMaster) {
           if (err) {
             return process.send({err: err})
           }
-          return process.send({content})
+          return process.send({type: msg.type, content})
         })
         break
       case 'contentFilter' :
-        contentFilter(msg.temps, (err, contentFilter) => {
+        contentFilter(msg.temps, (err, filter) => {
           if (err) {
             return process.send({err: err})
           }
-          return process.send({contentFilter})
+          return process.send({type: msg.type, filter})
         })
         break
       case 'closestBlock' :
-        closestBlock (msg.temps, (err, contentFilter(msg.temps, msg.filter, (err, key) => {
+        closestBlock (msg.temps, msg.filter, (err, key) => {
           if (err) {
             return process.send({err: err})
           }
-          return process.send({key})
-        })))
+          return process.send({type: msg.type, key})
+        })
         break
     }
   })
@@ -169,12 +173,12 @@ if (cluster.isMaster) {
       if (err) {
         return cb(err)
       }
-      contentFilter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
+      let filter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
       let i= -1
       for (let i = 0; i < content.length; i++) {
         contentFilter.add(content[i])
       }
-      return cb(err, contentFilter.toCBOR())
+      return cb(err, filter.toCBOR())
     })
   }
   function closestBlock (temps, filter, cb) {

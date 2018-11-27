@@ -2,7 +2,7 @@
   <div>
     <div id="container">
       <div id="dropzone" ref="dropzone">
-        <div ref="recycle" class="recycle-container">
+        <div id="recycle" ref="recycle" @click="zoneClick" class="recycle-container">
           <a v-if="!isLoading" class="recycle-link" @click="toggleRecycler"><i class="fa fa-recycle fa-3x recycle-icon"></i></a>
           <div class="recycle-form">
             <label class="label">Enter Off System Links (comma-delimited)</label>
@@ -171,6 +171,11 @@ module.exports = {
     }
   },
   methods: {
+    zoneClick (e) {
+      if (!this.isLoading && !this.expanded && e.target === this.$refs.recycle) {
+        this.$refs.dropzone.click()
+      }
+    },
     toggleRecycler () {
       this.$refs.recycle.classList.toggle('expanded')
       this.expanded = !this.expanded
