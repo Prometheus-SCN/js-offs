@@ -186,7 +186,7 @@ if (cluster.isMaster) {
         return cb(err)
       }
       try {
-        filter = Cuckoo.fromCBOR(filter)
+        filter = CuckooFilter.fromCBOR(filter)
         let hash = bs58.decode(key)
         content = content.filter((key) => !filter.contains(key))
         if (!content.length) {
@@ -200,6 +200,7 @@ if (cluster.isMaster) {
         content.sort(sort)
         return cb(null, content[0])
       } catch(err){
+        console.log('got err', err)
         return cb(err)
       }
     })
