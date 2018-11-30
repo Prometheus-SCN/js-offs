@@ -3,6 +3,11 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const bs58 = require('bs58')
 const fs = require('fs')
 const hamming = require('hamming-distance')
+type = {
+  closestBlock: 'closestBlock',
+  contentFilter: 'contentFilter',
+  content: 'content'
+}
 if (cluster.isMaster) {
   let _pool = new WeakMap()
   let _callbacks = new WeakMap()
@@ -26,7 +31,7 @@ if (cluster.isMaster) {
         worker.on('message', (msg) => {
           let cb
           switch (msg.type) {
-            case 'content':
+            case type.content:
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
@@ -35,7 +40,7 @@ if (cluster.isMaster) {
               this._free(worker.id)
               return cb(null, msg.content)
               break
-            case 'contentFilter':
+            case type.contentFilter:
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
@@ -44,7 +49,7 @@ if (cluster.isMaster) {
               this._free(worker.id)
               return cb(null, Buffer.from(msg.filter))
               break
-            case 'closestBlock':
+            case type.closestBlock:
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
@@ -72,10 +77,10 @@ if (cluster.isMaster) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'content', temps})
+        worker.send({type: type.content, temps})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'content', temps, cb: cb})
+        queue.unshift({type: type.content, temps, cb: cb})
       }
     }
 
@@ -83,10 +88,10 @@ if (cluster.isMaster) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'contentFilter', temps})
+        worker.send({type: type.contentFilter, temps})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'contentFilter', temps, cb: cb})
+        queue.unshift({type: type.contentFilter, temps, cb: cb})
       }
     }
 
@@ -94,10 +99,10 @@ if (cluster.isMaster) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'content', temps, key, filter})
+        worker.send({type: type.closestBlock, temps, key, filter})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'content', temps, key, filter, cb: cb})
+        queue.unshift({type: type.closestBlock, temps, key, filter, cb: cb})
       }
     }
     _free(threadId) {
@@ -118,7 +123,7 @@ if (cluster.isMaster) {
   var workerData = { path: process.argv[2], bucketSize: +process.argv[3], fingerprintSize: +process.argv[4]}
   process.on('message', (msg) => {
     switch(msg.type) {
-      case 'content' :
+      case type.content :
         content(msg.temps, (err, content) => {
           if (err) {
             return process.send({err: err})
@@ -126,7 +131,7 @@ if (cluster.isMaster) {
           return process.send({type: msg.type, content})
         })
         break
-      case 'contentFilter' :
+      case type.contentFilter :
         contentFilter(msg.temps, (err, filter) => {
           if (err) {
             return process.send({err: err})
@@ -134,11 +139,12 @@ if (cluster.isMaster) {
           return process.send({type: msg.type, filter})
         })
         break
-      case 'closestBlock' :
+      case type.closestBlock :
         closestBlock (msg.temps, msg.key, Buffer.from(msg.filter), (err, key) => {
           if (err) {
             return process.send({err: err})
           }
+          console.log('key', key)
           return process.send({type: msg.type, key})
         })
         break
@@ -175,7 +181,7 @@ if (cluster.isMaster) {
     })
   }
   function closestBlock (temps, key, filter, cb) {
-    content((err, content) => {
+    content(temps, (err, content) => {
       if (err) {
         return cb(err)
       }

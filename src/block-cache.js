@@ -240,7 +240,7 @@ module.exports =
       let temps = gatherTemporaries()
       let bcw = _bcw.get(this)
 
-      bcw.closestBlock(temps, filter, (err, key) => {
+      bcw.closestBlock(temps, key, filter, (err, key) => {
         if (err) {
           return cb(err)
         }
