@@ -154,7 +154,7 @@ module.exports = class RPC extends EventEmitter {
         responsepb.comType = Direction.Response
         responsepb.from = Peer.self.toJSON()
         let type = randompb.type
-        rpcInterface.closestBlock(pb.from.id, Cuckoo.fromCBOR(randompb.filter), randompb.type, (err, block)=> {
+        rpcInterface.closestBlock(pb.from.id, randompb.filter, randompb.type, (err, block)=> {
           if (err) {
             console.log('it failed')
             console.log(err)
