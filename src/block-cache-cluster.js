@@ -144,7 +144,6 @@ if (cluster.isMaster) {
           if (err) {
             return process.send({err: err})
           }
-          console.log('key', key)
           return process.send({type: msg.type, key})
         })
         break
@@ -169,7 +168,7 @@ if (cluster.isMaster) {
         return cb(err)
       }
       try {
-        let filter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
+        let filter = new CuckooFilter(content.length + Math.ceil(content.length * .10), workerData.bucketSize, workerData.fingerprintSize)
         let i = -1
         for (let i = 0; i < content.length; i++) {
           filter.add(content[ i ])
@@ -200,7 +199,6 @@ if (cluster.isMaster) {
         content.sort(sort)
         return cb(null, content[0])
       } catch(err){
-        console.log('got err', err)
         return cb(err)
       }
     })
