@@ -35,7 +35,7 @@ if (cluster.isMaster) {
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
-                return cb(msg.err)
+                return cb(new Error(msg.err))
               }
               this._free(worker.id)
               return cb(null, msg.content)
@@ -44,7 +44,7 @@ if (cluster.isMaster) {
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
-                return cb(msg.err)
+                return cb(new Error(msg.err))
               }
               this._free(worker.id)
               return cb(null, Buffer.from(msg.filter))
@@ -53,7 +53,7 @@ if (cluster.isMaster) {
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
-                return cb(msg.err)
+                return cb(new Error(msg.err))
               }
               this._free(worker.id)
               return cb(null, msg.key)
@@ -126,7 +126,7 @@ if (cluster.isMaster) {
       case type.content :
         content(msg.temps, (err, content) => {
           if (err) {
-            return process.send({err: err})
+            return process.send({type: msg.type, err: err.message})
           }
           return process.send({type: msg.type, content})
         })
@@ -134,7 +134,7 @@ if (cluster.isMaster) {
       case type.contentFilter :
         contentFilter(msg.temps, (err, filter) => {
           if (err) {
-            return process.send({err: err})
+            return process.send({type: msg.type, err: err.message})
           }
           return process.send({type: msg.type, filter})
         })
@@ -142,7 +142,7 @@ if (cluster.isMaster) {
       case type.closestBlock :
         closestBlock (msg.temps, msg.key, Buffer.from(msg.filter), (err, key) => {
           if (err) {
-            return process.send({err: err})
+            return process.send({type: msg.type, err: err.message})
           }
           return process.send({type: msg.type, key})
         })

@@ -24,7 +24,7 @@ let defaults = {
   descriptorPad: 32,
   scale: 2,
   filterSize: 20000,
-  fingerprintSize: 8,
+  fingerprintSize: 4,
   hitBoxSize: 100,
   bucketSize: 4,
   httpPort: 23402,
@@ -126,7 +126,7 @@ class Config {
       _descriptorPad.set(this, config.descriptorPad)
       _scale.set(this, config.scale)
       _filterSize.set(this, config.filterSize)
-      _fingerprintSize.set(this, config.fingerprintSize)
+      _fingerprintSize.set(this, config.fingerprintSize > 4 ? 4 : config.fingerprintSize)
       _hitBoxSize.set(this, config.hitBoxSize)
       _bucketSize.set(this, config.bucketSize)
       _httpPort.set(this, config.httpPort)
