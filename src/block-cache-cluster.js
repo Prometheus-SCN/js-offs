@@ -26,6 +26,10 @@ if (cluster.isMaster) {
         pool.set(worker.id, worker)
         worker.once('exit', () => {
           pool.delete(worker.id)
+          let cb = _callbacks.get(this)
+          if (cb) {
+            return cb(new Error('Worker Exited Unexpectedly'))
+          }
           return spawnWorker()
         })
         worker.on('message', (msg) => {
@@ -120,7 +124,7 @@ if (cluster.isMaster) {
     }
   }
 } else {
-  var workerData = { path: process.argv[2], bucketSize: +process.argv[3], fingerprintSize: +process.argv[4]}
+  var workerData = {path: process.argv[2], bucketSize: +process.argv[3], fingerprintSize: +process.argv[4]}
   process.on('message', (msg) => {
     switch(msg.type) {
       case type.content :
@@ -173,6 +177,7 @@ if (cluster.isMaster) {
         for (let i = 0; i < content.length; i++) {
           filter.add(content[ i ])
         }
+        let filter2 = CuckooFilter.fromCBOR(filter.toCBOR())
         return cb(err, filter.toCBOR())
       } catch (err){
         return cb(err)

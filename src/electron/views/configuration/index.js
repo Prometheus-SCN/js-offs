@@ -16302,7 +16302,7 @@ exports.insert = function (css) {
 }
 
 },{}],8:[function(require,module,exports){
-var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".main[data-v-f3da1f96] {\n  min-width: 800px;\n}")
+var __vueify_style_dispose__ = require("vueify/lib/insert-css").insert(".main[data-v-2b25cc58] {\n  min-width: 800px;\n}")
 ;(function(){
 //
 //
@@ -16446,16 +16446,16 @@ var __vue__options__ = (typeof module.exports === "function"? module.exports.opt
 if (__vue__options__.functional) {console.error("[vueify] functional components are not supported and should be defined in plain js files using render functions.")}
 __vue__options__.render = function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',[_c('div',{staticClass:"columns"},[_c('div',{staticClass:"column"}),_vm._v(" "),_c('div',{staticClass:"column main"},[(_vm.peers.length)?_c('table',{staticClass:"table is-bordered is-striped is-narrow is-hoverable is-fullwidth"},[_vm._m(0),_vm._v(" "),_c('tbody',_vm._l((_vm.peers),function(peer,index){return _c('tr',[_c('td',[_vm._v(_vm._s(peer.key))]),_vm._v(" "),_c('td',[_vm._v(_vm._s(peer.ip))]),_vm._v(" "),_c('td',[_vm._v(_vm._s(peer.port))]),_vm._v(" "),_c('td',[_c('i',{staticClass:"fa fa-times-circle",attrs:{"aria-hidden":"true"},on:{"click":function($event){_vm.remove(index)}}})])])}))]):_vm._e(),_vm._v(" "),_c('div',[_c('label',{staticClass:"checkbox"},[_vm._v("\n            Bootstrap to last known connections?\n            "),_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.lastKnownPeers),expression:"lastKnownPeers"}],attrs:{"type":"checkbox"},domProps:{"checked":Array.isArray(_vm.lastKnownPeers)?_vm._i(_vm.lastKnownPeers,null)>-1:(_vm.lastKnownPeers)},on:{"click":_vm.check,"change":function($event){var $$a=_vm.lastKnownPeers,$$el=$event.target,$$c=$$el.checked?(true):(false);if(Array.isArray($$a)){var $$v=null,$$i=_vm._i($$a,$$v);if($$el.checked){$$i<0&&(_vm.lastKnownPeers=$$a.concat([$$v]))}else{$$i>-1&&(_vm.lastKnownPeers=$$a.slice(0,$$i).concat($$a.slice($$i+1)))}}else{_vm.lastKnownPeers=$$c}}}})])]),_vm._v(" "),_c('hr'),_vm._v(" "),_c('form',{on:{"submit":function($event){$event.preventDefault();return _vm.add($event)}}},[_c('div',{staticClass:"column"},[_c('div',{staticClass:"field"},[_c('label',{staticClass:"label"},[_vm._v("Locator")]),_vm._v(" "),_c('div',{staticClass:"control has-icons-left has-icons-right"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.locator),expression:"locator"}],staticClass:" input is-success",attrs:{"type":"text","placeholder":"locator","name":"locator"},domProps:{"value":(_vm.locator)},on:{"input":function($event){if($event.target.composing){ return; }_vm.locator=$event.target.value}}}),_vm._v(" "),_vm._m(1)]),_vm._v(" "),_c('p',{directives:[{name:"show",rawName:"v-show",value:(_vm.locatorErr),expression:"locatorErr"}],staticClass:"help is-danger"},[_vm._v("Invalid Locator")])]),_vm._v(" "),_c('div',{staticClass:"control"},[(_vm.success)?_c('span',{staticClass:"message is-sucess"},[_vm._v("Success")]):_vm._e(),_vm._v(" "),(_vm.configuratorErr)?_c('span',{staticClass:"message is-danger"},[_vm._v(_vm._s(_vm.configuratorErr))]):_vm._e(),_vm._v(" "),_c('input',{staticClass:"button is-primary",staticStyle:{"float":"right"},attrs:{"type":"submit","value":"Add"}})])])])]),_vm._v(" "),_c('div',{staticClass:"column"})])])}
 __vue__options__.staticRenderFns = [function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('thead',[_c('tr',[_c('td',[_vm._v("Node ID")]),_vm._v(" "),_c('td',[_vm._v("IP Address")]),_vm._v(" "),_c('td',[_vm._v("Port")]),_vm._v(" "),_c('td',[_vm._v("Remove")])])])},function render () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('span',{staticClass:"icon is-small is-left"},[_c('i',{staticClass:"fa fa-globe"})])}]
-__vue__options__._scopeId = "data-v-f3da1f96"
+__vue__options__._scopeId = "data-v-2b25cc58"
 if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   hotAPI.install(require("vue"), true)
   if (!hotAPI.compatible) return
   module.hot.accept()
   module.hot.dispose(__vueify_style_dispose__)
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-f3da1f96", __vue__options__)
+    hotAPI.createRecord("data-v-2b25cc58", __vue__options__)
   } else {
-    hotAPI.reload("data-v-f3da1f96", __vue__options__)
+    hotAPI.reload("data-v-2b25cc58", __vue__options__)
   }
 })()}
 },{"vue":6,"vue-hot-reload-api":4,"vueify/lib/insert-css":7}],9:[function(require,module,exports){
@@ -16545,9 +16545,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   module.hot.accept()
   module.hot.dispose(__vueify_style_dispose__)
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-4355633d", __vue__options__)
+    hotAPI.createRecord("data-v-3533a55c", __vue__options__)
   } else {
-    hotAPI.reload("data-v-4355633d", __vue__options__)
+    hotAPI.reload("data-v-3533a55c", __vue__options__)
   }
 })()}
 },{"vue":6,"vue-hot-reload-api":4,"vueify/lib/insert-css":7}],10:[function(require,module,exports){
@@ -16714,9 +16714,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-65905bb5", __vue__options__)
+    hotAPI.createRecord("data-v-23566114", __vue__options__)
   } else {
-    hotAPI.reload("data-v-65905bb5", __vue__options__)
+    hotAPI.reload("data-v-23566114", __vue__options__)
   }
 })()}
 },{"vue":6,"vue-hot-reload-api":4}],12:[function(require,module,exports){
@@ -16933,9 +16933,9 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   module.hot.accept()
   module.hot.dispose(__vueify_style_dispose__)
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-8c2f54fc", __vue__options__)
+    hotAPI.createRecord("data-v-77ae5ae1", __vue__options__)
   } else {
-    hotAPI.reload("data-v-8c2f54fc", __vue__options__)
+    hotAPI.reload("data-v-77ae5ae1", __vue__options__)
   }
 })()}
 },{"vue":6,"vue-hot-reload-api":4,"vueify/lib/insert-css":7}]},{},[10]);

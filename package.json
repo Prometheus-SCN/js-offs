@@ -91,7 +91,7 @@
     "cbor-js": "^0.1.0",
     "collect-stream": "^1.2.1",
     "commander": "2.19.0",
-    "cuckoo-filter": "1.1.1",
+    "cuckoo-filter": "^1.1.3",
     "electron-context-menu": "^0.10.1",
     "electron-ipc-responder": "1.0.4",
     "end-of-stream": "^1.4.1",

@@ -190,7 +190,6 @@ module.exports =
         let gatherTemporaries = _gatherTemporaries.get(this)
         let temps = gatherTemporaries()
         let bcw = _bcw.get(this)
-
         bcw.contentFilter(temps, (err, contentFilter) => {
           if (!err) {
             _contentFilter.set(this, contentFilter)

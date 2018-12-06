@@ -145,7 +145,6 @@ module.exports = class RPC extends EventEmitter {
     }
     let randomResponse = (pb, socket) => {
       try {
-        console.log('starting random response')
         let randompb = RandomRequest.decode(pb.payload)
         sanitizeRandomRequest(randompb)
         let responsepb = {}
@@ -156,13 +155,10 @@ module.exports = class RPC extends EventEmitter {
         let type = randompb.type
         rpcInterface.closestBlock(pb.from.id, randompb.filter, randompb.type, (err, block)=> {
           if (err) {
-            console.log('it failed')
-            console.log(err)
             responsepb.status = Status.Failure
             let response = new RPCProto.RPC(responsepb).encode().toBuffer()
             socket.end(response)
           } else {
-            console.log('it succeeded', block.key)
             let randompb = { type: type, value: block.data }
             let payload = new RandomResponse(randompb).encode().toBuffer()
             responsepb.payload = payload
@@ -172,7 +168,6 @@ module.exports = class RPC extends EventEmitter {
           }
         })
       } catch (err) {
-        console.log('something else failed')
         this.emit('error', err)
       }
     }
