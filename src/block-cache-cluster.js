@@ -130,7 +130,7 @@ if (cluster.isMaster) {
       case type.content :
         content(msg.temps, (err, content) => {
           if (err) {
-            return process.send({type: msg.type, err: err.message})
+            return process.send({type: msg.type, err: err.message || err})
           }
           return process.send({type: msg.type, content})
         })
@@ -138,7 +138,7 @@ if (cluster.isMaster) {
       case type.contentFilter :
         contentFilter(msg.temps, (err, filter) => {
           if (err) {
-            return process.send({type: msg.type, err: err.message})
+            return process.send({type: msg.type, err: err.message || err})
           }
           return process.send({type: msg.type, filter})
         })
@@ -146,7 +146,7 @@ if (cluster.isMaster) {
       case type.closestBlock :
         closestBlock (msg.temps, msg.key, Buffer.from(msg.filter), (err, key) => {
           if (err) {
-            return process.send({type: msg.type, err: err.message})
+            return process.send({type: msg.type, err: err.message || err})
           }
           return process.send({type: msg.type, key})
         })
