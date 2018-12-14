@@ -228,7 +228,7 @@ class Config {
     if (value < 300) {
       throw new TypeError("Block Cache Size Is Too Small")
     }
-    if (value > (1000000 * mb)) {
+    if (value > (549755813 * mb)) {
       throw new TypeError("Block Cache Size Is Too Large")
     }
     _blockCacheSize.set(this, value)
@@ -246,7 +246,7 @@ class Config {
     if (value < 300) {
       throw new TypeError("Mini Block Cache Size Is Too Small")
     }
-    if (value > (1000000 * mb)) {
+    if (value > (42949672 * mb)) {
       throw new TypeError("Mini Block Cache Size Is Too Large")
     }
     _miniBlockCacheSize.set(this, value)
@@ -264,7 +264,7 @@ class Config {
     if (value < 300) {
       throw new TypeError("Nano Block Cache Size Is Too Small")
     }
-    if (value > (1000000 * mb)) {
+    if (value > (584115 * mb)) {
       throw new TypeError("Nano Block Cache Size Is Too Large")
     }
     _nanoBlockCacheSize.set(this, value)

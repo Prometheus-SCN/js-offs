@@ -18,7 +18,7 @@
           <div class="field">
             <label class="label">Block Cache Storage Size(MB)</label>
             <div class="control has-icons-left has-icons-right">
-              <input class="input is-success" type="text" v-validate="{ required: true, numeric: true, max_value:1000000 , min_value: 300 }" v-model="blockCacheSize" name="blockCacheSize">
+              <input class="input is-success" type="text" v-validate="{ required: true, numeric: true, max_value: 549755813, min_value: 300 }" v-model="blockCacheSize" name="blockCacheSize">
               <span class="icon is-small is-left">
                 <i class="fa fa-hdd-o" aria-hidden="true"></i>
               </span>
@@ -28,7 +28,7 @@
           <div class="field">
             <label class="label">Mini Block Cache Storage Size(MB)</label>
             <div class="control has-icons-left has-icons-right">
-              <input class="input is-success" type="text" v-model="miniBlockCacheSize" v-validate="{ required: true, numeric: true, max_value:1000000 , min_value: 300 }"  name="miniBlockCacheSize">
+              <input class="input is-success" type="text" v-model="miniBlockCacheSize" v-validate="{ required: true, numeric: true, max_value: 42949672, min_value: 300 }"  name="miniBlockCacheSize">
               <span class="icon is-small is-left">
                 <i class="fa fa-hdd-o" aria-hidden="true"></i>
               </span>
@@ -38,7 +38,7 @@
           <div class="field">
             <label class="label">Nano Block Cache Storage Size(MB)</label>
             <div class="control has-icons-left has-icons-right">
-              <input class="input is-success" type="text" v-model="nanoBlockCacheSize" v-validate="{ required: true, numeric: true, max_value:1000000 , min_value: 300 }" name="nanoBlockCacheSize">
+              <input class="input is-success" type="text" v-model="nanoBlockCacheSize" v-validate="{ required: true, numeric: true, max_value: 584115, min_value: 300 }" name="nanoBlockCacheSize">
               <span class="icon is-small is-left">
                 <i class="fa fa-hdd-o" aria-hidden="true"></i>
               </span>
