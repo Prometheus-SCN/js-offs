@@ -200,14 +200,40 @@ module.exports = class Scheduler extends EventEmitter {
           let node = nodes[ i ]
           rpc.ping(node.id, next)
         } else {
-          let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
-          _maintenanceJob.set(this, maintenanceJob)
+          rebootstrap(() => {
+            let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
+            _maintenanceJob.set(this, maintenanceJob)
+          })
         }
       }
       checkIP(next)
     }
     let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
     _maintenanceJob.set(this, maintenanceJob)
+    let rebootstrap = (cb) => {
+      try {
+        let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer))
+          .filter((peer) => !peer.isEqual(Peer.self) && !bucket.contains(peer.id))
+      } catch (err) {
+        this.emit(err)
+        return cb()
+      }
+      let i = -1
+      let next = (err) => {
+        if (err) {
+          this.emit('error', err)
+        }
+        i++
+        if (i < bootstrap.length) {
+          let peer = bootstrap[ i ]
+          rpc.connect(peer, next)
+        } else {
+          rpc.findNode(Peer.self.id, () => {})
+          return cb()
+        }
+      }
+      next()
+    }
     let checkIP = (cb) => {
       let intIP
       let extIP
