@@ -214,25 +214,26 @@ module.exports = class Scheduler extends EventEmitter {
       try {
         let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer))
           .filter((peer) => !peer.isEqual(Peer.self) && !bucket.contains(peer.id))
+
+        let i = -1
+        let next = (err) => {
+          if (err) {
+            this.emit('error', err)
+          }
+          i++
+          if (i < bootstrap.length) {
+            let peer = bootstrap[ i ]
+            rpc.connect(peer, next)
+          } else {
+            rpc.findNode(Peer.self.id, () => {})
+            return cb()
+          }
+        }
+        next()
       } catch (err) {
         this.emit(err)
         return cb()
       }
-      let i = -1
-      let next = (err) => {
-        if (err) {
-          this.emit('error', err)
-        }
-        i++
-        if (i < bootstrap.length) {
-          let peer = bootstrap[ i ]
-          rpc.connect(peer, next)
-        } else {
-          rpc.findNode(Peer.self.id, () => {})
-          return cb()
-        }
-      }
-      next()
     }
     let checkIP = (cb) => {
       let intIP
