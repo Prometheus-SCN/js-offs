@@ -7,6 +7,8 @@ const trayIcon = path.join(__dirname, 'electron', 'images', (/^darwin/.test(proc
 const Exporter = require('./exporter').mainExporter
 const Connector = require('./connector').mainConnector
 const Configurator = require('./configurator').mainConfigurator
+const Updator = require('./updator').mainUpdator
+const {autoUpdater} = require("electron-updater")
 const Peer = require('./peer')
 const bs58 = require('bs58')
 const cmd = require('./command').parse()
@@ -304,8 +306,24 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       })
     })
   }
+  function createUpdateWindow () {
+    let updateWin = new BrowserWindow({ width: 425, height: 120, icon: icon, autoHideMenuBar: true, resizable: true , show: false})
+    let onComplete = () => {
+      updateWin.close()
+      createTray()
+    }
+    let updator = new Updator(updateWin.webContents, ipcMain, autoUpdater, onComplete)
+    updateWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'update', 'index.html')}`)
+    updateWin.webContents.on('did-finish-load', function() {
+      updateWin.show()
+      updator.checkForUpdatesAndNotify()
+    })
+    //updateWin.webContents.openDevTools({})
+  }
 
-  app.on('ready', createTray)
+  app.on('ready', () =>{
+    createUpdateWindow()
+  })
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the

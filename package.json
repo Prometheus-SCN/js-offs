@@ -16,21 +16,16 @@
     "build-win": "npm run compile-vue && electron-builder --win",
     "build-mac": "npm run compile-vue && electron-builder --mac",
     "build-docker": "npm run build && sudo docker build -t offs .",
+    "publish": "build -p onTag",
     "docker": "sudo docker run -a STDERR -a STDOUT -p 23402:23402  -p 8200:8200 --name offsystem offs "
   },
   "author": "Prometheus <contact@prometheus.network>",
   "license": "GPL-3.0",
-  "repository": "https://github.com/Prometheus-SCN/js-offs.git",
+  "repository": "https://github.com/vijayee/js-offs",
   "build": {
     "productName": "offs",
     "appId": "com.prometheus.offsystem",
     "publish": "github",
-    "extraFiles": [
-      {
-        "from": "LICENSE.md",
-        "to": "license.txt"
-      }
-    ],
     "directories": {
       "output": "dist"
     },
@@ -75,6 +70,12 @@
             "armv7l",
             "arm64"
           ]
+        }
+      ],
+      "extraFiles": [
+        {
+          "from": "LICENSE.md",
+          "to": "license.txt"
         }
       ],
       "vendor": "Prometheus",
