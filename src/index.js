@@ -27,9 +27,9 @@ const log = require('js-logging')
       emergency: 'magenta'
     }
   })
+
 let win
 let node
-
 if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
@@ -39,7 +39,10 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
   })
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
-  node.start()
+  autoUpdater.on('update-not-available', () => {
+    node.start()
+  })
+  autoUpdater.checkForUpdatesAndNotify()
 } else {
   const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard, ipcMain } = require('electron')
   require('electron-context-menu')({ showInspectElement: false, showCopyImageAddress: false, showSaveImageAs: false })

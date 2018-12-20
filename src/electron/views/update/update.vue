@@ -18,6 +18,12 @@
                 <progressbar :error="error" :percent="percent"></progressbar>
               </td>
             </tr>
+            <tr>
+              <td class="data">
+                <strong class="total" v-if="total">{{transferred}}/{{total}}</strong>
+                <strong class="rate" v-if="rate">{{rate}}b/s</strong>
+              </td>
+            </tr>
           </table>
         </div>
       </div>
@@ -34,7 +40,7 @@
     min-width: 100px;
     height: 100px;
     width: 100px;
-    background-color: #f4d8c0;
+    background-color: #e1eaf1;
     border-radius: 10px;
     margin: 5px;
   }
@@ -90,6 +96,16 @@
   .error {
     color: red;
   }
+  .data {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .rate {
+    justify-self: end;
+  }
+  .total {
+    justify-self: start;
+  }
 </style>
 <script>
   let progressbar = require('../export/progressbar.vue')
@@ -101,7 +117,10 @@
         percent: 0,
         icon: '../../images/off-logo-lettered.svg',
         status: null,
-        updator: null
+        updator: null,
+        transferred: 0,
+        total: 0,
+        rate: 0
       }
     },
     mounted () {
@@ -112,11 +131,13 @@
         this.status = 'Checking for update'
       }
       let onUpdateAvailable = (info) => {
-        console.log(info)
         this.status = 'Update Found'
       }
       let onDownloadProgress = (info) => {
         this.percent = info.percent
+        this.transferred = info.transferred
+        this.total = info.total
+        this.rate = info.bytesPerSecond
       }
       let onUpdateNotAvailable = () =>{
         this.status = 'Everything Up To Date'

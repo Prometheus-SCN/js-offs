@@ -22,31 +22,27 @@ class mainUpdator extends responder {
       this.tell('checking-for-update')
     })
     autoUpdater.on('update-available', (info) => {
-      console.log(info)
       this.tell('update-available', info)
       autoUpdater.downloadUpdate()
     })
     autoUpdater.on('update-not-available', (info) => {
-      console.log(info)
       this.tell('update-not-available', info)
       setTimeout(onComplete, 2000)
     })
     autoUpdater.on('error', (err) => {
       this.tell('error', err)
+      setTimeout(onComplete, 2000)
     })
     autoUpdater.on('download-progress', (progressObj) => {
-      console.log(progressObj)
       this.tell('download-progress', progressObj)
     })
     autoUpdater.on('update-downloaded', (info) => {
-      console.log(info)
       this.tell('update-downloaded', info)
-      //setTimeout((() => autoUpdater.quitAndInstall()), 6000)
+      setTimeout((() => autoUpdater.quitAndInstall()), 6000)
     })
   }
   checkForUpdatesAndNotify () {
     let autoUpdater = _autoUpdater.get(this)
-    console.log('checking stuff')
     autoUpdater.checkForUpdatesAndNotify()
   }
 }

@@ -14050,7 +14050,7 @@ if (module.hot) {(function () {  var hotAPI = require("vue-hot-reload-api")
   if (!module.hot.data) {
     hotAPI.createRecord("data-v-cac42708", __vue__options__)
   } else {
-    hotAPI.reload("data-v-cac42708", __vue__options__)
+    hotAPI.rerender("data-v-cac42708", __vue__options__)
   }
 })()}
 },{"vue":6,"vue-hot-reload-api":5,"vueify/lib/insert-css":7}]},{},[9]);
