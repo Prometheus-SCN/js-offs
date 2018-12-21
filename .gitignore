@@ -17,4 +17,4 @@ js-offs-darwin-x64.zip
 js-offs-linux-x64.zip
 js-offs-linux-ia32.zip
 /dist
-
+/src/electron/views/**/index.js

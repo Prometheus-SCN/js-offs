@@ -3,13 +3,13 @@
 <hr>
 
 # Owner Free File System in Javascript
-## Status: Rebooting
 is a peer-to-peer distributed file system in which all shared files are represented by randomized multi-used data blocks. Instead of anonymizing the network, the data blocks are anonymized and therefore, only data garbage is ever exchanged and stored.
 ## Purpose
 The OFF System is the first P2P system designed to halt copyright infringement by facilitating legal activity. It protects each peers by removing the user's capability of breaking the law.  The unique feature of this system is, that it stores all of its internal data in a multi-use randomized block format. In other words: there is not a one to one mapping between a stored block and its use in a retrieved file. Each stored block is simultaneously used as a part of many different files. Individually, however, each block is nothing but arbitrary digital white noise data. This gives files stored redundancy, permanence, privacy, and freedom from censorship through a single simple mathematical means. This creates a universal public storage cloud with the same properties as national public radio or public broadcasting.
 ## Accessor's Rights First
 Very much like a physical key, an off-system URL grants acccess to content to anyone with the URL. Privacy preservation is determined by one's ability to keep one's links private as access is irrevocable. There are many effective solutions for keeping short strings of text private and the off system reduces the total domain of data security down to managing control over short strings of text rather than large encrypted files. Therefore, abstractions can be written to interface with the off-system to receive, encrypt, and redistribute urls.
-## v3
+
+## Feature Improvements
 This can be considered a completely redeveloped version of the off-system and is not compatible with older versions. This version features the following:
 * New URL format
 * New REST API's for storing and accessing content

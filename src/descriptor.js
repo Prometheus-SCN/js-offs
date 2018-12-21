@@ -39,10 +39,7 @@ module.exports = class Descriptor {
         throw new TypeError('Invalid Tuple')
       }
       let data = _data.get(this)
-      for (let block of blocks) {
-        //TODO Store files to keep local?
-        data = Buffer.concat([ data, block.hash ])
-      }
+      data = blocks.reduce(((acc, block) => Buffer.concat([ acc, block.hash ])), data)
       _data.set(this, data)
       let tuppleBytes = _tuppleBytes.get(this)
       if (data.length > tuppleBytes) {

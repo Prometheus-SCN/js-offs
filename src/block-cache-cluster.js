@@ -3,6 +3,11 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const bs58 = require('bs58')
 const fs = require('fs')
 const hamming = require('hamming-distance')
+type = {
+  closestBlock: 'closestBlock',
+  contentFilter: 'contentFilter',
+  content: 'content'
+}
 if (cluster.isMaster) {
   let _pool = new WeakMap()
   let _callbacks = new WeakMap()
@@ -21,34 +26,38 @@ if (cluster.isMaster) {
         pool.set(worker.id, worker)
         worker.once('exit', () => {
           pool.delete(worker.id)
+          let cb = _callbacks.get(this)
+          if (cb) {
+            return cb(new Error('Worker Exited Unexpectedly'))
+          }
           return spawnWorker()
         })
         worker.on('message', (msg) => {
           let cb
           switch (msg.type) {
-            case 'content':
+            case type.content:
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
-                return cb(msg.err)
+                return cb(new Error(msg.err))
               }
               this._free(worker.id)
               return cb(null, msg.content)
               break
-            case 'contentFilter':
+            case type.contentFilter:
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
-                return cb(msg.err)
+                return cb(new Error(msg.err))
               }
               this._free(worker.id)
-              return cb(null, msg.contentFilter)
+              return cb(null, Buffer.from(msg.filter))
               break
-            case 'closestBlock':
+            case type.closestBlock:
               cb = _callbacks.get(worker)
               _callbacks.set(worker, undefined)
               if (msg.err) {
-                return cb(msg.err)
+                return cb(new Error(msg.err))
               }
               this._free(worker.id)
               return cb(null, msg.key)
@@ -72,10 +81,10 @@ if (cluster.isMaster) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'content', temps})
+        worker.send({type: type.content, temps})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'content', temps, cb: cb})
+        queue.unshift({type: type.content, temps, cb: cb})
       }
     }
 
@@ -83,21 +92,21 @@ if (cluster.isMaster) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'contentFilter', temps})
+        worker.send({type: type.contentFilter, temps})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'contentFilter', temps, cb: cb})
+        queue.unshift({type: type.contentFilter, temps, cb: cb})
       }
     }
 
-    closestBlock (temps, filter, cb) {
+    closestBlock (temps, key, filter, cb) {
       let worker = this._freeWorker()
       if (worker) {
         _callbacks.set(worker, cb)
-        worker.send({type: 'content', temps, filter})
+        worker.send({type: type.closestBlock, temps, key, filter})
       } else {
         let queue = _queue.get(this)
-        queue.unshift({type: 'content', temps, filter, cb: cb})
+        queue.unshift({type: type.closestBlock, temps, key, filter, cb: cb})
       }
     }
     _free(threadId) {
@@ -107,48 +116,37 @@ if (cluster.isMaster) {
         if (next) {
           let pool = _pool.get(this)
           let worker = pool.get(threadId)
-          switch (next.type) {
-            case 'content':
-              _callbacks.set(worker, next.cb)
-              worker.send({type: next.type, temps: next.temps})
-              break
-            case 'contentFilter':
-              _callbacks.set(worker, next.cb)
-              worker.send({type: next.type, temps: next.temps})
-              break
-            case 'closestBlock':
-              _callbacks.set(worker, next.cb)
-              worker.send({type: next.type, temps: next.temps, filter: next.filter})
-              break
-          }
+          _callbacks.set(worker, next.cb)
+          delete next.cb
+          worker.send({...next})
         }
       })
     }
   }
 } else {
-  var workerData = { path: process.argv[2], bucketSize: +process.argv[3], fingerprintSize: +process.argv[4]}
+  var workerData = {path: process.argv[2], bucketSize: +process.argv[3], fingerprintSize: +process.argv[4]}
   process.on('message', (msg) => {
     switch(msg.type) {
-      case 'content' :
+      case type.content :
         content(msg.temps, (err, content) => {
           if (err) {
-            return process.send({err: err})
+            return process.send({type: msg.type, err: err.message || err})
           }
           return process.send({type: msg.type, content})
         })
         break
-      case 'contentFilter' :
+      case type.contentFilter :
         contentFilter(msg.temps, (err, filter) => {
           if (err) {
-            return process.send({err: err})
+            return process.send({type: msg.type, err: err.message || err})
           }
           return process.send({type: msg.type, filter})
         })
         break
-      case 'closestBlock' :
-        closestBlock (msg.temps, msg.filter, (err, key) => {
+      case type.closestBlock :
+        closestBlock (msg.temps, msg.key, Buffer.from(msg.filter), (err, key) => {
           if (err) {
-            return process.send({err: err})
+            return process.send({type: msg.type, err: err.message || err})
           }
           return process.send({type: msg.type, key})
         })
@@ -173,21 +171,26 @@ if (cluster.isMaster) {
       if (err) {
         return cb(err)
       }
-      let filter = new CuckooFilter(content.length, workerData.bucketSize, workerData.fingerprintSize)
-      let i= -1
-      for (let i = 0; i < content.length; i++) {
-        contentFilter.add(content[i])
+      try {
+        let filter = new CuckooFilter(content.length + Math.ceil(content.length * .10), workerData.bucketSize, workerData.fingerprintSize)
+        let i = -1
+        for (let i = 0; i < content.length; i++) {
+          filter.add(content[ i ])
+        }
+        let filter2 = CuckooFilter.fromCBOR(filter.toCBOR())
+        return cb(err, filter.toCBOR())
+      } catch (err){
+        return cb(err)
       }
-      return cb(err, filter.toCBOR())
     })
   }
-  function closestBlock (temps, filter, cb) {
-    content((err, content) => {
+  function closestBlock (temps, key, filter, cb) {
+    content(temps, (err, content) => {
       if (err) {
         return cb(err)
       }
       try {
-        filter = Cuckoo.fromCBOR(filter)
+        filter = CuckooFilter.fromCBOR(filter)
         let hash = bs58.decode(key)
         content = content.filter((key) => !filter.contains(key))
         if (!content.length) {

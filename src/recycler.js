@@ -7,11 +7,11 @@ const collect = require('collect-stream')
 let _blockCache = new WeakMap()
 let _descriptor = new WeakMap()
 let _url = new WeakMap()
-let _size = new WeakMap()
 let _offsetStart = new WeakMap()
 let _blockSize = new WeakMap()
 let _blockRouter = new WeakMap()
 let _urls = new WeakMap()
+let _endcap = new WeakMap()
 module.exports = class Recycler {
   constructor (blockSize, urls, blockCache, blockRouter) {
     if (!Number.isInteger(blockSize)) {
@@ -43,13 +43,30 @@ module.exports = class Recycler {
     let urls = _urls.get(this)
     return !url && !urls.length
   }
-
+  endcap (cb) {
+    let endcap = _endcap.get(this)
+    let descriptor = _descriptor.get(this)
+    if ((descriptor.length !== 0) && endcap) {
+      _endcap.set(this, null)
+      let bc = _blockCache.get(this)
+      bc.get(endcap, (err, block) => {
+        if (err) {
+          bc.load(key, cb)
+        } else {
+          return cb(err, block)
+        }
+      })
+    } else {
+      return cb(new Error('Endcap Unavailable'))
+    }
+  }
   next (cb) {
     let url = _url.get(this)
     if (!url) {
       let urls = _urls.get(this)
       if (urls.length) {
         url = urls.shift()
+        _url.set(this, url)
         if (url.contentType === 'offsystem/directory') {
           let rs
           let br = _blockRouter.get(this)
@@ -84,21 +101,13 @@ module.exports = class Recycler {
     let getBlock = () => {
       let key = descriptor.shift()
       _descriptor.set(url, descriptor)
-      let doNext = () => {
-        bc.get(key, cb)
-      }
-      let testContents = (contains) => {
-        if (!contains) {
-          let flightBox = bc.load([ key ])
-          flightBox.emitter.once(key, doNext)
-          flightBox.emitter.once('error', (err) => {
-            return cb(err)
-          })
+      bc.get(key, (err, block) => {
+        if (err) {
+          bc.load(key, cb)
         } else {
-          doNext()
+          return cb(err, block)
         }
-      }
-      bc.contains(key, testContents)
+      })
     }
 
     // If there is a stream offset it means we are looking for a specific section of the data
@@ -107,10 +116,8 @@ module.exports = class Recycler {
       if (url.streamOffset) {
         let offset = Math.floor(url.streamOffset / config.blockSize)
         for (let i = 0; i < (offset * config.tupleSize); i++) {
-          size = size + config.blockSize
           descriptor.shift()
         }
-        _size.set(this, size)
         let start = url.streamOffset % config.blockSize
         _offsetStart.set(this, start)
       }
@@ -120,14 +127,14 @@ module.exports = class Recycler {
     let segregateNewBlocks = () => {
       let front = []
       let back = []
-
       for (let i = 0; i < descriptor.length; i++) {
-         if (i % config.tupleSize) {
-           front.push(descriptor[i])
-         } else {
-           back.push(descriptor[i])
-         }
+        if (i % config.tupleSize) {
+          front.push(descriptor[i])
+        } else {
+          back.push(descriptor[i])
+        }
       }
+      _endcap.set(this, back[back.length - 1])
       descriptor = [...front, ...back]
       _descriptor.set(this, descriptor)
     }
@@ -155,22 +162,17 @@ module.exports = class Recycler {
             return getDesc()
           } else {
             moveToOffset()
+            segregateNewBlocks()
             return getBlock()
           }
         } else {
           if (descriptor.length < descKeys) {
             let nextDesc = descriptor.pop()
-            bc.contains(url.descriptorHash, (contains) => {
-              if (contains) {
-                bc.get(nextDesc, getDesc)
+            bc.get(nextDesc, (err, block) => {
+              if (err) {
+                return bc.load(nextDesc, getDesc)
               } else {
-                let flightBox = bc.load([ nextDesc ])
-                flightBox.emitter.once(nextDesc, () => {
-                  bc.get(nextDesc, getDesc)
-                })
-                flightBox.emitter.once('error', (err) => {
-                  return cb(err)
-                })
+                return getDesc(err, block)
               }
             })
           } else {
@@ -180,23 +182,17 @@ module.exports = class Recycler {
           }
         }
       }
-      bc.contains(url.descriptorHash, (contains) => {
-        if (contains) {
-          bc.get(url.descriptorHash, getDesc)
+      bc.get(url.descriptorHash, (err, block) => {
+        if (err) {
+          return bc.load(url.descriptorHash, getDesc)
         } else {
-
-          let flightBox = bc.load([ url.descriptorHash ])
-          flightBox.emitter.once(url.descriptorHash, () => {
-            bc.get(url.descriptorHash, getDesc)
-          })
-          flightBox.emitter.once('error', (err)=> {
-            return cb(err)
-          })
+          return getDesc(err, block)
         }
       })
     } else {
-      if (descriptor.length === 0 || size === url.streamLength) {
+      if (descriptor.length === 0) {
         _url.set(this, null)
+        _endcap.set(this, null)
         return this.next(cb)
       }
       process.nextTick(getBlock)

@@ -48,7 +48,6 @@ module.exports = class WritableOffStream extends Writable {
     }
     _url.set(this, opts.url)
 
-
     if (opts.recycler) {
       if (!(opts.recycler instanceof Recycler)) {
         throw new Error('Invalid recycler')
@@ -66,8 +65,8 @@ module.exports = class WritableOffStream extends Writable {
     _hasher.set(this, util.hasher())
     _size.set(this, 0)
     _count.set(this, 0)
-
-    // this is the private function that does all the work of writing a block
+    let globalDesc = ''
+    // this is the rivate function that does all the work of writing a block
     let writer = (buf, enc, nxt) => {
       //hash the original data
       let hasher = _hasher.get(this)
@@ -96,7 +95,6 @@ module.exports = class WritableOffStream extends Writable {
           }
           i++
           if (i < (config.tupleSize - 1)) {
-            // Get it from the recycler if we have it
             if (recycler && !recycler.empty) {
               return recycler.next(next)
             }
@@ -145,64 +143,87 @@ module.exports = class WritableOffStream extends Writable {
         let temp = _temp.get(this)
         //create off block from accumulated buffer
         let count = _count.get(this)
-        let offBlock = new Block(buf, blockSize)
-        if (count === 0) {
-          url.hash = offBlock.key
-          _url.set(this, url)
-        }
+        let recycler = _recycler.get(this)
 
-        let descriptor = _descriptor.get(this)
-        let tuple = []
-        for (let i = 0; i < randoms.length; i++) {
-          offBlock = offBlock.parity(randoms[ i ])
-          tuple.push(randoms[ i ])
-        }
-        // Save the first three off blocks as part of the url
-        if (count < 3) {
-          let url = _url.get(this)
-          url[ 'tupleBlock' + (count + 1) ] = offBlock.key
-          _url.set(this, url)
-        }
-        // TODO: Count may not be neccessary
-        count++
-        _count.set(this, count)
+        let makeTuple = () => {
+          let offBlock = new Block(buf, blockSize)
 
-        tuple.unshift(offBlock)
-        descriptor.tuple(tuple)
-        _descriptor.set(this, descriptor)
+          if (count === 0) {
+            url.hash = offBlock.key
+            _url.set(this, url)
+          }
 
-        //save resultant off block
-        let put = () => {
-          bc.put(offBlock, (err)=> {
-            if (err) {
-              this.emit('error', err)
-              return
-            }
-            return nxt()
-          })
-          //Save block to network
-          bc.emit('block', offBlock)
-        }
-        // If this is supposed to be temporary save any new blocks as such
-        // we need this check for temproraries because recyclers produce
-        // duplicate blocks that should not be considered temporary
-        if (temp) {
-          bc.get(offBlock.key, (err) => {
-            if (!err) {
+          let descriptor = _descriptor.get(this)
+
+          let tuple = []
+          for (let i = 0; i < randoms.length; i++) {
+            offBlock = offBlock.parity(randoms[ i ])
+            tuple.push(randoms[ i ])
+          }
+
+          tuple.unshift(offBlock)
+          globalDesc = tuple.reduce(((acc, block) => `${acc}${block.key}\n`), globalDesc)
+
+          // Save the first three off blocks as part of the url
+          if (count < 3) {
+            let url = _url.get(this)
+            url[ 'tupleBlock' + (count + 1) ] = offBlock.key
+            _url.set(this, url)
+          }
+          // TODO: Count may not be neccessary
+          count++
+          _count.set(this, count)
+
+          descriptor.tuple(tuple)
+          _descriptor.set(this, descriptor)
+          //save resultant off block
+          let put = () => {
+            bc.put(offBlock, (err)=> {
+              if (err) {
+                this.emit('error', err)
+                return
+              }
               return nxt()
+            })
+            //Save block to network
+            bc.emit('block', offBlock)
+          }
+          // If this is supposed to be temporary save any new blocks as such
+          // we need this check for temproraries because recyclers produce
+          // duplicate blocks that should not be considered temporary
+          if (temp) {
+            bc.get(offBlock.key, (err) => {
+              if (!err) {
+                return nxt()
+              } else {
+                temp.push(block.key)
+                return put()
+              }
+            })
+          } else {
+            return put()
+          }
+        }
+        //Because in situations where the last bit of data needs to be padded to meet the block size
+        // it pads with randomness. We want it to try to create the same block if we are using a recyler
+        if ((recycler) && (buf.length < blockSize)) {
+          recycler.endcap((err, block) => {
+            if (err) {
+              return makeTuple()
             } else {
-              temp.push(block.key)
-              return put()
+              for (let i = 0; i < randoms.length; i++) {
+                block = block.parity(randoms[ i ])
+              }
+              buf = Buffer.concat([buf, block.data.slice(buf.length, block.data.length)])
+              return makeTuple()
             }
           })
         } else {
-          return put()
+          return makeTuple()
         }
-
       }
       //Start finding blocks
       gather()
-
     }
     _writer.set(this, writer)
 
@@ -276,7 +297,6 @@ module.exports = class WritableOffStream extends Writable {
           this.emit('error', new Error('Invalid Input'))
           return
         }
-
         //Start Chunking and processing chunks into blocks
         bufStream.pipe(blocker({ size: blockSize, zeroPadding: false }))
           .pipe(through(writer))

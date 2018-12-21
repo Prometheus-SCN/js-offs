@@ -14,7 +14,6 @@ const CuckooFilter = require('cuckoo-filter').CuckooFilter
 const numCPUs = Math.floor(require('os').cpus().length/3) || 1
 let _cacheInterface = new WeakMap()
 let _path = new WeakMap()
-let _dirty = new WeakMap()
 let _blockSize = new WeakMap()
 let _contentFilter = new WeakMap()
 let _sizeTimer = new WeakMap()
@@ -45,7 +44,6 @@ module.exports =
       _blockSize.set(this, blockSize)
       _cacheInterface.set(this, cacheInterface)
       _blockSize.set(this, blockSize)
-      _dirty.set(this, false)
       mkdirp.sync(path)
       _path.set(this, path)
       _bcw.set(this, new BCW(numCPUs, path, config.bucketSize, config.fingerprintSize))
@@ -100,8 +98,10 @@ module.exports =
       return buckets.length
     }
 
-    get dirty () {
-      return _dirty.get(this)
+    set dirty (value) {
+      if (value) {
+        _contentFilter.set(this, undefined)
+      }
     }
 
     updateSize () {
@@ -136,6 +136,7 @@ module.exports =
         if (!err) {
           // used as a size approximation whilst dodging i/o to fs
           _size.set(this, (this.size + block.length))
+          this.dirty = true
           this.updateSize()
         }
         return cb(err)
@@ -165,6 +166,7 @@ module.exports =
           let blockSize = _blockSize.get(this)
           //approximation of size whilst dodging i/o to fs
           _size.set(this, (this.size - blockSize))
+          this.dirty = true
           this.updateSize()
         }
         return cb(err)
@@ -188,7 +190,6 @@ module.exports =
         let gatherTemporaries = _gatherTemporaries.get(this)
         let temps = gatherTemporaries()
         let bcw = _bcw.get(this)
-
         bcw.contentFilter(temps, (err, contentFilter) => {
           if (!err) {
             _contentFilter.set(this, contentFilter)
@@ -240,7 +241,7 @@ module.exports =
       let temps = gatherTemporaries()
       let bcw = _bcw.get(this)
 
-      bcw.closestBlock(temps, filter, (err, key) => {
+      bcw.closestBlock(temps, key, filter, (err, key) => {
         if (err) {
           return cb(err)
         }

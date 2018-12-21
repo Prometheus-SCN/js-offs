@@ -7,6 +7,7 @@ const trayIcon = path.join(__dirname, 'electron', 'images', (/^darwin/.test(proc
 const Exporter = require('./exporter').mainExporter
 const Connector = require('./connector').mainConnector
 const Configurator = require('./configurator').mainConfigurator
+const Updator = require('./updator').mainUpdator
 const Peer = require('./peer')
 const bs58 = require('bs58')
 const cmd = require('./command').parse()
@@ -25,9 +26,9 @@ const log = require('js-logging')
       emergency: 'magenta'
     }
   })
+
 let win
 let node
-
 if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   node = new Node('OFFSYSTEM')
   node.on('error', log.error)
@@ -37,9 +38,9 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
   })
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
-  node.start()
 } else {
   const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard, ipcMain } = require('electron')
+  const {autoUpdater} = require("electron-updater")
   require('electron-context-menu')({ showInspectElement: false, showCopyImageAddress: false, showSaveImageAs: false })
 
   const single = !app.requestSingleInstanceLock()
@@ -304,8 +305,28 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       })
     })
   }
+  function createUpdateWindow () {
+    let updateWin = new BrowserWindow({ width: 300, height: 150, icon: icon, autoHideMenuBar: true, resizable: false , show: false})
+    let onComplete = () => {
+      updateWin.close()
+      createTray()
+    }
+    let updator = new Updator(updateWin.webContents, ipcMain, autoUpdater, onComplete)
+    updateWin.loadURL(`file://${path.join(__dirname, 'electron', 'views', 'update', 'index.html')}`)
+    updateWin.webContents.on('did-finish-load', function() {
+      updateWin.show()
+      updator.checkForUpdatesAndNotify()
+    })
+    //updateWin.webContents.openDevTools({})
+  }
 
-  app.on('ready', createTray)
+  app.on('ready', () =>{
+    if (autoUpdater.isPackaged) {
+      createUpdateWindow()
+    } else {
+      createTray()
+    }
+  })
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the

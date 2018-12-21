@@ -24,7 +24,7 @@ let defaults = {
   descriptorPad: 32,
   scale: 2,
   filterSize: 20000,
-  fingerprintSize: 8,
+  fingerprintSize: 4,
   hitBoxSize: 100,
   bucketSize: 4,
   httpPort: 23402,
@@ -126,7 +126,7 @@ class Config {
       _descriptorPad.set(this, config.descriptorPad)
       _scale.set(this, config.scale)
       _filterSize.set(this, config.filterSize)
-      _fingerprintSize.set(this, config.fingerprintSize)
+      _fingerprintSize.set(this, config.fingerprintSize > 4 ? 4 : config.fingerprintSize)
       _hitBoxSize.set(this, config.hitBoxSize)
       _bucketSize.set(this, config.bucketSize)
       _httpPort.set(this, config.httpPort)
@@ -228,7 +228,7 @@ class Config {
     if (value < 300) {
       throw new TypeError("Block Cache Size Is Too Small")
     }
-    if (value > (1000000 * mb)) {
+    if (value > (549755813 * mb)) {
       throw new TypeError("Block Cache Size Is Too Large")
     }
     _blockCacheSize.set(this, value)
@@ -246,7 +246,7 @@ class Config {
     if (value < 300) {
       throw new TypeError("Mini Block Cache Size Is Too Small")
     }
-    if (value > (1000000 * mb)) {
+    if (value > (42949672 * mb)) {
       throw new TypeError("Mini Block Cache Size Is Too Large")
     }
     _miniBlockCacheSize.set(this, value)
@@ -264,7 +264,7 @@ class Config {
     if (value < 300) {
       throw new TypeError("Nano Block Cache Size Is Too Small")
     }
-    if (value > (1000000 * mb)) {
+    if (value > (584115 * mb)) {
       throw new TypeError("Nano Block Cache Size Is Too Large")
     }
     _nanoBlockCacheSize.set(this, value)
