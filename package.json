@@ -1,6 +1,6 @@
 {
   "name": "js-offs",
-  "version": "0.0.91",
+  "version": "0.0.92",
   "description": "Owner Free File System",
   "main": "src/index.js",
   "appname": "offs",
@@ -17,7 +17,6 @@
     "build-mac": "npm run compile-vue && electron-builder --mac",
     "build-docker": "npm run build && sudo docker build -t offs .",
     "publish": "build -p always",
-    "release": "build",
     "docker": "sudo docker run -a STDERR -a STDOUT -p 23402:23402  -p 8200:8200 --name offsystem offs "
   },
   "author": "Prometheus <contact@prometheus.network>",
