@@ -1,6 +1,6 @@
 {
   "name": "js-offs",
-  "version": "0.0.92",
+  "version": "0.1.0",
   "description": "Owner Free File System",
   "main": "src/index.js",
   "appname": "offs",
@@ -21,7 +21,7 @@
   },
   "author": "Prometheus <contact@prometheus.network>",
   "license": "GPL-3.0",
-  "repository": "https://github.com/vijayee/js-offs",
+  "repository": "https://github.com/Prometheus-SCN/js-offs",
   "build": {
     "productName": "offs",
     "appId": "com.prometheus.offsystem",
@@ -132,7 +132,7 @@
     "babel-preset-es2015": "6.24.1",
     "browserify": "14.5.0",
     "electron": "3.0.10",
-    "electron-builder": "20.31.2",
+    "electron-builder": "20.38.4",
     "electron-prebuilt": "1.4.13",
     "electron-rebuild": "1.8.2",
     "random-ipv4": "1.0.2",

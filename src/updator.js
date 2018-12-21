@@ -33,8 +33,8 @@ class mainUpdator extends responder {
       this.tell('error', err)
       setTimeout(onComplete, 2000)
     })
-    autoUpdater.on('download-progress', (progressObj) => {
-      this.tell('download-progress', progressObj)
+    autoUpdater.on('download-progress', (info) => {
+      this.tell('download-progress', info)
     })
     autoUpdater.on('update-downloaded', (info) => {
       this.tell('update-downloaded', info)

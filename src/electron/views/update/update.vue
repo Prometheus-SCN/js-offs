@@ -5,26 +5,8 @@
         <div class="icontainer">
           <img :class="error ? 'loader-icon error' : 'loader-icon'" :src="icon">
         </div>
-        <div class="file-info">
-          <table>
-            <tr>
-              <td>
-                <strong>status:</strong>
-                {{status}}
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <progressbar :error="error" :percent="percent"></progressbar>
-              </td>
-            </tr>
-            <tr>
-              <td class="data">
-                <strong class="total" v-if="total">{{transferred}}/{{total}}</strong>
-                <strong class="rate" v-if="rate">{{rate}}b/s</strong>
-              </td>
-            </tr>
-          </table>
+        <div>
+          {{status}}
         </div>
       </div>
     </div>
@@ -55,50 +37,17 @@
     margin: 50% 50%;
     transform: translate(-50%, -50%);
   }
-  .form-container {
-    max-height: 128px;
-    max-width: 500px;
-    min-height: 128px;
-    min-width: 500px;
-    height: 128px;
-    width: 500px;
-  }
-  .file-info {
-    display: flex;
-  }
   .file-status {
-    display: flex;
-    flex-direction: row;
-    margin: 5px;
-  }
-
-  .download-button {
+    width: 100%;
     height: 100%;
-    width: auto;
-    min-width: 100px;
-    font-family: Odin;
-    background-color: #edf0f2;
-    padding: 0;
-    display: flex;
-    border-color: #878787;
-    border-style: dotted;
-    border-width: 10px;
-    padding: 3px;
-    color: #878787;
-    outline: 5px solid #edf0f2;
+    display: grid;
+    grid-gap: 0;
     margin: 5px;
-    font-family: Odin;
-    align-self: center;
-    align-content: center;
-    justify-content: center;
-    flex-direction: column;
+    align-items: center;
+    justify-items: center;
   }
   .error {
     color: red;
-  }
-  .data {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
   }
   .rate {
     justify-self: end;
@@ -109,6 +58,9 @@
 </style>
 <script>
   let progressbar = require('../export/progressbar.vue')
+  function getRandomInt (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
   module.exports = {
     components: {progressbar},
     data () {
@@ -126,12 +78,14 @@
     mounted () {
       let onError =  (err) => {
         this.error = err
+        this.status = err
       }
       let onCheckingForUpdate = () => {
         this.status = 'Checking for update'
       }
       let onUpdateAvailable = (info) => {
-        this.status = 'Update Found'
+        this.status = 'Update Found...Downloading'
+        this.icon = `../../images/Preloader_${ getRandomInt(1, 7) }.gif`
       }
       let onDownloadProgress = (info) => {
         this.percent = info.percent
@@ -144,6 +98,7 @@
         this.percent = 100
       }
       let onUpdatedDownloaded = (info) => {
+        this.icon = '../../images/off-logo-lettered.svg'
         this.percent = 100
         this.status = 'Update Completed....Restarting'
       }

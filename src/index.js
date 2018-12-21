@@ -8,7 +8,6 @@ const Exporter = require('./exporter').mainExporter
 const Connector = require('./connector').mainConnector
 const Configurator = require('./configurator').mainConfigurator
 const Updator = require('./updator').mainUpdator
-const {autoUpdater} = require("electron-updater")
 const Peer = require('./peer')
 const bs58 = require('bs58')
 const cmd = require('./command').parse()
@@ -39,12 +38,9 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
   })
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
-  autoUpdater.on('update-not-available', () => {
-    node.start()
-  })
-  autoUpdater.checkForUpdatesAndNotify()
 } else {
   const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard, ipcMain } = require('electron')
+  const {autoUpdater} = require("electron-updater")
   require('electron-context-menu')({ showInspectElement: false, showCopyImageAddress: false, showSaveImageAs: false })
 
   const single = !app.requestSingleInstanceLock()
@@ -310,7 +306,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     })
   }
   function createUpdateWindow () {
-    let updateWin = new BrowserWindow({ width: 425, height: 120, icon: icon, autoHideMenuBar: true, resizable: true , show: false})
+    let updateWin = new BrowserWindow({ width: 300, height: 150, icon: icon, autoHideMenuBar: true, resizable: false , show: false})
     let onComplete = () => {
       updateWin.close()
       createTray()
@@ -325,7 +321,11 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   }
 
   app.on('ready', () =>{
-    createUpdateWindow()
+    if (autoUpdater.isPackaged) {
+      createUpdateWindow()
+    } else {
+      createTray()
+    }
   })
 
   app.on('activate', () => {
