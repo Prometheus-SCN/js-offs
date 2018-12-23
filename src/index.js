@@ -30,7 +30,7 @@ const log = require('js-logging')
 let win
 let node
 if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
-  node = new Node('OFFSYSTEM')
+  node = new Node('OFFSYSTEM', cmd.path)
   node.on('error', log.error)
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
   node.on('ready', () => {
@@ -52,7 +52,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     /*if (process.env.NODE_ENV === 'development') {
      devTools.install()
      }*/
-    node = new Node('OFFSYSTEM')
+    node = new Node('OFFSYSTEM', cmd.path)
     node.on('error', log.error)
     node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
     node.on('ready', () => {

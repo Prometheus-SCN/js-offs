@@ -64,7 +64,7 @@ module.exports = class Node extends EventEmitter {
           let getPeer = (err, intIP)=> {
             if (err) {
               this.emit('error', err)
-              ip = '127.0.0.1'
+              intIP = '127.0.0.1'
             }
             let pk = keyPair.publicKey
             let id = util.hash(pk)
