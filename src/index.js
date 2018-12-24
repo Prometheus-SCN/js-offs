@@ -301,7 +301,19 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     })
   }
   function createUpdateWindow () {
-    let updateWin = new BrowserWindow({ width: 300, height: 150, icon: icon, autoHideMenuBar: true, resizable: false , show: false})
+    let width
+    let height
+    if (/^win/.test(process.platform)) {
+      width = 300
+      height = 200
+    } else if (/^darwin/.test(process.platform)) {
+      width = 300
+      height = 150
+    } else {
+      width = 300
+      height = 150
+    }
+    let updateWin = new BrowserWindow({ width, height, icon: icon, autoHideMenuBar: true, resizable: false , show: false})
     let onComplete = () => {
       updateWin.close()
       createTray()
