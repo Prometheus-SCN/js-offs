@@ -74,6 +74,7 @@ module.exports = class Node extends EventEmitter {
             let blockRouter = new BlockRouter(config.cacheLocation, appFolder)
             _blockRouter.set(this, blockRouter)
             blockRouter.on('error', (err) => this.emit('error', err))
+            blockRouter.on('locator', () => this.emit('locator'))
             let server = Server(blockRouter, this.emit.bind(this))
             _server.set(this, server)
             server.listen(config.httpPort, () => {

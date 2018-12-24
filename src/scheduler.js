@@ -250,6 +250,7 @@ module.exports = class Scheduler extends EventEmitter {
           }
           if (Peer.self.intIp !== intIp || Peer.self.extIp !== extIp) {
             Peer.self = new Peer(Peer.self.id, extIp, Peer.self.extPort, intIp, Peer.self.intPort)
+            this.emit('locator')
           }
           return cb()
         })

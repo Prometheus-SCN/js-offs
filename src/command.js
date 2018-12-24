@@ -8,6 +8,8 @@ module.exports = new (class Command {
     cmd.name('offs')
     cmd.version(pkg.version, '-v, --version')
     cmd.option('-t, --terminal', 'Run in Terminal Only (without GUI)')
+    cmd.option('-p, --path [dir]', 'Initial path for the application')
+
   }
   parse() {
     cmd.parse(process.argv)

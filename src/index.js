@@ -27,17 +27,23 @@ const log = require('js-logging')
     }
   })
 
-let win
+
 let node
-if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
+function createNode() {
   node = new Node('OFFSYSTEM', cmd.path)
   node.on('error', log.error)
   node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
   node.on('ready', () => {
     log.notice(`Node ${node.peerInfo.key} is online externally at ${node.peerInfo.extIp} and port ${node.peerInfo.extPort}`)
     log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
+    log.notice(`Locator ${node.peerInfo.toLocator()}`)
   })
+  node.on('locator', () => log.notice(`Locator ${node.peerInfo.toLocator()}`))
   node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
+  node.start()
+}
+if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
+  createNode()
 } else {
   const { app, Menu, MenuItem, Tray, BrowserWindow, clipboard, ipcMain } = require('electron')
   const {autoUpdater} = require("electron-updater")
@@ -49,18 +55,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
     app.quit()
   }
   function createTray () {
-    /*if (process.env.NODE_ENV === 'development') {
-     devTools.install()
-     }*/
-    node = new Node('OFFSYSTEM', cmd.path)
-    node.on('error', log.error)
-    node.on('bootstrapped', (connections) => log.notice(`Boostrapped with ${connections} connections`))
-    node.on('ready', () => {
-      log.notice(`Node ${node.peerInfo.key} is online externally at ${node.peerInfo.extIp} and port ${node.peerInfo.extPort}`)
-      log.notice(`Node ${node.peerInfo.key} is online internally at ${node.peerInfo.intIp} and port ${node.peerInfo.intPort}`)
-    })
-    node.on('listening', (port) => log.notice(`HTTP Server is online at ${node.peerInfo.ip} and port ${port}`))
-    node.start()
+    createNode()
 
     node.once('ready', () => {
       let importWin
@@ -325,14 +320,6 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       createUpdateWindow()
     } else {
       createTray()
-    }
-  })
-
-  app.on('activate', () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (win === null) {
-      createWindow()
     }
   })
 }
