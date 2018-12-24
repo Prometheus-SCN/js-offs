@@ -316,10 +316,10 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
   }
 
   app.on('ready', () =>{
-    if (autoUpdater.isPackaged) {
-      createUpdateWindow()
-    } else {
+    if (process.defaultApp) {
       createTray()
+    } else {
+      createUpdateWindow()
     }
   })
 }
