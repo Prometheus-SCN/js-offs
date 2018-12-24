@@ -46,7 +46,7 @@ let defaults = {
   bucketTimeout: 60 * 1000 * 5,
   socketTimeout: 120 * 1000,
   bootstrap: [
-    '5LTX64UZmqxAckP99fRNKutPQCJabbB1xMa1vuCG1Z58SJdLkGa9NkngQNSihHhBPA25evTSSMzqrPJovRLkEykSf7orstw7TCUh1DABKyn3iozxBsL3yKBq7EWz9pHdAE9Fd'
+    'L8t3oLLfnGZPgkkiAW2FwzHqeWt4pS9amGZQNpPKQgkNrF3JTGxptXuQwc8W7AdaRB34k2afQszr3LQqfUP6hzXgPGu5Rnw28sDwcA3GRrsnqbGYdpLETkSVBNXK1cJwRFRqfD'
   ]
 }
 let _blockPath = new WeakMap()
@@ -190,7 +190,7 @@ class Config {
     _internalIP.set(this, defaults.internalIP)
     _bootstrap.set(this, defaults.bootstrap.slice(0))
     _bucketTimeout.set(this, defaults.bucketTimeout)
-    _bucketTimeout.set(this, defaults.socketTimeout)
+    _socketTimeout.set(this, defaults.socketTimeout)
   }
 
   get blockPath () {
@@ -225,7 +225,7 @@ class Config {
     if (!Number.isInteger(+value)) {
       throw new TypeError("Invalid Block Cache Size")
     }
-    if (value < 300) {
+    if (value < 300 * mb) {
       throw new TypeError("Block Cache Size Is Too Small")
     }
     if (value > (549755813 * mb)) {
@@ -243,7 +243,7 @@ class Config {
     if (!Number.isInteger(+value)) {
       throw new TypeError("Invalid Mini Block Cache Size")
     }
-    if (value < 300) {
+    if (value < 300 * mb) {
       throw new TypeError("Mini Block Cache Size Is Too Small")
     }
     if (value > (42949672 * mb)) {
@@ -261,7 +261,7 @@ class Config {
     if (!Number.isInteger(+value)) {
       throw new TypeError("Invalid Nano Block Cache Size")
     }
-    if (value < 300) {
+    if (value < 300 * mb) {
       throw new TypeError("Nano Block Cache Size Is Too Small")
     }
     if (value > (584115 * mb)) {
@@ -440,7 +440,6 @@ class Config {
   }
   get socketTimeout () {
     return _socketTimeout.get(this)
-    this.save()
   }
   set socketTimeout (value) {
     _socketTimeout.set(this, +value)

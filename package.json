@@ -16,8 +16,8 @@
     "build-win": "npm run compile-vue && electron-builder --win",
     "build-mac": "npm run compile-vue && electron-builder --mac",
     "build-docker": "npm run build && sudo docker build -t offs .",
-    "publish": "build -p always",
-    "docker": "sudo docker run -a STDERR -a STDOUT -p 23402:23402  -p 8200:8200 --name offsystem offs "
+    "publish": "build --win --linux -p always",
+    "docker": "sudo docker run -a STDERR -a STDOUT -p 23402:23402  -p 8200:8200 --name offsystem -v offs:/offs offs"
   },
   "author": "Prometheus <contact@prometheus.network>",
   "license": "GPL-3.0",
@@ -86,6 +86,9 @@
     },
     "appImage": {
       "artifactName": "OFF_System_${version}_linux_${arch}.AppImage"
+    },
+    "deb": {
+      "artifactName": "OFF_System_${version}_linux_${arch}.deb"
     }
   },
   "dependencies": {

@@ -311,47 +311,51 @@ module.exports = class BlockRouter extends EventEmitter {
   }
 
   bootstrap (cb) {
-    let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer)).filter((peer) => !peer.isEqual(Peer.self))
-    let connect = () => {
-      let i = -1
-      let next = (err) => {
-        if (err) {
-          this.emit('error', err)
-        }
-        i++
-        if (i < bootstrap.length) {
-          let peer = bootstrap[ i ]
-          this.connect(peer, next)
-        } else { //Fill routing table with the closet nodes to themselves
-          let rpc = _rpc.get(this)
-          rpc.findNode(Peer.self.id, cb)
-        }
-      }
-      next()
-    }
-    // If this option is selected  then Bootstrap to whomever we were last online with
-    if (config.lastKnownPeers) {
-      let path = _path.get(this)
-      let fd = pth.join(path, '.bucket')
-      fs.readFile(fd, (err, bucketFile) => {
-        if (err) {
-          this.emit(err)
-          return connect()
-        }
-        if (bucketFile) {
-          let peers = cbor.decode(toAb(bucketFile))
-          for (let pier of peers) {
-            let peer = Peer.fromLocator(pier)
-            let found = bootstrap.find((boot) => peer.isEqual(boot))
-            if (!found) {
-              bootstrap.push(peer)
-            }
+    try {
+      let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer)).filter((peer) => !peer.isEqual(Peer.self))
+      let connect = () => {
+        let i = -1
+        let next = (err) => {
+          if (err) {
+            this.emit('error', err)
+          }
+          i++
+          if (i < bootstrap.length) {
+            let peer = bootstrap[ i ]
+            this.connect(peer, next)
+          } else { //Fill routing table with the closet nodes to themselves
+            let rpc = _rpc.get(this)
+            rpc.findNode(Peer.self.id, cb)
           }
         }
+        next()
+      }
+      // If this option is selected  then Bootstrap to whomever we were last online with
+      if (config.lastKnownPeers) {
+        let path = _path.get(this)
+        let fd = pth.join(path, '.bucket')
+        fs.readFile(fd, (err, bucketFile) => {
+          if (err) {
+            this.emit(err)
+            return connect()
+          }
+          if (bucketFile) {
+            let peers = cbor.decode(toAb(bucketFile))
+            for (let pier of peers) {
+              let peer = Peer.fromLocator(pier)
+              let found = bootstrap.find((boot) => peer.isEqual(boot))
+              if (!found) {
+                bootstrap.push(peer)
+              }
+            }
+          }
+          return connect()
+        })
+      } else {
         return connect()
-      })
-    } else {
-      return connect()
+      }
+    } catch(err) {
+      return cb(err)
     }
   }
 
