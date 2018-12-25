@@ -308,7 +308,7 @@ if (process.env.ELECTRON_RUN_AS_NODE || cmd.terminal) {
       height = 200
     } else if (/^darwin/.test(process.platform)) {
       width = 300
-      height = 150
+      height = 200
     } else {
       width = 300
       height = 150

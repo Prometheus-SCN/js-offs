@@ -78,7 +78,7 @@
     mounted () {
       let onError =  (err) => {
         this.error = err
-        this.status = err
+        this.status = 'An error occurred'
       }
       let onCheckingForUpdate = () => {
         this.status = 'Checking for update'
