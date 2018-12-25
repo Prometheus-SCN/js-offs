@@ -1,20 +1,24 @@
-let OffUrl= require('./off-url')
-let path = require('path')
-let mkdirp = require('mkdirp')
-let http = require('http')
-let collect = require('collect-stream')
-let fs = require('fs')
-let responder = require('electron-ipc-responder')
-let util = require('./utility')
+const OffUrl= require('./off-url')
+const path = require('path')
+const mkdirp = require('mkdirp')
+const http = require('http')
+const collect = require('collect-stream')
+const fs = require('fs')
+const responder = require('electron-ipc-responder')
+const util = require('./utility')
+const Speed = require('streamspeed')
 
 class rendererExporter extends responder {
-  constructor (ipcRenderer, onPercent, onError) {
+  constructor (ipcRenderer, onPercent, onSpeed, onError) {
     super(ipcRenderer.send.bind(ipcRenderer), ipcRenderer.on.bind(ipcRenderer))
     this.registerTopic('percent', async (payload) => {
       onPercent(payload)
     })
     this.registerTopic('error',async (payload) => {
       onError(payload)
+    })
+    this.registerTopic('speed',async (payload) => {
+      onSpeed(payload)
     })
   }
   async exporter (location, url, id) {
@@ -39,6 +43,11 @@ class mainExporter extends responder {
     if (url.contentType === 'offsystem/directory') {
       file.filename = file.filename.replace('.ofd', '')
       let cb = (response) => {
+        let speed = new Speed()
+        speed.on('speed', (rate) => {
+          this.tell('speed', {id: payload.id, rate})
+        })
+        speed.add(response)
         collect(response, async (err, data) => {
           if (err) {
             return this.tell('error', {id: payload.id, err})
@@ -67,6 +76,11 @@ class mainExporter extends responder {
                   mkdirp.sync(path.join(payload.location, dir, fp.dir))
                 }
                 let ws = fs.createWriteStream(path.join(payload.location, dir, key))
+                let speed = new Speed()
+                speed.on('speed', (rate) => {
+                  this.tell('speed', {id: payload.id, rate})
+                })
+                speed.add(response)
                 response.on('data', async (chunk) => {
                   file.size += chunk.length
                   file.percent = Math.floor((file.size/file.streamLength) * 100)
@@ -94,6 +108,12 @@ class mainExporter extends responder {
     } else {
       let cb = (response) => {
         let ws = fs.createWriteStream(filename)
+        let speed = new Speed()
+        speed.on('speed', (rate) => {
+          this.tell('speed', {id: payload.id, rate})
+        })
+        speed.add(response)
+
         ws.on('error', (err) => {
           this.tell('error', {id: payload.id, err})
         })
