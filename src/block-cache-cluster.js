@@ -28,7 +28,7 @@ if (cluster.isMaster) {
           pool.delete(worker.id)
           let cb = _callbacks.get(this)
           if (cb) {
-            return cb(new Error('Worker Exited Unexpectedly'))
+            cb(new Error('Worker Exited Unexpectedly'))
           }
           return spawnWorker()
         })
@@ -78,35 +78,47 @@ if (cluster.isMaster) {
       }
     }
     content (temps, cb) {
-      let worker = this._freeWorker()
-      if (worker) {
-        _callbacks.set(worker, cb)
-        worker.send({type: type.content, temps})
-      } else {
-        let queue = _queue.get(this)
-        queue.unshift({type: type.content, temps, cb: cb})
+      try {
+        let worker = this._freeWorker()
+        if (worker) {
+          _callbacks.set(worker, cb)
+          worker.send({ type: type.content, temps })
+        } else {
+          let queue = _queue.get(this)
+          queue.unshift({ type: type.content, temps, cb: cb })
+        }
+      } catch (err) {
+        return cb(err)
       }
     }
 
-    contentFilter (temps, cb){
-      let worker = this._freeWorker()
-      if (worker) {
-        _callbacks.set(worker, cb)
-        worker.send({type: type.contentFilter, temps})
-      } else {
-        let queue = _queue.get(this)
-        queue.unshift({type: type.contentFilter, temps, cb: cb})
+    contentFilter (temps, cb) {
+      try {
+        let worker = this._freeWorker()
+        if (worker) {
+          _callbacks.set(worker, cb)
+          worker.send({ type: type.contentFilter, temps })
+        } else {
+          let queue = _queue.get(this)
+          queue.unshift({ type: type.contentFilter, temps, cb: cb })
+        }
+      } catch (err) {
+        return cb(err)
       }
     }
 
     closestBlock (temps, key, filter, cb) {
-      let worker = this._freeWorker()
-      if (worker) {
-        _callbacks.set(worker, cb)
-        worker.send({type: type.closestBlock, temps, key, filter})
-      } else {
-        let queue = _queue.get(this)
-        queue.unshift({type: type.closestBlock, temps, key, filter, cb: cb})
+      try {
+        let worker = this._freeWorker()
+        if (worker) {
+          _callbacks.set(worker, cb)
+          worker.send({ type: type.closestBlock, temps, key, filter })
+        } else {
+          let queue = _queue.get(this)
+          queue.unshift({ type: type.closestBlock, temps, key, filter, cb: cb })
+        }
+      } catch (err) {
+        return cb(err)
       }
     }
     _free(threadId) {
@@ -116,9 +128,14 @@ if (cluster.isMaster) {
         if (next) {
           let pool = _pool.get(this)
           let worker = pool.get(threadId)
-          _callbacks.set(worker, next.cb)
+          let cb = next.cb
+          _callbacks.set(worker, cb)
           delete next.cb
-          worker.send({...next})
+          try {
+            worker.send({ ...next })
+          } catch (err) {
+            return cb(err)
+          }
         }
       })
     }
