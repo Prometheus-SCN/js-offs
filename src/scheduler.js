@@ -188,32 +188,11 @@ module.exports = class Scheduler extends EventEmitter {
     capacityJob(nano, config.nano)
 
     bucket.on('ping', onPing)
-    let maintainBucket = ()=> {
-      let nodes = bucket.toArray()
-      let i = -1
-      let next = (err)=> {
-        if (err) {
-          bucket.remove(nodes[ i ])
-        }
-        i++
-        if (i < nodes.length) {
-          let node = nodes[ i ]
-          rpc.ping(node.id, next)
-        } else {
-          rebootstrap(() => {
-            let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
-            _maintenanceJob.set(this, maintenanceJob)
-          })
-        }
-      }
-      checkIP(next)
-    }
-    let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
-    _maintenanceJob.set(this, maintenanceJob)
     let rebootstrap = (cb) => {
       try {
+        let peers = bucket.toArray()
         let bootstrap = config.bootstrap.map((peer) => Peer.fromLocator(peer))
-          .filter((peer) => !peer.isEqual(Peer.self) && !bucket.contains(peer.id))
+          .filter((peer) => !peer.isEqual(Peer.self) && !peers.find((pier) => pier.isEqual(peer)))
 
         let i = -1
         let next = (err) => {
@@ -235,6 +214,29 @@ module.exports = class Scheduler extends EventEmitter {
         return cb()
       }
     }
+    let maintainBucket = () => {
+      let nodes = bucket.toArray()
+      let i = -1
+      let next = (err)=> {
+        if (err) {
+          bucket.remove(nodes[ i ])
+        }
+        i++
+        if (i < nodes.length) {
+          let node = nodes[ i ]
+          rpc.ping(node.id, next)
+        } else {
+          rebootstrap(() => {
+            let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
+            _maintenanceJob.set(this, maintenanceJob)
+          })
+        }
+      }
+      checkIP(next)
+    }
+    let maintenanceJob = setTimeout(maintainBucket, 20000)
+    _maintenanceJob.set(this, maintenanceJob)
+
     let checkIP = (cb) => {
       let intIP
       let extIP
@@ -256,7 +258,6 @@ module.exports = class Scheduler extends EventEmitter {
         })
       })
     }
-
   }
 
 }
