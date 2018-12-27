@@ -234,7 +234,7 @@ module.exports = class Scheduler extends EventEmitter {
       }
       checkIP(next)
     }
-    let maintenanceJob = setTimeout(maintainBucket, 20000)
+    let maintenanceJob = setTimeout(maintainBucket, config.bucketTimeout)
     _maintenanceJob.set(this, maintenanceJob)
 
     let checkIP = (cb) => {
