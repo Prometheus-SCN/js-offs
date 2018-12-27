@@ -64,7 +64,7 @@ module.exports = class Node extends EventEmitter {
           let getPeer = (err, intIP)=> {
             if (err) {
               this.emit('error', err)
-              ip = '127.0.0.1'
+              intIP = '127.0.0.1'
             }
             let pk = keyPair.publicKey
             let id = util.hash(pk)
@@ -74,6 +74,7 @@ module.exports = class Node extends EventEmitter {
             let blockRouter = new BlockRouter(config.cacheLocation, appFolder)
             _blockRouter.set(this, blockRouter)
             blockRouter.on('error', (err) => this.emit('error', err))
+            blockRouter.on('locator', () => this.emit('locator'))
             let server = Server(blockRouter, this.emit.bind(this))
             _server.set(this, server)
             server.listen(config.httpPort, () => {

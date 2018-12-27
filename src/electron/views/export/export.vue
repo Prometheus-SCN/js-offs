@@ -18,6 +18,9 @@
                 <progressbar :error="file.error" :percent="file.percent"></progressbar>
               </td>
             </tr>
+            <tr>
+              <strong>Rate:</strong>&nbsp;{{file.rate}}/s
+            </tr>
           </table>
         </div>
       </div>
@@ -162,7 +165,7 @@
       }
     },
     mounted () {
-      this.Exporter =  new Exporter(ipcRenderer, this.onPercent, this.onError)
+      this.Exporter =  new Exporter(ipcRenderer, this.onPercent, this.onSpeed, this.onError)
       let heightOffset = window.outerHeight - window.innerHeight
       let widthOffset = window.outerWidth - window.innerWidth
       let height = this.$refs.container.clientHeight + heightOffset
@@ -178,8 +181,11 @@
         })
       },
       onError (err) {
-        this.files[err.id].error = err.err
+        this.files[err.id].error = 'An error occurred'
         this.files[err.id].icon = '../../images/error.svg'
+      },
+      onSpeed (speed) {
+        this.files[speed.id].rate = prettyBytes(speed.rate)
       },
       onPercent(payload) {
         this.files[payload.id].percent = payload.percent
@@ -207,35 +213,28 @@
         }
       },
       exporter () {
-      this.$validator.validateAll()
-        .then((ok) => {
-          if (!ok) return
-          let url = OffUrl.parse(this.url)
-          let filename = path.join(this.location, urldecode(url.fileName))
-          let streamLength = url.streamLength
-          let percent = 0
-          let size = 0
-          let icon = `../../images/Preloader_${ getRandomInt(1, 7) }.gif`
-          let show = true
-          let error = null
-          let file = {filename, percent, size, streamLength, icon, show, error}
+        this.$validator.validateAll()
+          .then((ok) => {
+            if (!ok) return
+            let url = OffUrl.parse(this.url)
+            let filename = path.join(this.location, urldecode(url.fileName))
+            let streamLength = url.streamLength
+            let percent = 0
+            let size = 0
+            let icon = `../../images/Preloader_${ getRandomInt(1, 7) }.gif`
+            let show = true
+            let error = null
+            let file = {filename, percent, size, streamLength, icon, show, error}
 
-          // Resize Window to fit
-          setTimeout(this.resize, 100)
-          let id = this.files.length
-          this.files.push(file)
-          this.Exporter.exporter(this.location, this.url, id)
-          //this.location = null
-          //this.url = null
-          this.$validator.flag('location', {
-            valid: false,
-            dirty: false
+            // Resize Window to fit
+            setTimeout(this.resize, 100)
+            let id = this.files.length
+            this.files.push(file)
+            this.Exporter.exporter(this.location, this.url, id)
+            this.location = null
+            this.url = null
+            process.nextTick(() => this.$validator.reset())
           })
-          this.$validator.flag('url', {
-            valid: false,
-            dirty: false
-          })
-        })
       },
       openLocation (index) {
         if (this.files[index].percent >= 100) {
